@@ -365,7 +365,7 @@ app.post("/apis/:group/:version/:plural", async c => {
   ).bind(uuid(), group, version, crd.kind, plural, name, JSON.stringify(body.spec), null).run()
 
   // If this is a Cloudflare resource, queue it for provisioning
-  if (group === "cloudflare.guber.proc.io" && (crd.kind === "D1" || crd.kind === "Queue") && c.env.GUBER_BUS) {
+  if (group === "cf.guber.proc.io" && (crd.kind === "D1" || crd.kind === "Queue") && c.env.GUBER_BUS) {
     await c.env.GUBER_BUS.send({
       action: "create",
       resourceType: crd.kind.toLowerCase(),
@@ -436,7 +436,7 @@ app.delete("/apis/:group/:version/:plural/:name", async c => {
   if (!result) return c.json({ message: "Not Found" }, 404)
 
   // If this is a Cloudflare resource, queue it for deletion BEFORE deleting from DB
-  if (group === "cloudflare.guber.proc.io" && (result.kind === "D1" || result.kind === "Queue") && c.env.GUBER_BUS) {
+  if (group === "cf.guber.proc.io" && (result.kind === "D1" || result.kind === "Queue") && c.env.GUBER_BUS) {
     const spec = JSON.parse(result.spec)
     const status = result.status ? JSON.parse(result.status) : {}
     await c.env.GUBER_BUS.send({
@@ -914,7 +914,7 @@ async function reconcileQueues(env: Env) {
     
     // Get all Queue resources from our API
     const { results: apiResources } = await env.DB.prepare(
-      "SELECT * FROM resources WHERE group_name='cloudflare.guber.proc.io' AND kind='Queue'"
+      "SELECT * FROM resources WHERE group_name='cf.guber.proc.io' AND kind='Queue'"
     ).all()
     
     // Get all Queues from Cloudflare
@@ -954,7 +954,7 @@ async function reconcileQueues(env: Env) {
     const orphanedQueues = []
     for (const [queueName, cloudflareQueue] of cloudflareQueueMap) {
       // Only consider queues that match our naming pattern
-      if (queueName.includes('.') && (queueName.includes('.queues.cloudflare.guber.proc.io') || queueName.includes('.queue.cloudflare.guber.proc.io'))) {
+      if (queueName.includes('.') && (queueName.includes('.queues.cf.guber.proc.io') || queueName.includes('.queue.cf.guber.proc.io'))) {
         if (!apiQueueMap.has(queueName)) {
           orphanedQueues.push(cloudflareQueue)
         }
@@ -1083,7 +1083,7 @@ async function reconcileD1Databases(env: Env) {
     
     // Get all D1 resources from our API
     const { results: apiResources } = await env.DB.prepare(
-      "SELECT * FROM resources WHERE group_name='cloudflare.guber.proc.io' AND kind='D1'"
+      "SELECT * FROM resources WHERE group_name='cf.guber.proc.io' AND kind='D1'"
     ).all()
     
     // Get all D1 databases from Cloudflare
@@ -1123,7 +1123,7 @@ async function reconcileD1Databases(env: Env) {
     const orphanedDatabases = []
     for (const [dbName, cloudflareDb] of cloudflareDatabaseMap) {
       // Only consider databases that match our naming pattern
-      if (dbName.includes('.') && (dbName.includes('.d1s.cloudflare.guber.proc.io') || dbName.includes('.d1.cloudflare.guber.proc.io'))) {
+      if (dbName.includes('.') && (dbName.includes('.d1s.cf.guber.proc.io') || dbName.includes('.d1.cf.guber.proc.io'))) {
         if (!apiDatabaseMap.has(dbName)) {
           orphanedDatabases.push(cloudflareDb)
         }

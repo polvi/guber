@@ -1,4 +1,4 @@
-apiVersion: cloudflare.guber.proc.io/v1
+apiVersion: cf.guber.proc.io/v1
 kind: D1
 metadata:
   name: example-db
