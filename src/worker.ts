@@ -1828,9 +1828,9 @@ async function reconcileWorkers(env: Env) {
             
             // Get current worker metadata to check existing bindings
             console.log(`[Reconcile] Fetching worker metadata for ${fullName}`)
-            console.log(`[Reconcile] Request URL: https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullName}`)
+            console.log(`[Reconcile] Request URL: https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullName}/settings`)
             
-            const workerResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullName}`, {
+            const workerResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullName}/settings`, {
               method: "GET",
               headers: { "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}` }
             })
@@ -1842,8 +1842,7 @@ async function reconcileWorkers(env: Env) {
               let workerData
               try {
                 const responseText = await workerResponse.text()
-                console.log(`[Reconcile] Worker metadata response body (first 1000 chars):`, responseText.substring(0, 1000))
-                console.log(`[Reconcile] Worker metadata response body (last 500 chars):`, responseText.substring(Math.max(0, responseText.length - 500)))
+                console.log(`[Reconcile] Worker metadata response body:`, responseText)
                 
                 workerData = JSON.parse(responseText)
                 console.log(`[Reconcile] Parsed worker metadata:`, JSON.stringify(workerData, null, 2))
