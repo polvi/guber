@@ -1,7 +1,13 @@
 import { Hono } from "hono"
 import { v4 as uuid } from "uuid"
 
-type Env = { Bindings: { DB: D1Database } }
+type Env = { 
+  Bindings: { 
+    DB: D1Database
+    D1_QUEUE: Queue
+    CLOUDFLARE_API_TOKEN: string
+  } 
+}
 
 const app = new Hono<Env>()
 
@@ -351,6 +357,15 @@ app.post("/apis/:group/:version/:plural", async c => {
     "INSERT INTO resources (id, group_name, version, kind, plural, name, spec, namespace) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
   ).bind(uuid(), group, version, crd.kind, plural, name, JSON.stringify(body.spec), null).run()
 
+  // If this is a D1 resource, queue it for provisioning
+  if (group === "cloudflare.guber.io" && crd.kind === "D1") {
+    await c.env.D1_QUEUE.send({
+      action: "create",
+      resourceName: name,
+      spec: body.spec
+    })
+  }
+
   return c.json({
     apiVersion: `${group}/${version}`,
     kind: crd.kind,
@@ -407,6 +422,16 @@ app.delete("/apis/:group/:version/:plural/:name", async c => {
     "SELECT * FROM resources WHERE group_name=? AND version=? AND plural=? AND name=? AND namespace IS NULL"
   ).bind(group, version, plural, name).first()
   if (!result) return c.json({ message: "Not Found" }, 404)
+
+  // If this is a D1 resource, queue it for deletion
+  if (group === "cloudflare.guber.io" && result.kind === "D1") {
+    const spec = JSON.parse(result.spec)
+    await c.env.D1_QUEUE.send({
+      action: "delete",
+      resourceName: name,
+      spec: spec
+    })
+  }
 
   // Delete the resource
   await c.env.DB.prepare(
@@ -563,4 +588,95 @@ app.delete("/apis/:group/:version/namespaces/:namespace/:plural/:name", async c 
   })
 })
 
-export default app
+// Queue consumer for D1 provisioning
+export default {
+  fetch: app.fetch,
+  async queue(batch: MessageBatch<any>, env: Env): Promise<void> {
+    for (const message of batch.messages) {
+      try {
+        const { action, resourceName, spec } = message.body
+        
+        if (action === "create") {
+          await provisionD1Database(env, resourceName, spec)
+        } else if (action === "delete") {
+          await deleteD1Database(env, resourceName, spec)
+        }
+        
+        message.ack()
+      } catch (error) {
+        console.error(`Failed to process queue message:`, error)
+        message.retry()
+      }
+    }
+  }
+}
+
+async function provisionD1Database(env: Env, resourceName: string, spec: any) {
+  const response = await fetch("https://api.cloudflare.com/client/v4/accounts/YOUR_ACCOUNT_ID/d1/database", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      name: spec.name,
+      primary_location_hint: spec.location || "weur"
+    })
+  })
+  
+  if (response.ok) {
+    const result = await response.json()
+    const databaseId = result.result.uuid
+    
+    // Update the resource status in the database
+    await env.DB.prepare(
+      "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
+    ).bind(JSON.stringify({
+      state: "Ready",
+      database_id: databaseId,
+      createdAt: new Date().toISOString(),
+      endpoint: `https://api.cloudflare.com/client/v4/accounts/YOUR_ACCOUNT_ID/d1/database/${databaseId}`
+    }), resourceName).run()
+    
+    console.log(`D1 database ${spec.name} provisioned successfully with ID: ${databaseId}`)
+  } else {
+    const error = await response.text()
+    console.error(`Failed to provision D1 database ${spec.name}:`, error)
+    
+    // Update status to failed
+    await env.DB.prepare(
+      "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
+    ).bind(JSON.stringify({
+      state: "Failed",
+      error: error
+    }), resourceName).run()
+  }
+}
+
+async function deleteD1Database(env: Env, resourceName: string, spec: any) {
+  // First get the database ID from the resource status
+  const resource = await env.DB.prepare(
+    "SELECT status FROM resources WHERE name=? AND namespace IS NULL"
+  ).bind(resourceName).first()
+  
+  if (resource && resource.status) {
+    const status = JSON.parse(resource.status)
+    const databaseId = status.database_id
+    
+    if (databaseId) {
+      const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/YOUR_ACCOUNT_ID/d1/database/${databaseId}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`
+        }
+      })
+      
+      if (response.ok) {
+        console.log(`D1 database ${spec.name} deleted successfully`)
+      } else {
+        const error = await response.text()
+        console.error(`Failed to delete D1 database ${spec.name}:`, error)
+      }
+    }
+  }
+}

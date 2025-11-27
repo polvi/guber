@@ -6,3 +6,10 @@ compatibility_date = "2023-11-21"
 binding = "DB"
 database_name = "guber-db"
 database_id = "b21bb1bc-6d87-43b8-9c36-c31cbad47dbb"
+
+[[queues]]
+binding = "D1_QUEUE"
+queue = "d1-provisioning-queue"
+
+[vars]
+# Add your Cloudflare API token as a secret: wrangler secret put CLOUDFLARE_API_TOKEN
