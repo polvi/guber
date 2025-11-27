@@ -1961,7 +1961,7 @@ async function reconcileWorkers(env: Env) {
                   newStatus.healthCheckError = `HTTP ${healthResponse.status}: ${errorText.substring(0, 500)}`
                 }
               } catch (e) {
-                // Ignore errors reading response body
+                newStatus.healthCheckError = `HTTP ${healthResponse.status}: Failed to read response body - ${e.message}`
               }
             }
             
@@ -1981,7 +1981,14 @@ async function reconcileWorkers(env: Env) {
           console.error(`Error checking worker ${fullName}:`, error)
           
           // Update status to indicate check failed
-          const status = apiResource.status ? JSON.parse(apiResource.status) : {}
+          let status = {}
+          try {
+            status = apiResource.status ? JSON.parse(apiResource.status) : {}
+          } catch (parseError) {
+            console.error(`Failed to parse existing status for worker ${fullName}:`, parseError)
+            status = {}
+          }
+          
           const newStatus = {
             ...status,
             state: "Failed",
@@ -1997,7 +2004,11 @@ async function reconcileWorkers(env: Env) {
             ? [JSON.stringify(newStatus), apiResource.name, apiResource.namespace]
             : [JSON.stringify(newStatus), apiResource.name]
           
-          await env.DB.prepare(updateQuery).bind(...updateParams).run()
+          try {
+            await env.DB.prepare(updateQuery).bind(...updateParams).run()
+          } catch (dbError) {
+            console.error(`Failed to update status for worker ${fullName}:`, dbError)
+          }
         }
       }
     }
