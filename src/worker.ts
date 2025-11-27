@@ -1144,6 +1144,24 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
       formData.append('index.js.map', new Blob([sourceMap], { type: 'text/plain' }), 'index.js.map')
     }
     
+    // Debug logging
+    console.log(`=== Worker Deployment Debug Info ===`)
+    console.log(`Worker Name: ${fullWorkerName}`)
+    console.log(`Script URL: ${spec.scriptUrl || 'inline'}`)
+    console.log(`Metadata: ${JSON.stringify(metadata, null, 2)}`)
+    console.log(`Script Content (first 500 chars): ${script.substring(0, 500)}...`)
+    console.log(`Script Content (last 200 chars): ...${script.substring(script.length - 200)}`)
+    console.log(`Has Source Map: ${sourceMap ? 'yes' : 'no'}`)
+    console.log(`FormData entries:`)
+    for (const [key, value] of formData.entries()) {
+      if (value instanceof Blob) {
+        console.log(`  ${key}: Blob (${value.type}, ${value.size} bytes)`)
+      } else {
+        console.log(`  ${key}: ${value}`)
+      }
+    }
+    console.log(`=== End Debug Info ===`)
+    
     const deployResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullWorkerName}`, {
       method: "PUT",
       headers: {
@@ -1460,6 +1478,16 @@ async function reconcileWorkers(env: Env) {
         if (sourceMap) {
           formData.append('index.js.map', new Blob([sourceMap], { type: 'text/plain' }), 'index.js.map')
         }
+        
+        // Debug logging for reconciliation
+        console.log(`=== Worker Reconciliation Debug Info ===`)
+        console.log(`Worker Name: ${fullName}`)
+        console.log(`Script URL: ${spec.scriptUrl || 'inline'}`)
+        console.log(`Metadata: ${JSON.stringify(metadata, null, 2)}`)
+        console.log(`Script Content (first 500 chars): ${script.substring(0, 500)}...`)
+        console.log(`Script Content (last 200 chars): ...${script.substring(script.length - 200)}`)
+        console.log(`Has Source Map: ${sourceMap ? 'yes' : 'no'}`)
+        console.log(`=== End Reconciliation Debug Info ===`)
         
         const createResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullName}`, {
           method: "PUT",
