@@ -1088,18 +1088,29 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
   const customDomain = `${resourceName}.${env.GUBER_NAME}.${env.GUBER_DOMAIN}`
   
   try {
+    // Get the worker script content
+    let script = spec.script || "addEventListener('fetch', event => { event.respondWith(new Response('Hello World')); })"
+    
+    if (spec.scriptUrl) {
+      const scriptResponse = await fetch(spec.scriptUrl)
+      if (!scriptResponse.ok) {
+        throw new Error(`Failed to fetch script from ${spec.scriptUrl}: ${scriptResponse.status} ${scriptResponse.statusText}`)
+      }
+      script = await scriptResponse.text()
+    }
+    
     // Step 1: Deploy the worker script
-    const scriptResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullWorkerName}`, {
+    const deployResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullWorkerName}`, {
       method: "PUT",
       headers: {
         "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
         "Content-Type": "application/javascript"
       },
-      body: spec.script || "addEventListener('fetch', event => { event.respondWith(new Response('Hello World')); })"
+      body: script
     })
     
-    if (!scriptResponse.ok) {
-      const errorResponse = await scriptResponse.json()
+    if (!deployResponse.ok) {
+      const errorResponse = await deployResponse.json()
       throw new Error(`Failed to deploy worker script: ${JSON.stringify(errorResponse)}`)
     }
     

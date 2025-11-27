@@ -30,6 +30,9 @@ spec:
                 script:
                   type: string
                   description: The JavaScript/TypeScript code for the Worker.
+                scriptUrl:
+                  type: string
+                  description: URL to fetch the Worker script from (alternative to inline script).
                 bindings:
                   type: object
                   description: Environment bindings for the Worker (KV, D1, etc.).
