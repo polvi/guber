@@ -23,20 +23,20 @@ bun dev
 bun db:init
 ```
 
-3. Set up kubectl to use the local Guber instance:
-```bash
-export KUBECONFIG=k8s/kubeconfig
-```
-
-Note: The kubeconfig is pre-configured to work with the development server running on `http://localhost:8787`.
-
-4. Apply the example CRD and resource:
+3. Apply the example CRD and resource:
 ```bash
 kubectl apply -f k8s/boardposts.bulletin.yaml --validate=false
 kubectl apply -f k8s/boardpost.yaml --validate=false
 ```
 
 ## Example Usage
+
+First, set up kubectl to use the local Guber instance:
+```bash
+export KUBECONFIG=k8s/kubeconfig
+```
+
+Note: The kubeconfig is pre-configured to work with the development server running on `http://localhost:8787`.
 
 Once running and with KUBECONFIG set, you can use kubectl to interact with your custom resources:
 
