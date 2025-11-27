@@ -852,6 +852,8 @@ async function provisionD1Database(env: Env, resourceName: string, group: string
       }), resourceName).run()
     }
   }
+  
+  return false
 }
 
 async function deleteD1Database(env: Env, resourceName: string, group: string, kind: string, plural: string, namespace: string | null, spec: any, status?: any) {
@@ -982,6 +984,8 @@ async function provisionQueue(env: Env, resourceName: string, group: string, kin
       }), resourceName).run()
     }
   }
+  
+  return false
 }
 
 async function deleteQueue(env: Env, resourceName: string, group: string, kind: string, plural: string, namespace: string | null, spec: any, status?: any) {
