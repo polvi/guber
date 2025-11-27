@@ -5,7 +5,7 @@ compatibility_date = "2023-11-21"
 [[d1_databases]]
 binding = "DB"
 database_name = "guber-db"
-database_id = "3c5cfeb5-62cc-4ef7-8f66-df755f8ab318"
+database_id = "5f5d9a0a-b02c-44cf-88d8-91a48c720e99"
 
 [[queues.producers]]
 queue = "guber-bus"

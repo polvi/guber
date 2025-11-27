@@ -2,7 +2,7 @@
 
 # Delete the existing database
 echo "Deleting existing database..."
-bun run wrangler d1 delete guber-db --force
+bun run wrangler d1 delete guber-db --skip-confirmation
 
 # Create a new database and capture the output
 echo "Creating new database..."
@@ -25,6 +25,6 @@ echo "Updated wrangler.toml with new database ID"
 
 # Run migrations
 echo "Running migrations..."
-bun run wrangler d1 migrations apply guber-db
+bun run wrangler d1 migrations apply guber-db --local
 
 echo "Database reset complete!"
