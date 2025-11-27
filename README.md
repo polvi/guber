@@ -48,6 +48,14 @@ kubectl get boardpost first-post
 kubectl delete boardpost first-post --validate=false
 ```
 
+## Testing Reconciliation
+
+You can manually trigger the reconciliation process by hitting the scheduled handler endpoint:
+
+```bash
+curl http://127.0.0.1:8787/cdn-cgi/handler/scheduled
+```
+
 The example manifests in `k8s/` demonstrate:
 - `boardposts.bulletin.yaml`: A CRD defining a BoardPost resource type
 - `boardpost.yaml`: An instance of a BoardPost resource
