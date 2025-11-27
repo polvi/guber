@@ -1827,14 +1827,35 @@ async function reconcileWorkers(env: Env) {
             }
             
             // Get current worker metadata to check existing bindings
+            console.log(`[Reconcile] Fetching worker metadata for ${fullName}`)
+            console.log(`[Reconcile] Request URL: https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullName}`)
+            
             const workerResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullName}`, {
               method: "GET",
               headers: { "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}` }
             })
             
+            console.log(`[Reconcile] Worker metadata response status: ${workerResponse.status} ${workerResponse.statusText}`)
+            console.log(`[Reconcile] Worker metadata response headers:`, Object.fromEntries(workerResponse.headers.entries()))
+            
             if (workerResponse.ok) {
-              const workerData = await workerResponse.json()
+              let workerData
+              try {
+                const responseText = await workerResponse.text()
+                console.log(`[Reconcile] Worker metadata response body (first 1000 chars):`, responseText.substring(0, 1000))
+                console.log(`[Reconcile] Worker metadata response body (last 500 chars):`, responseText.substring(Math.max(0, responseText.length - 500)))
+                
+                workerData = JSON.parse(responseText)
+                console.log(`[Reconcile] Parsed worker metadata:`, JSON.stringify(workerData, null, 2))
+              } catch (parseError) {
+                console.error(`[Reconcile] Failed to parse worker metadata response:`, parseError)
+                console.log(`[Reconcile] Could not parse worker metadata for ${fullName}, skipping binding check`)
+                continue
+              }
+              
               const currentBindings = workerData.result?.bindings || []
+              console.log(`[Reconcile] Current bindings for ${fullName}:`, JSON.stringify(currentBindings, null, 2))
+              console.log(`[Reconcile] Expected bindings for ${fullName}:`, JSON.stringify(expectedBindings, null, 2))
               
               // Compare expected vs current bindings
               if (expectedBindings.length !== currentBindings.length) {
@@ -1853,12 +1874,19 @@ async function reconcileWorkers(env: Env) {
                   if (!matchingBinding) {
                     needsBindingUpdate = true
                     console.log(`[Reconcile] Missing or mismatched binding for ${fullName}:`, expectedBinding)
+                    console.log(`[Reconcile] Available bindings:`, currentBindings)
                     break
                   }
                 }
               }
+              
+              if (!needsBindingUpdate) {
+                console.log(`[Reconcile] Bindings are up to date for ${fullName}`)
+              }
             } else {
+              const errorText = await workerResponse.text()
               console.log(`[Reconcile] Could not fetch current worker metadata for ${fullName}`)
+              console.log(`[Reconcile] Error response:`, errorText)
             }
           }
           
