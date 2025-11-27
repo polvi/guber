@@ -1156,18 +1156,26 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
         for (const d1Binding of spec.bindings.d1_databases) {
           // Look up the D1 resource to get its database_id
           const d1Resource = await env.DB.prepare(
-            "SELECT * FROM resources WHERE name=? AND kind='D1' AND group_name='cf.guber.proc.io'"
+            "SELECT * FROM resources WHERE name=? AND kind='D1' AND group_name='cf.guber.proc.io' AND namespace IS NULL"
           ).bind(d1Binding.database_name).first()
+          
+          console.log(`Looking up D1 binding: ${d1Binding.database_name}, found:`, d1Resource)
           
           if (d1Resource && d1Resource.status) {
             const status = JSON.parse(d1Resource.status)
+            console.log(`D1 resource status:`, status)
             if (status.database_id) {
               bindings.push({
                 type: "d1",
                 name: d1Binding.binding,
                 database_id: status.database_id
               })
+              console.log(`Added D1 binding: ${d1Binding.binding} -> ${status.database_id}`)
+            } else {
+              console.log(`D1 resource ${d1Binding.database_name} has no database_id in status`)
             }
+          } else {
+            console.log(`D1 resource ${d1Binding.database_name} not found or has no status`)
           }
         }
       }
@@ -1177,18 +1185,26 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
         for (const queueBinding of spec.bindings.queues) {
           // Look up the Queue resource to get its queue_id
           const queueResource = await env.DB.prepare(
-            "SELECT * FROM resources WHERE name=? AND kind='Queue' AND group_name='cf.guber.proc.io'"
+            "SELECT * FROM resources WHERE name=? AND kind='Queue' AND group_name='cf.guber.proc.io' AND namespace IS NULL"
           ).bind(queueBinding.queue_name).first()
+          
+          console.log(`Looking up Queue binding: ${queueBinding.queue_name}, found:`, queueResource)
           
           if (queueResource && queueResource.status) {
             const status = JSON.parse(queueResource.status)
+            console.log(`Queue resource status:`, status)
             if (status.queue_id) {
               bindings.push({
                 type: "queue",
                 name: queueBinding.binding,
                 queue_name: status.queue_id
               })
+              console.log(`Added Queue binding: ${queueBinding.binding} -> ${status.queue_id}`)
+            } else {
+              console.log(`Queue resource ${queueBinding.queue_name} has no queue_id in status`)
             }
+          } else {
+            console.log(`Queue resource ${queueBinding.queue_name} not found or has no status`)
           }
         }
       }
@@ -1553,18 +1569,26 @@ async function reconcileWorkers(env: Env) {
             for (const d1Binding of spec.bindings.d1_databases) {
               // Look up the D1 resource to get its database_id
               const d1Resource = await env.DB.prepare(
-                "SELECT * FROM resources WHERE name=? AND kind='D1' AND group_name='cf.guber.proc.io'"
+                "SELECT * FROM resources WHERE name=? AND kind='D1' AND group_name='cf.guber.proc.io' AND namespace IS NULL"
               ).bind(d1Binding.database_name).first()
+              
+              console.log(`[Reconcile] Looking up D1 binding: ${d1Binding.database_name}, found:`, d1Resource)
               
               if (d1Resource && d1Resource.status) {
                 const status = JSON.parse(d1Resource.status)
+                console.log(`[Reconcile] D1 resource status:`, status)
                 if (status.database_id) {
                   bindings.push({
                     type: "d1",
                     name: d1Binding.binding,
                     database_id: status.database_id
                   })
+                  console.log(`[Reconcile] Added D1 binding: ${d1Binding.binding} -> ${status.database_id}`)
+                } else {
+                  console.log(`[Reconcile] D1 resource ${d1Binding.database_name} has no database_id in status`)
                 }
+              } else {
+                console.log(`[Reconcile] D1 resource ${d1Binding.database_name} not found or has no status`)
               }
             }
           }
@@ -1574,18 +1598,26 @@ async function reconcileWorkers(env: Env) {
             for (const queueBinding of spec.bindings.queues) {
               // Look up the Queue resource to get its queue_id
               const queueResource = await env.DB.prepare(
-                "SELECT * FROM resources WHERE name=? AND kind='Queue' AND group_name='cf.guber.proc.io'"
+                "SELECT * FROM resources WHERE name=? AND kind='Queue' AND group_name='cf.guber.proc.io' AND namespace IS NULL"
               ).bind(queueBinding.queue_name).first()
+              
+              console.log(`[Reconcile] Looking up Queue binding: ${queueBinding.queue_name}, found:`, queueResource)
               
               if (queueResource && queueResource.status) {
                 const status = JSON.parse(queueResource.status)
+                console.log(`[Reconcile] Queue resource status:`, status)
                 if (status.queue_id) {
                   bindings.push({
                     type: "queue",
                     name: queueBinding.binding,
                     queue_name: status.queue_id
                   })
+                  console.log(`[Reconcile] Added Queue binding: ${queueBinding.binding} -> ${status.queue_id}`)
+                } else {
+                  console.log(`[Reconcile] Queue resource ${queueBinding.queue_name} has no queue_id in status`)
                 }
+              } else {
+                console.log(`[Reconcile] Queue resource ${queueBinding.queue_name} not found or has no status`)
               }
             }
           }
