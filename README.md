@@ -23,14 +23,7 @@ Guber requires several environment variables to be configured:
 
 ### Domain Setup
 
-For Cloudflare Workers to work with custom domains, you need to:
-
-1. **Add your domain to Cloudflare** - Ensure your domain is managed by Cloudflare
-2. **Create a wildcard DNS record** in your Cloudflare DNS settings:
-   - **Type**: CNAME
-   - **Name**: `*.{GUBER_NAME}.{GUBER_DOMAIN}` (e.g., `*.dev.proc.io`)
-   - **Target**: Your main domain (e.g., `proc.io`)
-   - **Proxy Status**: Proxied (orange cloud enabled)
+For Cloudflare Workers to work with custom domains, you need to ensure your domain is managed by Cloudflare. 
 
 This allows workers to be deployed at URLs like `example-worker.dev.proc.io`.
 
