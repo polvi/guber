@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # Delete the existing database
 echo "Deleting existing database..."
 bun run wrangler d1 delete guber-db --skip-confirmation
