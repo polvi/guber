@@ -1192,21 +1192,19 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
   try {
     // Check dependencies first
     if (spec.dependencies && spec.dependencies.length > 0) {
-      console.log(`Checking dependencies for worker ${fullWorkerName}:`, spec.dependencies)
+      console.log(`Checking ${spec.dependencies.length} dependencies for worker ${fullWorkerName}`)
       
       for (const dependency of spec.dependencies) {
         const depGroup = dependency.group || "cf.guber.proc.io"
         const depKind = dependency.kind
         const depName = dependency.name
         
-        console.log(`Checking dependency: ${depKind}/${depName} in group ${depGroup}`)
-        
         const depResource = await env.DB.prepare(
           "SELECT * FROM resources WHERE name=? AND kind=? AND group_name=? AND namespace IS NULL"
         ).bind(depName, depKind, depGroup).first()
         
         if (!depResource) {
-          console.log(`Dependency ${depKind}/${depName} not found, deferring worker provisioning`)
+          console.log(`Dependency ${depKind}/${depName} not found, deferring provisioning`)
           await env.DB.prepare(
             "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
           ).bind(JSON.stringify({
@@ -1308,12 +1306,10 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
     
     // Add bindings if specified
     if (spec.bindings) {
-      console.log(`Processing bindings for worker ${fullWorkerName}:`, JSON.stringify(spec.bindings, null, 2))
       const bindings: any[] = []
       
       // Handle D1 database bindings
       if (spec.bindings.d1_databases) {
-        console.log(`Processing ${spec.bindings.d1_databases.length} D1 database bindings`)
         for (const d1Binding of spec.bindings.d1_databases) {
           // Look up the D1 resource to get its database_id
           const d1Resource = await env.DB.prepare(
