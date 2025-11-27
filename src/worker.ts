@@ -617,12 +617,19 @@ export default {
         const { action, resourceType, resourceName, group, kind, plural, namespace, spec, status } = message.body
         
         if (action === "create") {
+          let provisioningSuccessful = false
+          
           if (resourceType === "d1") {
-            await provisionD1Database(env, resourceName, group, kind, plural, namespace, spec)
+            provisioningSuccessful = await provisionD1Database(env, resourceName, group, kind, plural, namespace, spec)
           } else if (resourceType === "queue") {
-            await provisionQueue(env, resourceName, group, kind, plural, namespace, spec)
+            provisioningSuccessful = await provisionQueue(env, resourceName, group, kind, plural, namespace, spec)
           } else if (resourceType === "worker") {
-            await provisionWorker(env, resourceName, group, kind, plural, namespace, spec)
+            provisioningSuccessful = await provisionWorker(env, resourceName, group, kind, plural, namespace, spec)
+          }
+          
+          // After successful provisioning, check for dependent resources
+          if (provisioningSuccessful) {
+            await checkAndProvisionDependentResources(env, resourceName, group, kind)
           }
         } else if (action === "delete") {
           if (resourceType === "d1") {
@@ -649,6 +656,95 @@ export default {
   }
 }
 
+async function checkAndProvisionDependentResources(env: Env, resolvedResourceName: string, resolvedGroup: string, resolvedKind: string) {
+  console.log(`Checking for resources dependent on ${resolvedKind}/${resolvedResourceName}`)
+  
+  // Find all resources that depend on this newly resolved resource
+  const { results } = await env.DB.prepare(`
+    SELECT * FROM resources 
+    WHERE group_name='cf.guber.proc.io' 
+    AND kind='Worker' 
+    AND json_extract(status, '$.state') = 'Pending'
+  `).all()
+  
+  for (const resource of (results || [])) {
+    try {
+      const spec = JSON.parse(resource.spec)
+      const status = resource.status ? JSON.parse(resource.status) : {}
+      
+      if (spec.dependencies && status.pendingDependencies) {
+        const hasDependency = spec.dependencies.some((dep: any) => 
+          dep.name === resolvedResourceName && 
+          dep.kind === resolvedKind && 
+          (dep.group || "cf.guber.proc.io") === resolvedGroup
+        )
+        
+        if (hasDependency) {
+          console.log(`Found dependent resource ${resource.name}, checking if all dependencies are now ready`)
+          
+          // Check if ALL dependencies are now ready
+          let allDependenciesReady = true
+          const unresolvedDependencies = []
+          
+          for (const dependency of spec.dependencies) {
+            const depGroup = dependency.group || "cf.guber.proc.io"
+            const depResource = await env.DB.prepare(
+              "SELECT * FROM resources WHERE name=? AND kind=? AND group_name=? AND namespace IS NULL"
+            ).bind(dependency.name, dependency.kind, depGroup).first()
+            
+            if (!depResource || !depResource.status) {
+              allDependenciesReady = false
+              unresolvedDependencies.push(dependency)
+              continue
+            }
+            
+            const depStatus = JSON.parse(depResource.status)
+            if (depStatus.state !== "Ready") {
+              allDependenciesReady = false
+              unresolvedDependencies.push(dependency)
+            }
+          }
+          
+          if (allDependenciesReady) {
+            console.log(`✅ All dependencies resolved for worker ${resource.name}, re-queuing for provisioning`)
+            
+            // Queue for provisioning
+            if (env.GUBER_BUS) {
+              await env.GUBER_BUS.send({
+                action: "create",
+                resourceType: "worker",
+                resourceName: resource.name,
+                group: resource.group_name,
+                kind: resource.kind,
+                plural: resource.plural,
+                namespace: resource.namespace,
+                spec: spec
+              })
+            }
+          } else {
+            console.log(`⏳ Worker ${resource.name} still has unresolved dependencies:`, unresolvedDependencies.map(d => `${d.kind}/${d.name}`))
+            
+            // Update status to reflect current dependency state
+            const updatedStatus = {
+              ...status,
+              state: "Pending",
+              message: `Waiting for dependencies: ${unresolvedDependencies.map(d => `${d.kind}/${d.name}`).join(', ')}`,
+              pendingDependencies: unresolvedDependencies,
+              lastDependencyCheck: new Date().toISOString()
+            }
+            
+            await env.DB.prepare(
+              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
+            ).bind(JSON.stringify(updatedStatus), resource.name).run()
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`Error checking dependencies for resource ${resource.name}:`, error)
+    }
+  }
+}
+
 function buildFullDatabaseName(resourceName: string, group: string, plural: string, namespace: string | null, instanceName: string): string {
   // Construct full database name: name-namespace-resource-type-instance
   const namespaceStr = namespace || "c"
@@ -656,7 +752,7 @@ function buildFullDatabaseName(resourceName: string, group: string, plural: stri
   return `${resourceName}-${namespaceStr}-${resourceType}-${instanceName}`
 }
 
-async function provisionD1Database(env: Env, resourceName: string, group: string, kind: string, plural: string, namespace: string | null, spec: any) {
+async function provisionD1Database(env: Env, resourceName: string, group: string, kind: string, plural: string, namespace: string | null, spec: any): Promise<boolean> {
   const fullDatabaseName = buildFullDatabaseName(resourceName, group, plural, namespace, env.GUBER_NAME)
   
   const requestBody: any = {
@@ -692,6 +788,7 @@ async function provisionD1Database(env: Env, resourceName: string, group: string
     }), resourceName).run()
     
     console.log(`D1 database ${fullDatabaseName} provisioned successfully with ID: ${databaseId}`)
+    return true
   } else {
     const errorResponse = await response.json()
     
@@ -785,7 +882,7 @@ async function deleteD1Database(env: Env, resourceName: string, group: string, k
   }
 }
 
-async function provisionQueue(env: Env, resourceName: string, group: string, kind: string, plural: string, namespace: string | null, spec: any) {
+async function provisionQueue(env: Env, resourceName: string, group: string, kind: string, plural: string, namespace: string | null, spec: any): Promise<boolean> {
   const fullQueueName = buildFullDatabaseName(resourceName, group, plural, namespace, env.GUBER_NAME)
   
   const requestBody: any = {
@@ -821,6 +918,7 @@ async function provisionQueue(env: Env, resourceName: string, group: string, kin
     }), resourceName).run()
     
     console.log(`Queue ${fullQueueName} provisioned successfully with ID: ${queueId}`)
+    return true
   } else {
     const errorResponse = await response.json()
     
@@ -1083,7 +1181,7 @@ async function reconcileQueues(env: Env) {
   }
 }
 
-async function provisionWorker(env: Env, resourceName: string, group: string, kind: string, plural: string, namespace: string | null, spec: any) {
+async function provisionWorker(env: Env, resourceName: string, group: string, kind: string, plural: string, namespace: string | null, spec: any): Promise<boolean> {
   const fullWorkerName = buildFullDatabaseName(resourceName, group, plural, namespace, env.GUBER_NAME)
   const customDomain = `${resourceName}.${env.GUBER_NAME}.${env.GUBER_DOMAIN}`
   
@@ -1112,7 +1210,7 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
             message: `Waiting for dependency: ${depKind}/${depName}`,
             pendingDependencies: [dependency]
           }), resourceName).run()
-          return
+          return false
         }
         
         if (!depResource.status) {
@@ -1392,6 +1490,8 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
       state: "Failed",
       error: error.message || String(error)
     }), resourceName).run()
+    
+    return false
   }
 }
 
@@ -1439,6 +1539,9 @@ async function deleteWorker(env: Env, resourceName: string, group: string, kind:
 async function reconcileWorkers(env: Env) {
   try {
     console.log("Starting Worker reconciliation...")
+    
+    // First, check pending workers for dependency resolution
+    await reconcilePendingWorkers(env)
     
     // Get all Worker resources from our API
     const { results: apiResources } = await env.DB.prepare(
@@ -2133,6 +2236,81 @@ async function reconcileWorkers(env: Env) {
     console.log("Worker reconciliation completed")
   } catch (error) {
     console.error("Error during Worker reconciliation:", error)
+  }
+}
+
+async function reconcilePendingWorkers(env: Env) {
+  console.log("Checking pending workers for dependency resolution...")
+  
+  const { results: pendingWorkers } = await env.DB.prepare(`
+    SELECT * FROM resources 
+    WHERE group_name='cf.guber.proc.io' 
+    AND kind='Worker' 
+    AND json_extract(status, '$.state') = 'Pending'
+  `).all()
+  
+  for (const worker of (pendingWorkers || [])) {
+    try {
+      const spec = JSON.parse(worker.spec)
+      const status = JSON.parse(worker.status)
+      
+      if (spec.dependencies && status.pendingDependencies) {
+        let allDependenciesReady = true
+        const unresolvedDependencies = []
+        
+        for (const dependency of spec.dependencies) {
+          const depGroup = dependency.group || "cf.guber.proc.io"
+          const depResource = await env.DB.prepare(
+            "SELECT * FROM resources WHERE name=? AND kind=? AND group_name=? AND namespace IS NULL"
+          ).bind(dependency.name, dependency.kind, depGroup).first()
+          
+          if (!depResource || !depResource.status) {
+            allDependenciesReady = false
+            unresolvedDependencies.push(dependency)
+            continue
+          }
+          
+          const depStatus = JSON.parse(depResource.status)
+          if (depStatus.state !== "Ready") {
+            allDependenciesReady = false
+            unresolvedDependencies.push(dependency)
+          }
+        }
+        
+        if (allDependenciesReady) {
+          console.log(`[Reconcile] All dependencies resolved for worker ${worker.name}, re-queuing for provisioning`)
+          
+          // Queue for provisioning
+          if (env.GUBER_BUS) {
+            await env.GUBER_BUS.send({
+              action: "create",
+              resourceType: "worker",
+              resourceName: worker.name,
+              group: worker.group_name,
+              kind: worker.kind,
+              plural: worker.plural,
+              namespace: worker.namespace,
+              spec: spec
+            })
+          }
+        } else {
+          console.log(`[Reconcile] Worker ${worker.name} still has unresolved dependencies:`, unresolvedDependencies.map(d => `${d.kind}/${d.name}`))
+          
+          // Update the dependency check timestamp
+          const updatedStatus = {
+            ...status,
+            lastDependencyCheck: new Date().toISOString(),
+            pendingDependencies: unresolvedDependencies
+          }
+          
+          await env.DB.prepare(
+            "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
+          ).bind(JSON.stringify(updatedStatus), worker.name).run()
+        }
+      }
+    } catch (error) {
+      console.error(`[Reconcile] Error checking dependencies for worker ${worker.name}:`, error)
+    }
   }
 }
 
