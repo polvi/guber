@@ -26,3 +26,22 @@ spec:
     queues:
       - binding: MY_QUEUE
         queue_name: example-queue
+---
+apiVersion: cf.guber.proc.io/v1
+kind: D1
+metadata:
+  name: example-db
+spec:
+  name: example-db
+  location: western-us
+---
+apiVersion: cf.guber.proc.io/v1
+kind: Queue
+metadata:
+  name: example-queue
+spec:
+  name: example-queue
+  settings:
+    delivery_delay: 0
+    message_retries: 3
+    visibility_timeout: 30
