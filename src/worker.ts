@@ -10,6 +10,11 @@ type Env = {
   } 
 }
 
+interface ScheduledEvent {
+  scheduledTime: number
+  cron: string
+}
+
 const app = new Hono<Env>()
 
 // --- Discovery endpoints for kubectl compatibility ---
@@ -619,6 +624,10 @@ export default {
         message.retry()
       }
     }
+  },
+  async scheduled(event: ScheduledEvent, env: Env): Promise<void> {
+    console.log(`Running D1 reconciliation at ${new Date(event.scheduledTime).toISOString()}`)
+    await reconcileD1Databases(env)
   }
 }
 
@@ -754,5 +763,176 @@ async function deleteD1Database(env: Env, resourceName: string, group: string, k
     }
   } else {
     console.log(`No database ID found for ${fullDatabaseName}, skipping Cloudflare deletion`)
+  }
+}
+
+async function reconcileD1Databases(env: Env) {
+  try {
+    console.log("Starting D1 database reconciliation...")
+    
+    // Get all D1 resources from our API
+    const { results: apiResources } = await env.DB.prepare(
+      "SELECT * FROM resources WHERE group_name='cloudflare.guber.proc.io' AND kind='D1'"
+    ).all()
+    
+    // Get all D1 databases from Cloudflare
+    const cloudflareResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/d1/database`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`
+      }
+    })
+    
+    if (!cloudflareResponse.ok) {
+      console.error("Failed to fetch D1 databases from Cloudflare:", await cloudflareResponse.text())
+      return
+    }
+    
+    const cloudflareResult = await cloudflareResponse.json()
+    const cloudflareDatabases = cloudflareResult.result || []
+    
+    // Create maps for easier comparison
+    const apiDatabaseMap = new Map()
+    const cloudflareDatabaseMap = new Map()
+    
+    // Build API database map with full names
+    for (const resource of (apiResources || [])) {
+      const namespaceStr = resource.namespace || "cluster"
+      const resourceType = `${resource.plural}.${resource.group_name}`
+      const fullDatabaseName = `${resource.name}.${namespaceStr}.${resourceType}`
+      apiDatabaseMap.set(fullDatabaseName, resource)
+    }
+    
+    // Build Cloudflare database map
+    for (const db of cloudflareDatabases) {
+      cloudflareDatabaseMap.set(db.name, db)
+    }
+    
+    console.log(`Found ${apiDatabaseMap.size} D1 resources in API and ${cloudflareDatabaseMap.size} databases in Cloudflare`)
+    
+    // Find databases that exist in Cloudflare but not in our API (orphaned databases)
+    const orphanedDatabases = []
+    for (const [dbName, cloudflareDb] of cloudflareDatabaseMap) {
+      // Only consider databases that match our naming pattern
+      if (dbName.includes('.') && (dbName.includes('.d1s.cloudflare.guber.proc.io') || dbName.includes('.d1.cloudflare.guber.proc.io'))) {
+        if (!apiDatabaseMap.has(dbName)) {
+          orphanedDatabases.push(cloudflareDb)
+        }
+      }
+    }
+    
+    // Find resources that exist in our API but not in Cloudflare (missing databases)
+    const missingDatabases = []
+    for (const [fullName, apiResource] of apiDatabaseMap) {
+      if (!cloudflareDatabaseMap.has(fullName)) {
+        missingDatabases.push({ fullName, resource: apiResource })
+      }
+    }
+    
+    console.log(`Found ${orphanedDatabases.length} orphaned databases and ${missingDatabases.length} missing databases`)
+    
+    // Delete orphaned databases from Cloudflare
+    for (const orphanedDb of orphanedDatabases) {
+      try {
+        console.log(`Deleting orphaned database: ${orphanedDb.name} (ID: ${orphanedDb.uuid})`)
+        
+        const deleteResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/d1/database/${orphanedDb.uuid}`, {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`
+          }
+        })
+        
+        if (deleteResponse.ok) {
+          console.log(`Successfully deleted orphaned database: ${orphanedDb.name}`)
+        } else {
+          const error = await deleteResponse.text()
+          console.error(`Failed to delete orphaned database ${orphanedDb.name}:`, error)
+        }
+      } catch (error) {
+        console.error(`Error deleting orphaned database ${orphanedDb.name}:`, error)
+      }
+    }
+    
+    // Create missing databases in Cloudflare
+    for (const { fullName, resource } of missingDatabases) {
+      try {
+        console.log(`Creating missing database: ${fullName}`)
+        
+        const spec = JSON.parse(resource.spec)
+        const requestBody: any = { name: fullName }
+        
+        if (spec.location) {
+          requestBody.primary_location_hint = spec.location
+        }
+        
+        const createResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/d1/database`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(requestBody)
+        })
+        
+        if (createResponse.ok) {
+          const result = await createResponse.json()
+          const databaseId = result.result.uuid
+          
+          // Update the resource status in our database
+          const updateQuery = resource.namespace 
+            ? "UPDATE resources SET status=? WHERE name=? AND namespace=?"
+            : "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
+          
+          const updateParams = resource.namespace
+            ? [JSON.stringify({
+                state: "Ready",
+                database_id: databaseId,
+                createdAt: new Date().toISOString(),
+                endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/d1/database/${databaseId}`,
+                reconciledAt: new Date().toISOString()
+              }), resource.name, resource.namespace]
+            : [JSON.stringify({
+                state: "Ready",
+                database_id: databaseId,
+                createdAt: new Date().toISOString(),
+                endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/d1/database/${databaseId}`,
+                reconciledAt: new Date().toISOString()
+              }), resource.name]
+          
+          await env.DB.prepare(updateQuery).bind(...updateParams).run()
+          
+          console.log(`Successfully created missing database: ${fullName} with ID: ${databaseId}`)
+        } else {
+          const error = await createResponse.text()
+          console.error(`Failed to create missing database ${fullName}:`, error)
+          
+          // Update status to failed
+          const updateQuery = resource.namespace 
+            ? "UPDATE resources SET status=? WHERE name=? AND namespace=?"
+            : "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
+          
+          const updateParams = resource.namespace
+            ? [JSON.stringify({
+                state: "Failed",
+                error: error,
+                reconciledAt: new Date().toISOString()
+              }), resource.name, resource.namespace]
+            : [JSON.stringify({
+                state: "Failed", 
+                error: error,
+                reconciledAt: new Date().toISOString()
+              }), resource.name]
+          
+          await env.DB.prepare(updateQuery).bind(...updateParams).run()
+        }
+      } catch (error) {
+        console.error(`Error creating missing database ${fullName}:`, error)
+      }
+    }
+    
+    console.log("D1 database reconciliation completed")
+  } catch (error) {
+    console.error("Error during D1 database reconciliation:", error)
   }
 }
