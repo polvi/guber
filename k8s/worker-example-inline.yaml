@@ -5,14 +5,13 @@ metadata:
 spec:
   name: example-worker-inline
   script: |
-    // src/index.ts
-    var index_default = {
-      async fetch(request, env, ctx) {
-        return new Response("Hello World!");
-      }
-    };
-    export {
-      index_default as default
-    };
-    //# sourceMappingURL=index.js.map
+    addEventListener('fetch', event => {
+      event.respondWith(handleRequest(event.request))
+    })
+
+    async function handleRequest(request) {
+      return new Response('Hello from inline Cloudflare Worker!', {
+        headers: { 'Content-Type': 'text/plain' }
+      })
+    }
   compatibility_date: "2025-11-27"
