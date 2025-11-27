@@ -4,5 +4,5 @@ metadata:
   name: example-worker
 spec:
   name: example-worker
-  scriptUrl: "https://github.com/polvi/first-worker/releases/download/v0.0.2/index.js"
+  scriptUrl: "https://github.com/polvi/first-worker/releases/download/v0.0.5/index.js"
   compatibility_date: "2025-11-27"
