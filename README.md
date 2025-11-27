@@ -12,28 +12,22 @@ Guber mimics the Kubernetes API server's CRD functionality, allowing you to:
 
 ## Quick Start
 
-1. Install dependencies and start development server:
+Install dependencies and start development server:
+
 ```bash
 bun install
-bun dev
-```
-
-2. Initialize the database:
-```bash
 bun db:init
-```
-
-3. Apply the example CRD and resource:
-```bash
-kubectl apply -f k8s/boardposts.bulletin.yaml --validate=false
-kubectl apply -f k8s/boardpost.yaml --validate=false
+bun dev
 ```
 
 ## Example Usage
 
-First, set up kubectl to use the local Guber instance:
+First, set up kubectl to use the local Guber instance, then apply the example CRDs.
+
 ```bash
 export KUBECONFIG=k8s/kubeconfig
+kubectl apply -f k8s/boardposts.bulletin.yaml --validate=false
+kubectl apply -f k8s/boardpost.yaml --validate=false
 ```
 
 Note: The kubeconfig is pre-configured to work with the development server running on `http://localhost:8787`.
