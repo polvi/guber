@@ -1,0 +1,57 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: queues.cf.guber.proc.io
+spec:
+  group: cf.guber.proc.io
+  scope: Cluster
+  names:
+    plural: queues
+    singular: queue
+    kind: Queue
+    shortNames:
+      - queue
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required: ["name"]
+              properties:
+                name:
+                  type: string
+                  description: The name of the Queue.
+                settings:
+                  type: object
+                  description: Queue configuration settings.
+                  properties:
+                    delivery_delay:
+                      type: integer
+                      description: Delivery delay in seconds.
+                    message_retries:
+                      type: integer
+                      description: Number of message retries.
+                    visibility_timeout:
+                      type: integer
+                      description: Visibility timeout in seconds.
+            status:
+              type: object
+              properties:
+                state:
+                  type: string
+                  description: Current provisioning state (Creating, Ready, Failed, Deleting).
+                queue_id:
+                  type: string
+                  description: Cloudflare-assigned UUID for the Queue.
+                createdAt:
+                  type: string
+                  format: date-time
+                  description: Timestamp of creation in Cloudflare.
+                endpoint:
+                  type: string
+                  description: Connection endpoint for API clients.
