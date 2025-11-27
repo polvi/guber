@@ -1139,6 +1139,9 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
     }
     
     // Add compatibility settings if specified
+    if (spec.compatibility_date) {
+      metadata.compatibility_date = spec.compatibility_date
+    }
     if (spec.compatibility_flags) {
       metadata.compatibility_flags = spec.compatibility_flags
     }
@@ -1502,6 +1505,9 @@ async function reconcileWorkers(env: Env) {
         }
         
         // Add compatibility settings if specified
+        if (spec.compatibility_date) {
+          metadata.compatibility_date = spec.compatibility_date
+        }
         if (spec.compatibility_flags) {
           metadata.compatibility_flags = spec.compatibility_flags
         }
