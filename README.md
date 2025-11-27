@@ -15,12 +15,12 @@ Guber mimics the Kubernetes API server's CRD functionality, allowing you to:
 1. Install dependencies and start development server:
 ```bash
 bun install
-bun run dev
+bun dev
 ```
 
 2. Initialize the database:
 ```bash
-bun run db:init
+bun db:init
 ```
 
 3. Set up kubectl to use the local Guber instance:
