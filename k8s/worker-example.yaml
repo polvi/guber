@@ -5,11 +5,13 @@ metadata:
 spec:
   name: example-worker
   script: |
-    export default {
-      async fetch(request, env, ctx) {
-        return new Response('Hello from Cloudflare Worker!', {
-          headers: { 'Content-Type': 'text/plain' }
-        });
-      }
-    };
+    addEventListener('fetch', event => {
+      event.respondWith(handleRequest(event.request))
+    })
+
+    async function handleRequest(request) {
+      return new Response('Hello from Cloudflare Worker!', {
+        headers: { 'Content-Type': 'text/plain' }
+      })
+    }
   compatibility_date: "2023-05-18"
