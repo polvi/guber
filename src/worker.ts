@@ -1092,7 +1092,12 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
     let script: string
     
     if (spec.scriptUrl) {
-      const scriptResponse = await fetch(spec.scriptUrl)
+      const scriptResponse = await fetch(spec.scriptUrl, {
+        redirect: 'follow',
+        headers: {
+          'User-Agent': 'Guber-Worker-Provisioner/1.0'
+        }
+      })
       if (!scriptResponse.ok) {
         throw new Error(`Failed to fetch script from ${spec.scriptUrl}: ${scriptResponse.status} ${scriptResponse.statusText}`)
       }
@@ -1112,7 +1117,12 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
     if (spec.scriptUrl) {
       try {
         const sourceMapUrl = spec.scriptUrl + '.map'
-        const sourceMapResponse = await fetch(sourceMapUrl)
+        const sourceMapResponse = await fetch(sourceMapUrl, {
+          redirect: 'follow',
+          headers: {
+            'User-Agent': 'Guber-Worker-Provisioner/1.0'
+          }
+        })
         if (sourceMapResponse.ok) {
           sourceMap = await sourceMapResponse.text()
           console.log(`Found source map at ${sourceMapUrl}`)
@@ -1445,7 +1455,12 @@ async function reconcileWorkers(env: Env) {
         // Get the worker script content
         let script: string
         if (spec.scriptUrl) {
-          const scriptResponse = await fetch(spec.scriptUrl)
+          const scriptResponse = await fetch(spec.scriptUrl, {
+            redirect: 'follow',
+            headers: {
+              'User-Agent': 'Guber-Worker-Provisioner/1.0'
+            }
+          })
           if (!scriptResponse.ok) {
             throw new Error(`Failed to fetch script from ${spec.scriptUrl}: ${scriptResponse.status} ${scriptResponse.statusText}`)
           }
@@ -1465,7 +1480,12 @@ async function reconcileWorkers(env: Env) {
         if (spec.scriptUrl) {
           try {
             const sourceMapUrl = spec.scriptUrl + '.map'
-            const sourceMapResponse = await fetch(sourceMapUrl)
+            const sourceMapResponse = await fetch(sourceMapUrl, {
+              redirect: 'follow',
+              headers: {
+                'User-Agent': 'Guber-Worker-Provisioner/1.0'
+              }
+            })
             if (sourceMapResponse.ok) {
               sourceMap = await sourceMapResponse.text()
               console.log(`Found source map at ${sourceMapUrl}`)
