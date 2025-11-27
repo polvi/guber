@@ -1,0 +1,4 @@
+.aider*
+.wrangler
+node_modules
+*.swp

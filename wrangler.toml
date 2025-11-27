@@ -1,0 +1,8 @@
+name = "guber-v0"
+main = "src/worker.ts"
+compatibility_date = "2023-11-21"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "guber-db"
+database_id = "b21bb1bc-6d87-43b8-9c36-c31cbad47dbb"

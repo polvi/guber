@@ -1,0 +1,22 @@
+{
+  "name": "guber-v0",
+  "version": "0.1.0",
+  "description": "CRD-based API fabric running on Cloudflare Workers",
+  "main": "src/worker.ts",
+  "scripts": {
+    "dev": "bun run wrangler dev",
+    "deploy": "bun run wrangler deploy",
+    "db:init": "bun run wrangler d1 execute guber-db --file=./schema.sql",
+    "build": "bun run wrangler deploy --dry-run"
+  },
+  "dependencies": {
+    "hono": "^4.10.7",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20251126.0",
+    "@types/uuid": "^11.0.0",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.51.0"
+  }
+}
