@@ -954,7 +954,7 @@ async function reconcileQueues(env: Env) {
     const orphanedQueues = []
     for (const [queueName, cloudflareQueue] of cloudflareQueueMap) {
       // Only consider queues that match our naming pattern
-      if (queueName.includes('-') && (queueName.includes('-queues-cf-guber-proc-io') || queueName.includes('-queue-cf-guber-proc-io'))) {
+      if (queueName.includes('-') && (queueName.includes('-qs-cf-guber-proc-io') || queueName.includes('-q-cf-guber-proc-io'))) {
         if (!apiQueueMap.has(queueName)) {
           orphanedQueues.push(cloudflareQueue)
         }

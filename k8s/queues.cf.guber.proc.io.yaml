@@ -1,16 +1,16 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: queues.cf.guber.proc.io
+  name: qs.cf.guber.proc.io
 spec:
   group: cf.guber.proc.io
   scope: Cluster
   names:
-    plural: queues
-    singular: queue
+    plural: qs
+    singular: q
     kind: Queue
     shortNames:
-      - queue
+      - q
   versions:
     - name: v1
       served: true

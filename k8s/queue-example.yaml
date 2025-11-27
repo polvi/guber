@@ -1,9 +1,9 @@
 apiVersion: cf.guber.proc.io/v1
 kind: Queue
 metadata:
-  name: example-queue
+  name: example-q
 spec:
-  name: example-queue
+  name: example-q
   settings:
     delivery_delay: 0
     message_retries: 3
