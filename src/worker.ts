@@ -631,11 +631,15 @@ export default {
   }
 }
 
-async function provisionD1Database(env: Env, resourceName: string, group: string, kind: string, plural: string, namespace: string | null, spec: any) {
+function buildFullDatabaseName(resourceName: string, group: string, plural: string, namespace: string | null): string {
   // Construct full database name: name.namespace.resource-type
   const namespaceStr = namespace || "cluster"
   const resourceType = `${plural}.${group}`
-  const fullDatabaseName = `${resourceName}.${namespaceStr}.${resourceType}`
+  return `${resourceName}.${namespaceStr}.${resourceType}`
+}
+
+async function provisionD1Database(env: Env, resourceName: string, group: string, kind: string, plural: string, namespace: string | null, spec: any) {
+  const fullDatabaseName = buildFullDatabaseName(resourceName, group, plural, namespace)
   
   const requestBody: any = {
     name: fullDatabaseName
@@ -736,10 +740,7 @@ async function provisionD1Database(env: Env, resourceName: string, group: string
 }
 
 async function deleteD1Database(env: Env, resourceName: string, group: string, kind: string, plural: string, namespace: string | null, spec: any, status?: any) {
-  // Construct full database name: name.namespace.resource-type
-  const namespaceStr = namespace || "cluster"
-  const resourceType = `${plural}.${group}`
-  const fullDatabaseName = `${resourceName}.${namespaceStr}.${resourceType}`
+  const fullDatabaseName = buildFullDatabaseName(resourceName, group, plural, namespace)
   // Get database ID from the passed status or spec
   const databaseId = status?.database_id
   
@@ -797,9 +798,7 @@ async function reconcileD1Databases(env: Env) {
     
     // Build API database map with full names
     for (const resource of (apiResources || [])) {
-      const namespaceStr = resource.namespace || "cluster"
-      const resourceType = `${resource.plural}.${resource.group_name}`
-      const fullDatabaseName = `${resource.name}.${namespaceStr}.${resourceType}`
+      const fullDatabaseName = buildFullDatabaseName(resource.name, resource.group_name, resource.plural, resource.namespace)
       apiDatabaseMap.set(fullDatabaseName, resource)
     }
     
