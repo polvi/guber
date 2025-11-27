@@ -1128,9 +1128,18 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
     
     if (isModule) {
       // For module workers, use metadata with main_module
-      const metadata = {
+      const metadata: any = {
         main_module: "index.js"
       }
+      
+      // Add compatibility settings if specified
+      if (spec.compatibility_date) {
+        metadata.compatibility_date = spec.compatibility_date
+      }
+      if (spec.compatibility_flags) {
+        metadata.compatibility_flags = spec.compatibility_flags
+      }
+      
       formData.append('metadata', JSON.stringify(metadata))
       formData.append('index.js', new Blob([script], { type: 'text/javascript' }), 'index.js')
       
@@ -1140,9 +1149,18 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
       }
     } else {
       // For classic workers, use metadata with body_part
-      const metadata = {
+      const metadata: any = {
         body_part: "script"
       }
+      
+      // Add compatibility settings if specified
+      if (spec.compatibility_date) {
+        metadata.compatibility_date = spec.compatibility_date
+      }
+      if (spec.compatibility_flags) {
+        metadata.compatibility_flags = spec.compatibility_flags
+      }
+      
       formData.append('metadata', JSON.stringify(metadata))
       formData.append('script', new Blob([script], { type: 'text/javascript' }), 'script')
       
@@ -1453,9 +1471,18 @@ async function reconcileWorkers(env: Env) {
         
         if (isModule) {
           // For module workers, use metadata with main_module
-          const metadata = {
+          const metadata: any = {
             main_module: "index.js"
           }
+          
+          // Add compatibility settings if specified
+          if (spec.compatibility_date) {
+            metadata.compatibility_date = spec.compatibility_date
+          }
+          if (spec.compatibility_flags) {
+            metadata.compatibility_flags = spec.compatibility_flags
+          }
+          
           formData.append('metadata', JSON.stringify(metadata))
           formData.append('index.js', new Blob([script], { type: 'text/javascript' }), 'index.js')
           
@@ -1465,9 +1492,18 @@ async function reconcileWorkers(env: Env) {
           }
         } else {
           // For classic workers, use metadata with body_part
-          const metadata = {
+          const metadata: any = {
             body_part: "script"
           }
+          
+          // Add compatibility settings if specified
+          if (spec.compatibility_date) {
+            metadata.compatibility_date = spec.compatibility_date
+          }
+          if (spec.compatibility_flags) {
+            metadata.compatibility_flags = spec.compatibility_flags
+          }
+          
           formData.append('metadata', JSON.stringify(metadata))
           formData.append('script', new Blob([script], { type: 'text/javascript' }), 'script')
           
