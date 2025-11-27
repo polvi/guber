@@ -74,6 +74,22 @@ spec:
                   items:
                     type: string
                   description: Compatibility flags for the Worker runtime.
+                dependencies:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      kind:
+                        type: string
+                        description: The kind of resource this worker depends on (D1, Queue, etc.).
+                      name:
+                        type: string
+                        description: The name of the resource this worker depends on.
+                      group:
+                        type: string
+                        description: The API group of the resource (defaults to cf.guber.proc.io).
+                        default: "cf.guber.proc.io"
+                  description: Resources that must be ready before this worker can be provisioned.
             status:
               type: object
               properties:

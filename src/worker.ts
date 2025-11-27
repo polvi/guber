@@ -1088,6 +1088,64 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
   const customDomain = `${resourceName}.${env.GUBER_NAME}.${env.GUBER_DOMAIN}`
   
   try {
+    // Check dependencies first
+    if (spec.dependencies && spec.dependencies.length > 0) {
+      console.log(`Checking dependencies for worker ${fullWorkerName}:`, spec.dependencies)
+      
+      for (const dependency of spec.dependencies) {
+        const depGroup = dependency.group || "cf.guber.proc.io"
+        const depKind = dependency.kind
+        const depName = dependency.name
+        
+        console.log(`Checking dependency: ${depKind}/${depName} in group ${depGroup}`)
+        
+        const depResource = await env.DB.prepare(
+          "SELECT * FROM resources WHERE name=? AND kind=? AND group_name=? AND namespace IS NULL"
+        ).bind(depName, depKind, depGroup).first()
+        
+        if (!depResource) {
+          console.log(`Dependency ${depKind}/${depName} not found, deferring worker provisioning`)
+          await env.DB.prepare(
+            "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
+          ).bind(JSON.stringify({
+            state: "Pending",
+            message: `Waiting for dependency: ${depKind}/${depName}`,
+            pendingDependencies: [dependency]
+          }), resourceName).run()
+          return
+        }
+        
+        if (!depResource.status) {
+          console.log(`Dependency ${depKind}/${depName} has no status, deferring worker provisioning`)
+          await env.DB.prepare(
+            "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
+          ).bind(JSON.stringify({
+            state: "Pending",
+            message: `Waiting for dependency to be provisioned: ${depKind}/${depName}`,
+            pendingDependencies: [dependency]
+          }), resourceName).run()
+          return
+        }
+        
+        const depStatus = JSON.parse(depResource.status)
+        if (depStatus.state !== "Ready") {
+          console.log(`Dependency ${depKind}/${depName} is not ready (state: ${depStatus.state}), deferring worker provisioning`)
+          await env.DB.prepare(
+            "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
+          ).bind(JSON.stringify({
+            state: "Pending",
+            message: `Waiting for dependency to be ready: ${depKind}/${depName} (current state: ${depStatus.state})`,
+            pendingDependencies: [dependency]
+          }), resourceName).run()
+          return
+        }
+        
+        console.log(`✅ Dependency ${depKind}/${depName} is ready`)
+      }
+      
+      console.log(`All dependencies satisfied for worker ${fullWorkerName}, proceeding with provisioning`)
+    }
+    
     // Get the worker script content
     let script: string
     

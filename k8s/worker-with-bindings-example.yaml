@@ -43,6 +43,11 @@ spec:
       }
     };
   compatibility_date: "2025-11-27"
+  dependencies:
+    - kind: D1
+      name: example-db
+    - kind: Queue
+      name: example-queue
   bindings:
     d1_databases:
       - binding: MY_DB
