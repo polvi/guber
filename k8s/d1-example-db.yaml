@@ -4,6 +4,3 @@ metadata:
   name: example-db
 spec:
   name: example-db
-  location: "western-us"
-  plan: "standard"
-

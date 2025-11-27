@@ -7,8 +7,11 @@ binding = "DB"
 database_name = "guber-db"
 database_id = "b21bb1bc-6d87-43b8-9c36-c31cbad47dbb"
 
-[[queues]]
+[[queues.producers]]
+queue = "d1-provisioning-queue"
 binding = "D1_QUEUE"
+
+[[queues.consumers]]
 queue = "d1-provisioning-queue"
 
 [vars]
