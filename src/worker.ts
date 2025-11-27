@@ -1104,11 +1104,14 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
     }
     
     // Step 1: Deploy the worker script
+    // Determine if this is a module based on file extension or content
+    const isModule = spec.scriptUrl?.endsWith('.js') || spec.script?.includes('export default')
+    
     const deployResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullWorkerName}`, {
       method: "PUT",
       headers: {
         "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
-        "Content-Type": "application/javascript"
+        "Content-Type": isModule ? "application/javascript+module" : "application/javascript"
       },
       body: script
     })
@@ -1382,11 +1385,14 @@ async function reconcileWorkers(env: Env) {
         }
         
         // Create worker script
+        // Determine if this is a module based on file extension or content
+        const isModule = spec.scriptUrl?.endsWith('.js') || spec.script?.includes('export default')
+        
         const createResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullName}`, {
           method: "PUT",
           headers: {
             "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
-            "Content-Type": "application/javascript"
+            "Content-Type": isModule ? "application/javascript+module" : "application/javascript"
           },
           body: script
         })
