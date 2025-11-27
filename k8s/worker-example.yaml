@@ -6,33 +6,3 @@ spec:
   name: example-worker
   scriptUrl: "https://github.com/polvi/first-worker/releases/download/v0.0.2/index.js"
   compatibility_date: "2025-11-27"
----
-# Example with inline script
-apiVersion: cf.guber.proc.io/v1
-kind: Worker
-metadata:
-  name: inline-worker
-spec:
-  name: inline-worker
-  script: |
-    addEventListener('fetch', event => {
-      event.respondWith(handleRequest(event.request))
-    })
-
-    async function handleRequest(request) {
-      return new Response('Hello from inline Cloudflare Worker!', {
-        headers: { 'Content-Type': 'text/plain' }
-      })
-    }
-  compatibility_date: "2025-11-27"
----
-# Example with ES module from GitHub release
-apiVersion: cf.guber.proc.io/v1
-kind: Worker
-metadata:
-  name: module-worker
-spec:
-  name: module-worker
-  scriptUrl: "https://github.com/your-org/your-workers/releases/download/v1.0.0/module-worker.js"
-  compatibility_date: "2025-11-27"
-  compatibility_flags: ["nodejs_compat"]
