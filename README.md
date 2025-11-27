@@ -10,6 +10,48 @@ Guber mimics the Kubernetes API server's CRD functionality, allowing you to:
 - Use standard kubectl commands to interact with your custom APIs
 - Run entirely on Cloudflare's edge network with D1 database storage
 
+## Configuration
+
+Guber requires several environment variables to be configured:
+
+### Required Environment Variables
+
+- `CLOUDFLARE_ACCOUNT_ID` - Your Cloudflare account ID
+- `CLOUDFLARE_API_TOKEN` - Cloudflare API token with Workers and D1 permissions
+- `GUBER_NAME` - Instance name (e.g., "dev", "staging", "prod")
+- `GUBER_DOMAIN` - Your domain name (e.g., "proc.io")
+
+### Domain Setup
+
+For Cloudflare Workers to work with custom domains, you need to:
+
+1. **Add your domain to Cloudflare** - Ensure your domain is managed by Cloudflare
+2. **Create a wildcard DNS record** in your Cloudflare DNS settings:
+   - **Type**: CNAME
+   - **Name**: `*.{GUBER_NAME}.{GUBER_DOMAIN}` (e.g., `*.dev.proc.io`)
+   - **Target**: Your main domain (e.g., `proc.io`)
+   - **Proxy Status**: Proxied (orange cloud enabled)
+
+This allows workers to be deployed at URLs like `example-worker.dev.proc.io`.
+
+### Setting Environment Variables
+
+Copy `.env.example` to `.env` and fill in your values:
+
+```bash
+cp .env.example .env
+# Edit .env with your values
+```
+
+For production deployment, set these as Wrangler secrets:
+
+```bash
+wrangler secret put CLOUDFLARE_ACCOUNT_ID
+wrangler secret put CLOUDFLARE_API_TOKEN
+wrangler secret put GUBER_NAME
+wrangler secret put GUBER_DOMAIN
+```
+
 ## Quick Start
 
 Install dependencies and start development server:
@@ -31,6 +73,31 @@ kubectl apply -f k8s/boardpost.yaml --validate=false
 ```
 
 Note: The kubeconfig is pre-configured to work with the development server running on `http://localhost:8787`.
+
+### Working with Cloudflare Resources
+
+Guber includes built-in support for provisioning Cloudflare resources:
+
+```bash
+# Apply Cloudflare resource CRDs
+kubectl apply -f k8s/d1s.cf.guber.proc.io.yaml --validate=false
+kubectl apply -f k8s/qs.cf.guber.proc.io.yaml --validate=false
+kubectl apply -f k8s/workers.cf.guber.proc.io.yaml --validate=false
+
+# Create Cloudflare resources
+kubectl apply -f k8s/d1-example-db.yaml --validate=false
+kubectl apply -f k8s/q-example.yaml --validate=false
+kubectl apply -f k8s/worker-example.yaml --validate=false
+
+# Check resource status
+kubectl get d1s
+kubectl get queues
+kubectl get workers
+```
+
+Workers will be automatically deployed to `{worker-name}.{GUBER_NAME}.{GUBER_DOMAIN}`.
+
+### Basic kubectl Operations
 
 Once running and with KUBECONFIG set, you can use kubectl to interact with your custom resources:
 
