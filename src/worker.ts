@@ -8,6 +8,7 @@ type Env = {
     CLOUDFLARE_API_TOKEN: string
     CLOUDFLARE_ACCOUNT_ID: string
     GUBER_NAME: string
+    GUBER_DOMAIN: string
   } 
 }
 
@@ -1084,7 +1085,7 @@ async function reconcileQueues(env: Env) {
 
 async function provisionWorker(env: Env, resourceName: string, group: string, kind: string, plural: string, namespace: string | null, spec: any) {
   const fullWorkerName = buildFullDatabaseName(resourceName, group, plural, namespace, env.GUBER_NAME)
-  const customDomain = `${resourceName}.${env.GUBER_NAME}.proc.io`
+  const customDomain = `${resourceName}.${env.GUBER_NAME}.${env.GUBER_DOMAIN}`
   
   try {
     // Step 1: Deploy the worker script
@@ -1171,7 +1172,7 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
 
 async function deleteWorker(env: Env, resourceName: string, group: string, kind: string, plural: string, namespace: string | null, spec: any, status?: any) {
   const fullWorkerName = buildFullDatabaseName(resourceName, group, plural, namespace, env.GUBER_NAME)
-  const customDomain = `${resourceName}.${env.GUBER_NAME}.proc.io`
+  const customDomain = `${resourceName}.${env.GUBER_NAME}.${env.GUBER_DOMAIN}`
   
   try {
     // Step 1: Delete custom domain if it exists
@@ -1282,7 +1283,7 @@ async function reconcileWorkers(env: Env) {
     // Find orphaned domains
     const orphanedDomains = []
     for (const [hostname, domain] of cloudflareDomainMap) {
-      if (hostname.endsWith(`.${env.GUBER_NAME}.proc.io`)) {
+      if (hostname.endsWith(`.${env.GUBER_NAME}.${env.GUBER_DOMAIN}`)) {
         const workerName = hostname.split('.')[0]
         const found = Array.from(apiWorkerMap.values()).some(resource => resource.name === workerName)
         if (!found) {
@@ -1349,7 +1350,7 @@ async function reconcileWorkers(env: Env) {
         console.log(`Creating missing worker: ${fullName}`)
         
         const spec = JSON.parse(resource.spec)
-        const customDomain = `${resource.name}.${env.GUBER_NAME}.proc.io`
+        const customDomain = `${resource.name}.${env.GUBER_NAME}.${env.GUBER_DOMAIN}`
         const script = spec.script || "addEventListener('fetch', event => { event.respondWith(new Response('Hello World')); })"
         
         // Create worker script
