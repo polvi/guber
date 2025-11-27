@@ -1188,27 +1188,6 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
     
     console.log(`Worker script ${fullWorkerName} deployed successfully`)
     
-    // Step 1.5: Set compatibility date if specified
-    if (spec.compatibility_date) {
-      const settingsResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullWorkerName}/settings`, {
-        method: "PATCH",
-        headers: {
-          "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          compatibility_date: spec.compatibility_date
-        })
-      })
-      
-      if (!settingsResponse.ok) {
-        const settingsError = await settingsResponse.json()
-        console.error(`Failed to set compatibility date for ${fullWorkerName}:`, JSON.stringify(settingsError))
-      } else {
-        console.log(`Compatibility date ${spec.compatibility_date} set for worker ${fullWorkerName}`)
-      }
-    }
-    
     // Step 2: Create custom domain
     const domainResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/domains`, {
       method: "PUT",
@@ -1542,27 +1521,6 @@ async function reconcileWorkers(env: Env) {
         
         if (createResponse.ok) {
           console.log(`Successfully created missing worker script: ${fullName}`)
-          
-          // Set compatibility date if specified
-          if (spec.compatibility_date) {
-            const settingsResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullName}/settings`, {
-              method: "PATCH",
-              headers: {
-                "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify({
-                compatibility_date: spec.compatibility_date
-              })
-            })
-            
-            if (!settingsResponse.ok) {
-              const settingsError = await settingsResponse.json()
-              console.error(`Failed to set compatibility date for ${fullName}:`, JSON.stringify(settingsError))
-            } else {
-              console.log(`Compatibility date ${spec.compatibility_date} set for worker ${fullName}`)
-            }
-          }
           
           // Create custom domain
           const domainResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/domains`, {
