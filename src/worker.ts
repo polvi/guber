@@ -613,16 +613,22 @@ export default {
 }
 
 async function provisionD1Database(env: Env, resourceName: string, spec: any) {
+  const requestBody: any = {
+    name: spec.name
+  }
+  
+  // Only add primary_location_hint if location is specified
+  if (spec.location) {
+    requestBody.primary_location_hint = spec.location
+  }
+  
   const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/d1/database`, {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({
-      name: spec.name,
-      primary_location_hint: spec.location || "weur"
-    })
+    body: JSON.stringify(requestBody)
   })
   
   if (response.ok) {
