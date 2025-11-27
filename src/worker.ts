@@ -1702,6 +1702,83 @@ async function reconcileWorkers(env: Env) {
       }
     }
     
+    // Health check existing workers
+    console.log("Starting worker health checks...")
+    for (const [fullName, apiResource] of apiWorkerMap) {
+      if (cloudflareWorkerMap.has(fullName)) {
+        try {
+          const status = apiResource.status ? JSON.parse(apiResource.status) : {}
+          const customDomain = `${apiResource.name}.${env.GUBER_NAME}.${env.GUBER_DOMAIN}`
+          
+          // Test the worker endpoint
+          const healthResponse = await fetch(`https://${customDomain}`, {
+            method: 'GET',
+            headers: {
+              'User-Agent': 'Guber-Health-Check/1.0'
+            }
+          })
+          
+          const isHealthy = healthResponse.ok
+          const currentState = status.state
+          
+          // Update status if health state changed
+          if ((isHealthy && currentState === "Failed") || (!isHealthy && currentState === "Ready")) {
+            const newStatus = {
+              ...status,
+              state: isHealthy ? "Ready" : "Failed",
+              lastHealthCheck: new Date().toISOString(),
+              healthCheckStatus: healthResponse.status,
+              healthCheckError: isHealthy ? undefined : `HTTP ${healthResponse.status}: ${healthResponse.statusText}`
+            }
+            
+            if (!isHealthy) {
+              try {
+                const errorText = await healthResponse.text()
+                if (errorText) {
+                  newStatus.healthCheckError = `HTTP ${healthResponse.status}: ${errorText.substring(0, 500)}`
+                }
+              } catch (e) {
+                // Ignore errors reading response body
+              }
+            }
+            
+            const updateQuery = apiResource.namespace 
+              ? "UPDATE resources SET status=? WHERE name=? AND namespace=?"
+              : "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
+            
+            const updateParams = apiResource.namespace
+              ? [JSON.stringify(newStatus), apiResource.name, apiResource.namespace]
+              : [JSON.stringify(newStatus), apiResource.name]
+            
+            await env.DB.prepare(updateQuery).bind(...updateParams).run()
+            
+            console.log(`Updated worker ${fullName} health status: ${currentState} -> ${newStatus.state}`)
+          }
+        } catch (error) {
+          console.error(`Error health checking worker ${fullName}:`, error)
+          
+          // Update status to indicate health check failed
+          const status = apiResource.status ? JSON.parse(apiResource.status) : {}
+          const newStatus = {
+            ...status,
+            state: "Failed",
+            lastHealthCheck: new Date().toISOString(),
+            healthCheckError: `Health check failed: ${error.message || String(error)}`
+          }
+          
+          const updateQuery = apiResource.namespace 
+            ? "UPDATE resources SET status=? WHERE name=? AND namespace=?"
+            : "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
+          
+          const updateParams = apiResource.namespace
+            ? [JSON.stringify(newStatus), apiResource.name, apiResource.namespace]
+            : [JSON.stringify(newStatus), apiResource.name]
+          
+          await env.DB.prepare(updateQuery).bind(...updateParams).run()
+        }
+      }
+    }
+    
     console.log("Worker reconciliation completed")
   } catch (error) {
     console.error("Error during Worker reconciliation:", error)
