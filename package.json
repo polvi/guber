@@ -7,7 +7,7 @@
     "dev": "bun run wrangler dev",
     "deploy": "bun run wrangler deploy",
     "db:init": "bun run wrangler d1 execute guber-db --file=./schema.sql",
-    "db:reset": "bun run wrangler d1 delete guber-db --force && bun run wrangler d1 create guber-db && bun run wrangler d1 migrations apply guber-db",
+    "db:reset": "bun run wrangler d1 delete guber-db --local --skip-confirmation && bun run wrangler d1 create guber-db --local --skip-confirmation && bun run wrangler d1 migrations apply guber-db --local --skip-confirmation",
     "build": "bun run wrangler deploy --dry-run"
   },
   "dependencies": {
