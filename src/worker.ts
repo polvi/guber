@@ -363,6 +363,10 @@ app.post("/apis/:group/:version/:plural", async c => {
     await c.env.D1_QUEUE.send({
       action: "create",
       resourceName: name,
+      group: group,
+      kind: crd.kind,
+      plural: plural,
+      namespace: null,
       spec: body.spec
     })
   }
@@ -431,6 +435,10 @@ app.delete("/apis/:group/:version/:plural/:name", async c => {
     await c.env.D1_QUEUE.send({
       action: "delete",
       resourceName: name,
+      group: group,
+      kind: result.kind,
+      plural: plural,
+      namespace: null,
       spec: spec,
       status: status
     })
@@ -597,12 +605,12 @@ export default {
   async queue(batch: MessageBatch<any>, env: Env): Promise<void> {
     for (const message of batch.messages) {
       try {
-        const { action, resourceName, spec, status } = message.body
+        const { action, resourceName, group, kind, plural, namespace, spec, status } = message.body
         
         if (action === "create") {
-          await provisionD1Database(env, resourceName, spec)
+          await provisionD1Database(env, resourceName, group, kind, plural, namespace, spec)
         } else if (action === "delete") {
-          await deleteD1Database(env, resourceName, spec, status)
+          await deleteD1Database(env, resourceName, group, kind, plural, namespace, spec, status)
         }
         
         message.ack()
@@ -614,9 +622,14 @@ export default {
   }
 }
 
-async function provisionD1Database(env: Env, resourceName: string, spec: any) {
+async function provisionD1Database(env: Env, resourceName: string, group: string, kind: string, plural: string, namespace: string | null, spec: any) {
+  // Construct full database name: name.namespace.resource-type
+  const namespaceStr = namespace || "cluster"
+  const resourceType = `${plural}.${group}`
+  const fullDatabaseName = `${resourceName}.${namespaceStr}.${resourceType}`
+  
   const requestBody: any = {
-    name: spec.name
+    name: fullDatabaseName
   }
   
   // Only add primary_location_hint if location is specified
@@ -647,13 +660,13 @@ async function provisionD1Database(env: Env, resourceName: string, spec: any) {
       endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/d1/database/${databaseId}`
     }), resourceName).run()
     
-    console.log(`D1 database ${spec.name} provisioned successfully with ID: ${databaseId}`)
+    console.log(`D1 database ${fullDatabaseName} provisioned successfully with ID: ${databaseId}`)
   } else {
     const errorResponse = await response.json()
     
     // Check if the error is because the database already exists
     if (errorResponse.errors && errorResponse.errors.some((err: any) => err.code === 7502)) {
-      console.log(`Database ${spec.name} already exists, attempting to find and match existing database`)
+      console.log(`Database ${fullDatabaseName} already exists, attempting to find and match existing database`)
       
       // List existing databases to find the one with matching name
       const listResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/d1/database`, {
@@ -665,7 +678,7 @@ async function provisionD1Database(env: Env, resourceName: string, spec: any) {
       
       if (listResponse.ok) {
         const listResult = await listResponse.json()
-        const existingDb = listResult.result.find((db: any) => db.name === spec.name)
+        const existingDb = listResult.result.find((db: any) => db.name === fullDatabaseName)
         
         if (existingDb) {
           const databaseId = existingDb.uuid
@@ -680,9 +693,9 @@ async function provisionD1Database(env: Env, resourceName: string, spec: any) {
             endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/d1/database/${databaseId}`
           }), resourceName).run()
           
-          console.log(`Matched existing D1 database ${spec.name} with ID: ${databaseId}`)
+          console.log(`Matched existing D1 database ${fullDatabaseName} with ID: ${databaseId}`)
         } else {
-          console.error(`Could not find existing database ${spec.name} in account`)
+          console.error(`Could not find existing database ${fullDatabaseName} in account`)
           await env.DB.prepare(
             "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
           ).bind(JSON.stringify({
@@ -691,7 +704,7 @@ async function provisionD1Database(env: Env, resourceName: string, spec: any) {
           }), resourceName).run()
         }
       } else {
-        console.error(`Failed to list databases to find existing ${spec.name}`)
+        console.error(`Failed to list databases to find existing ${fullDatabaseName}`)
         await env.DB.prepare(
           "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
         ).bind(JSON.stringify({
@@ -700,7 +713,7 @@ async function provisionD1Database(env: Env, resourceName: string, spec: any) {
         }), resourceName).run()
       }
     } else {
-      console.error(`Failed to provision D1 database ${spec.name}:`, JSON.stringify(errorResponse))
+      console.error(`Failed to provision D1 database ${fullDatabaseName}:`, JSON.stringify(errorResponse))
       
       // Update status to failed
       await env.DB.prepare(
@@ -713,7 +726,11 @@ async function provisionD1Database(env: Env, resourceName: string, spec: any) {
   }
 }
 
-async function deleteD1Database(env: Env, resourceName: string, spec: any, status?: any) {
+async function deleteD1Database(env: Env, resourceName: string, group: string, kind: string, plural: string, namespace: string | null, spec: any, status?: any) {
+  // Construct full database name: name.namespace.resource-type
+  const namespaceStr = namespace || "cluster"
+  const resourceType = `${plural}.${group}`
+  const fullDatabaseName = `${resourceName}.${namespaceStr}.${resourceType}`
   // Get database ID from the passed status or spec
   const databaseId = status?.database_id
   
@@ -727,15 +744,15 @@ async function deleteD1Database(env: Env, resourceName: string, spec: any, statu
       })
       
       if (response.ok) {
-        console.log(`D1 database ${spec.name} (ID: ${databaseId}) deleted successfully`)
+        console.log(`D1 database ${fullDatabaseName} (ID: ${databaseId}) deleted successfully`)
       } else {
         const error = await response.text()
-        console.error(`Failed to delete D1 database ${spec.name} (ID: ${databaseId}):`, error)
+        console.error(`Failed to delete D1 database ${fullDatabaseName} (ID: ${databaseId}):`, error)
       }
     } catch (error) {
-      console.error(`Error deleting D1 database ${spec.name}:`, error)
+      console.error(`Error deleting D1 database ${fullDatabaseName}:`, error)
     }
   } else {
-    console.log(`No database ID found for ${spec.name}, skipping Cloudflare deletion`)
+    console.log(`No database ID found for ${fullDatabaseName}, skipping Cloudflare deletion`)
   }
 }
