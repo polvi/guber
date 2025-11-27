@@ -1191,7 +1191,7 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
         for (const queueBinding of spec.bindings.queues) {
           console.log(`Looking up Queue binding: ${queueBinding.queue_name} -> ${queueBinding.binding}`)
           
-          // Look up the Queue resource to get its queue_id
+          // Look up the Queue resource to get its queue name
           const queueResource = await env.DB.prepare(
             "SELECT * FROM resources WHERE name=? AND kind='Queue' AND group_name='cf.guber.proc.io' AND namespace IS NULL"
           ).bind(queueBinding.queue_name).first()
@@ -1202,10 +1202,12 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
             const status = JSON.parse(queueResource.status)
             console.log(`Queue resource status:`, status)
             if (status.queue_id) {
+              // Build the full queue name that was created in Cloudflare
+              const fullQueueName = buildFullDatabaseName(queueResource.name, queueResource.group_name, queueResource.plural, queueResource.namespace, env.GUBER_NAME)
               const binding = {
                 type: "queue",
                 name: queueBinding.binding,
-                queue_name: queueBinding.queue_name
+                queue_name: fullQueueName
               }
               bindings.push(binding)
               console.log(`✅ Added Queue binding:`, binding)
