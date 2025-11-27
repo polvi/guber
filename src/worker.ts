@@ -424,7 +424,12 @@ app.delete("/apis/:group/:version/:plural/:name", async c => {
   ).bind(group, version, plural, name).first()
   if (!result) return c.json({ message: "Not Found" }, 404)
 
-  // If this is a D1 resource, queue it for deletion
+  // Delete the resource
+  await c.env.DB.prepare(
+    "DELETE FROM resources WHERE group_name=? AND version=? AND plural=? AND name=? AND namespace IS NULL"
+  ).bind(group, version, plural, name).run()
+
+  // If this is a D1 resource, queue it for deletion (after getting the status)
   if (group === "cloudflare.guber.io" && result.kind === "D1" && c.env.D1_QUEUE) {
     const spec = JSON.parse(result.spec)
     const status = result.status ? JSON.parse(result.status) : {}
@@ -435,11 +440,6 @@ app.delete("/apis/:group/:version/:plural/:name", async c => {
       status: status
     })
   }
-
-  // Delete the resource
-  await c.env.DB.prepare(
-    "DELETE FROM resources WHERE group_name=? AND version=? AND plural=? AND name=? AND namespace IS NULL"
-  ).bind(group, version, plural, name).run()
   
   // Return the deleted object
   return c.json({
