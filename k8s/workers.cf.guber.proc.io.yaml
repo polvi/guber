@@ -36,6 +36,31 @@ spec:
                 bindings:
                   type: object
                   description: Environment bindings for the Worker (KV, D1, etc.).
+                  properties:
+                    d1_databases:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          binding:
+                            type: string
+                            description: The binding name to use in the Worker code.
+                          database_name:
+                            type: string
+                            description: The name of the D1 resource to bind.
+                      description: D1 database bindings.
+                    queues:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          binding:
+                            type: string
+                            description: The binding name to use in the Worker code.
+                          queue_name:
+                            type: string
+                            description: The name of the Queue resource to bind.
+                      description: Queue bindings.
                 routes:
                   type: array
                   items:

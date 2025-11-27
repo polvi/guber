@@ -1147,6 +1147,57 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
       metadata.compatibility_flags = spec.compatibility_flags
     }
     
+    // Add bindings if specified
+    if (spec.bindings) {
+      const bindings: any[] = []
+      
+      // Handle D1 database bindings
+      if (spec.bindings.d1_databases) {
+        for (const d1Binding of spec.bindings.d1_databases) {
+          // Look up the D1 resource to get its database_id
+          const d1Resource = await env.DB.prepare(
+            "SELECT * FROM resources WHERE name=? AND kind='D1' AND group_name='cf.guber.proc.io'"
+          ).bind(d1Binding.database_name).first()
+          
+          if (d1Resource && d1Resource.status) {
+            const status = JSON.parse(d1Resource.status)
+            if (status.database_id) {
+              bindings.push({
+                type: "d1",
+                name: d1Binding.binding,
+                database_id: status.database_id
+              })
+            }
+          }
+        }
+      }
+      
+      // Handle Queue bindings
+      if (spec.bindings.queues) {
+        for (const queueBinding of spec.bindings.queues) {
+          // Look up the Queue resource to get its queue_id
+          const queueResource = await env.DB.prepare(
+            "SELECT * FROM resources WHERE name=? AND kind='Queue' AND group_name='cf.guber.proc.io'"
+          ).bind(queueBinding.queue_name).first()
+          
+          if (queueResource && queueResource.status) {
+            const status = JSON.parse(queueResource.status)
+            if (status.queue_id) {
+              bindings.push({
+                type: "queue",
+                name: queueBinding.binding,
+                queue_name: status.queue_id
+              })
+            }
+          }
+        }
+      }
+      
+      if (bindings.length > 0) {
+        metadata.bindings = bindings
+      }
+    }
+    
     formData.append('metadata', JSON.stringify(metadata))
     formData.append('index.js', new Blob([script], { type: 'application/javascript+module' }), 'index.js')
     
@@ -1491,6 +1542,57 @@ async function reconcileWorkers(env: Env) {
         }
         if (spec.compatibility_flags) {
           metadata.compatibility_flags = spec.compatibility_flags
+        }
+        
+        // Add bindings if specified
+        if (spec.bindings) {
+          const bindings: any[] = []
+          
+          // Handle D1 database bindings
+          if (spec.bindings.d1_databases) {
+            for (const d1Binding of spec.bindings.d1_databases) {
+              // Look up the D1 resource to get its database_id
+              const d1Resource = await env.DB.prepare(
+                "SELECT * FROM resources WHERE name=? AND kind='D1' AND group_name='cf.guber.proc.io'"
+              ).bind(d1Binding.database_name).first()
+              
+              if (d1Resource && d1Resource.status) {
+                const status = JSON.parse(d1Resource.status)
+                if (status.database_id) {
+                  bindings.push({
+                    type: "d1",
+                    name: d1Binding.binding,
+                    database_id: status.database_id
+                  })
+                }
+              }
+            }
+          }
+          
+          // Handle Queue bindings
+          if (spec.bindings.queues) {
+            for (const queueBinding of spec.bindings.queues) {
+              // Look up the Queue resource to get its queue_id
+              const queueResource = await env.DB.prepare(
+                "SELECT * FROM resources WHERE name=? AND kind='Queue' AND group_name='cf.guber.proc.io'"
+              ).bind(queueBinding.queue_name).first()
+              
+              if (queueResource && queueResource.status) {
+                const status = JSON.parse(queueResource.status)
+                if (status.queue_id) {
+                  bindings.push({
+                    type: "queue",
+                    name: queueBinding.binding,
+                    queue_name: status.queue_id
+                  })
+                }
+              }
+            }
+          }
+          
+          if (bindings.length > 0) {
+            metadata.bindings = bindings
+          }
         }
         
         formData.append('metadata', JSON.stringify(metadata))

@@ -1,0 +1,28 @@
+apiVersion: cf.guber.proc.io/v1
+kind: Worker
+metadata:
+  name: example-worker-with-bindings
+spec:
+  name: example-worker-with-bindings
+  script: |
+    export default {
+      async fetch(request, env, ctx) {
+        // Use the bound D1 database
+        const result = await env.MY_DB.prepare("SELECT 1 as test").first();
+        
+        // Send a message to the bound queue
+        await env.MY_QUEUE.send({ message: "Hello from worker!" });
+        
+        return new Response(`Database test: ${result.test}, Queue message sent!`, {
+          headers: { 'Content-Type': 'text/plain' }
+        });
+      }
+    };
+  compatibility_date: "2025-11-27"
+  bindings:
+    d1_databases:
+      - binding: MY_DB
+        database_name: example-db
+    queues:
+      - binding: MY_QUEUE
+        queue_name: example-queue
