@@ -1084,44 +1084,64 @@ async function reconcileQueues(env: Env) {
 
 async function provisionWorker(env: Env, resourceName: string, group: string, kind: string, plural: string, namespace: string | null, spec: any) {
   const fullWorkerName = buildFullDatabaseName(resourceName, group, plural, namespace, env.GUBER_NAME)
+  const customDomain = `${resourceName}.${env.GUBER_NAME}.proc.io`
   
-  const requestBody: any = {
-    name: fullWorkerName
-  }
-  
-  // Add script content if provided
-  if (spec.script) {
-    requestBody.script = spec.script
-  }
-  
-  // Add compatibility settings
-  if (spec.compatibility_date) {
-    requestBody.compatibility_date = spec.compatibility_date
-  }
-  
-  if (spec.compatibility_flags) {
-    requestBody.compatibility_flags = spec.compatibility_flags
-  }
-  
-  // Add bindings if provided
-  if (spec.bindings) {
-    requestBody.bindings = spec.bindings
-  }
-  
-  const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullWorkerName}`, {
-    method: "PUT",
-    headers: {
-      "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
-      "Content-Type": "application/javascript"
-    },
-    body: spec.script || "export default { async fetch() { return new Response('Hello World'); } }"
-  })
-  
-  if (response.ok) {
-    const result = await response.json()
-    const subdomain = `${fullWorkerName}.${env.CLOUDFLARE_ACCOUNT_ID}.workers.dev`
+  try {
+    // Step 1: Deploy the worker script
+    const scriptResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullWorkerName}`, {
+      method: "PUT",
+      headers: {
+        "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
+        "Content-Type": "application/javascript"
+      },
+      body: spec.script || "addEventListener('fetch', event => { event.respondWith(new Response('Hello World')); })"
+    })
     
-    // Update the resource status in the database
+    if (!scriptResponse.ok) {
+      const errorResponse = await scriptResponse.json()
+      throw new Error(`Failed to deploy worker script: ${JSON.stringify(errorResponse)}`)
+    }
+    
+    console.log(`Worker script ${fullWorkerName} deployed successfully`)
+    
+    // Step 2: Create custom domain
+    const domainResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/domains`, {
+      method: "PUT",
+      headers: {
+        "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        hostname: customDomain,
+        service: fullWorkerName,
+        environment: "production"
+      })
+    })
+    
+    if (!domainResponse.ok) {
+      const domainError = await domainResponse.json()
+      console.error(`Failed to create custom domain ${customDomain}:`, JSON.stringify(domainError))
+      
+      // Still update status as partially successful (script deployed but no custom domain)
+      await env.DB.prepare(
+        "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
+      ).bind(JSON.stringify({
+        state: "PartiallyReady",
+        worker_id: fullWorkerName,
+        createdAt: new Date().toISOString(),
+        endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullWorkerName}`,
+        customDomain: customDomain,
+        domainError: JSON.stringify(domainError)
+      }), resourceName).run()
+      
+      console.log(`Worker ${fullWorkerName} deployed but custom domain setup failed`)
+      return
+    }
+    
+    const domainResult = await domainResponse.json()
+    console.log(`Custom domain ${customDomain} created successfully for worker ${fullWorkerName}`)
+    
+    // Step 3: Update the resource status in the database
     await env.DB.prepare(
       "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
     ).bind(JSON.stringify({
@@ -1129,39 +1149,60 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
       worker_id: fullWorkerName,
       createdAt: new Date().toISOString(),
       endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullWorkerName}`,
-      subdomain: subdomain
+      customDomain: customDomain,
+      domainId: domainResult.result?.id,
+      url: `https://${customDomain}`
     }), resourceName).run()
     
-    console.log(`Worker ${fullWorkerName} provisioned successfully`)
-  } else {
-    const errorResponse = await response.json()
-    console.error(`Failed to provision Worker ${fullWorkerName}:`, JSON.stringify(errorResponse))
+    console.log(`Worker ${fullWorkerName} provisioned successfully at ${customDomain}`)
+    
+  } catch (error) {
+    console.error(`Failed to provision Worker ${fullWorkerName}:`, error)
     
     // Update status to failed
     await env.DB.prepare(
       "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
     ).bind(JSON.stringify({
       state: "Failed",
-      error: JSON.stringify(errorResponse)
+      error: error.message || String(error)
     }), resourceName).run()
   }
 }
 
 async function deleteWorker(env: Env, resourceName: string, group: string, kind: string, plural: string, namespace: string | null, spec: any, status?: any) {
   const fullWorkerName = buildFullDatabaseName(resourceName, group, plural, namespace, env.GUBER_NAME)
+  const customDomain = `${resourceName}.${env.GUBER_NAME}.proc.io`
   
   try {
-    const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullWorkerName}`, {
+    // Step 1: Delete custom domain if it exists
+    if (status?.domainId) {
+      const domainResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/domains/${status.domainId}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`
+        }
+      })
+      
+      if (domainResponse.ok) {
+        console.log(`Custom domain ${customDomain} deleted successfully`)
+      } else {
+        const error = await domainResponse.text()
+        console.error(`Failed to delete custom domain ${customDomain}:`, error)
+      }
+    }
+    
+    // Step 2: Delete the worker script
+    const scriptResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullWorkerName}`, {
       method: "DELETE",
       headers: {
         "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`
       }
     })
     
-    if (response.ok) {
+    if (scriptResponse.ok) {
       console.log(`Worker ${fullWorkerName} deleted successfully`)
     } else {
-      const error = await response.text()
+      const error = await scriptResponse.text()
       console.error(`Failed to delete Worker ${fullWorkerName}:`, error)
     }
   } catch (error) {
@@ -1179,24 +1220,36 @@ async function reconcileWorkers(env: Env) {
     ).all()
     
     // Get all Workers from Cloudflare
-    const cloudflareResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts`, {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`
-      }
-    })
+    const [workersResponse, domainsResponse] = await Promise.all([
+      fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts`, {
+        method: "GET",
+        headers: { "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}` }
+      }),
+      fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/domains`, {
+        method: "GET",
+        headers: { "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}` }
+      })
+    ])
     
-    if (!cloudflareResponse.ok) {
-      console.error("Failed to fetch Workers from Cloudflare:", await cloudflareResponse.text())
+    if (!workersResponse.ok) {
+      console.error("Failed to fetch Workers from Cloudflare:", await workersResponse.text())
       return
     }
     
-    const cloudflareResult = await cloudflareResponse.json()
-    const cloudflareWorkers = cloudflareResult.result || []
+    if (!domainsResponse.ok) {
+      console.error("Failed to fetch Worker domains from Cloudflare:", await domainsResponse.text())
+      return
+    }
+    
+    const workersResult = await workersResponse.json()
+    const domainsResult = await domainsResponse.json()
+    const cloudflareWorkers = workersResult.result || []
+    const cloudflareDomains = domainsResult.result || []
     
     // Create maps for easier comparison
     const apiWorkerMap = new Map()
     const cloudflareWorkerMap = new Map()
+    const cloudflareDomainMap = new Map()
     
     // Build API worker map with full names
     for (const resource of (apiResources || [])) {
@@ -1204,12 +1257,16 @@ async function reconcileWorkers(env: Env) {
       apiWorkerMap.set(fullWorkerName, resource)
     }
     
-    // Build Cloudflare worker map
+    // Build Cloudflare worker and domain maps
     for (const worker of cloudflareWorkers) {
       cloudflareWorkerMap.set(worker.id, worker)
     }
     
-    console.log(`Found ${apiWorkerMap.size} Worker resources in API and ${cloudflareWorkerMap.size} workers in Cloudflare`)
+    for (const domain of cloudflareDomains) {
+      cloudflareDomainMap.set(domain.hostname, domain)
+    }
+    
+    console.log(`Found ${apiWorkerMap.size} Worker resources in API, ${cloudflareWorkerMap.size} workers, and ${cloudflareDomainMap.size} domains in Cloudflare`)
     
     // Find workers that exist in Cloudflare but not in our API (orphaned workers)
     const orphanedWorkers = []
@@ -1222,6 +1279,18 @@ async function reconcileWorkers(env: Env) {
       }
     }
     
+    // Find orphaned domains
+    const orphanedDomains = []
+    for (const [hostname, domain] of cloudflareDomainMap) {
+      if (hostname.endsWith(`.${env.GUBER_NAME}.proc.io`)) {
+        const workerName = hostname.split('.')[0]
+        const found = Array.from(apiWorkerMap.values()).some(resource => resource.name === workerName)
+        if (!found) {
+          orphanedDomains.push(domain)
+        }
+      }
+    }
+    
     // Find resources that exist in our API but not in Cloudflare (missing workers)
     const missingWorkers = []
     for (const [fullName, apiResource] of apiWorkerMap) {
@@ -1230,18 +1299,37 @@ async function reconcileWorkers(env: Env) {
       }
     }
     
-    console.log(`Found ${orphanedWorkers.length} orphaned workers and ${missingWorkers.length} missing workers`)
+    console.log(`Found ${orphanedWorkers.length} orphaned workers, ${orphanedDomains.length} orphaned domains, and ${missingWorkers.length} missing workers`)
     
-    // Delete orphaned workers from Cloudflare
+    // Delete orphaned domains first
+    for (const orphanedDomain of orphanedDomains) {
+      try {
+        console.log(`Deleting orphaned domain: ${orphanedDomain.hostname}`)
+        
+        const deleteResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/domains/${orphanedDomain.id}`, {
+          method: "DELETE",
+          headers: { "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}` }
+        })
+        
+        if (deleteResponse.ok) {
+          console.log(`Successfully deleted orphaned domain: ${orphanedDomain.hostname}`)
+        } else {
+          const error = await deleteResponse.text()
+          console.error(`Failed to delete orphaned domain ${orphanedDomain.hostname}:`, error)
+        }
+      } catch (error) {
+        console.error(`Error deleting orphaned domain ${orphanedDomain.hostname}:`, error)
+      }
+    }
+    
+    // Delete orphaned workers
     for (const orphanedWorker of orphanedWorkers) {
       try {
         console.log(`Deleting orphaned worker: ${orphanedWorker.id}`)
         
         const deleteResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${orphanedWorker.id}`, {
           method: "DELETE",
-          headers: {
-            "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`
-          }
+          headers: { "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}` }
         })
         
         if (deleteResponse.ok) {
@@ -1261,8 +1349,10 @@ async function reconcileWorkers(env: Env) {
         console.log(`Creating missing worker: ${fullName}`)
         
         const spec = JSON.parse(resource.spec)
-        const script = spec.script || "export default { async fetch() { return new Response('Hello World'); } }"
+        const customDomain = `${resource.name}.${env.GUBER_NAME}.proc.io`
+        const script = spec.script || "addEventListener('fetch', event => { event.respondWith(new Response('Hello World')); })"
         
+        // Create worker script
         const createResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullName}`, {
           method: "PUT",
           headers: {
@@ -1273,34 +1363,58 @@ async function reconcileWorkers(env: Env) {
         })
         
         if (createResponse.ok) {
-          const subdomain = `${fullName}.${env.CLOUDFLARE_ACCOUNT_ID}.workers.dev`
+          console.log(`Successfully created missing worker script: ${fullName}`)
+          
+          // Create custom domain
+          const domainResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/domains`, {
+            method: "PUT",
+            headers: {
+              "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              hostname: customDomain,
+              service: fullName,
+              environment: "production"
+            })
+          })
+          
+          let domainId = null
+          if (domainResponse.ok) {
+            const domainResult = await domainResponse.json()
+            domainId = domainResult.result?.id
+            console.log(`Successfully created custom domain: ${customDomain}`)
+          } else {
+            const domainError = await domainResponse.text()
+            console.error(`Failed to create custom domain ${customDomain}:`, domainError)
+          }
           
           // Update the resource status in our database
           const updateQuery = resource.namespace 
             ? "UPDATE resources SET status=? WHERE name=? AND namespace=?"
             : "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
           
+          const statusData = {
+            state: domainId ? "Ready" : "PartiallyReady",
+            worker_id: fullName,
+            createdAt: new Date().toISOString(),
+            endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullName}`,
+            customDomain: customDomain,
+            url: `https://${customDomain}`,
+            reconciledAt: new Date().toISOString()
+          }
+          
+          if (domainId) {
+            statusData.domainId = domainId
+          }
+          
           const updateParams = resource.namespace
-            ? [JSON.stringify({
-                state: "Ready",
-                worker_id: fullName,
-                createdAt: new Date().toISOString(),
-                endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullName}`,
-                subdomain: subdomain,
-                reconciledAt: new Date().toISOString()
-              }), resource.name, resource.namespace]
-            : [JSON.stringify({
-                state: "Ready",
-                worker_id: fullName,
-                createdAt: new Date().toISOString(),
-                endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullName}`,
-                subdomain: subdomain,
-                reconciledAt: new Date().toISOString()
-              }), resource.name]
+            ? [JSON.stringify(statusData), resource.name, resource.namespace]
+            : [JSON.stringify(statusData), resource.name]
           
           await env.DB.prepare(updateQuery).bind(...updateParams).run()
           
-          console.log(`Successfully created missing worker: ${fullName}`)
+          console.log(`Successfully reconciled missing worker: ${fullName}`)
         } else {
           const error = await createResponse.text()
           console.error(`Failed to create missing worker ${fullName}:`, error)

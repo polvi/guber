@@ -15,3 +15,4 @@ spec:
       })
     }
   compatibility_date: "2023-05-18"
+# This worker will be available at: example-worker.{GUBER_NAME}.proc.io
