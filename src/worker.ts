@@ -649,16 +649,67 @@ async function provisionD1Database(env: Env, resourceName: string, spec: any) {
     
     console.log(`D1 database ${spec.name} provisioned successfully with ID: ${databaseId}`)
   } else {
-    const error = await response.text()
-    console.error(`Failed to provision D1 database ${spec.name}:`, error)
+    const errorResponse = await response.json()
     
-    // Update status to failed
-    await env.DB.prepare(
-      "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
-    ).bind(JSON.stringify({
-      state: "Failed",
-      error: error
-    }), resourceName).run()
+    // Check if the error is because the database already exists
+    if (errorResponse.errors && errorResponse.errors.some((err: any) => err.code === 7502)) {
+      console.log(`Database ${spec.name} already exists, attempting to find and match existing database`)
+      
+      // List existing databases to find the one with matching name
+      const listResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/d1/database`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`
+        }
+      })
+      
+      if (listResponse.ok) {
+        const listResult = await listResponse.json()
+        const existingDb = listResult.result.find((db: any) => db.name === spec.name)
+        
+        if (existingDb) {
+          const databaseId = existingDb.uuid
+          
+          // Update the resource status to match the existing database
+          await env.DB.prepare(
+            "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
+          ).bind(JSON.stringify({
+            state: "Ready",
+            database_id: databaseId,
+            createdAt: existingDb.created_on,
+            endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/d1/database/${databaseId}`
+          }), resourceName).run()
+          
+          console.log(`Matched existing D1 database ${spec.name} with ID: ${databaseId}`)
+        } else {
+          console.error(`Could not find existing database ${spec.name} in account`)
+          await env.DB.prepare(
+            "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
+          ).bind(JSON.stringify({
+            state: "Failed",
+            error: "Database exists but could not be found in account"
+          }), resourceName).run()
+        }
+      } else {
+        console.error(`Failed to list databases to find existing ${spec.name}`)
+        await env.DB.prepare(
+          "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
+        ).bind(JSON.stringify({
+          state: "Failed",
+          error: JSON.stringify(errorResponse)
+        }), resourceName).run()
+      }
+    } else {
+      console.error(`Failed to provision D1 database ${spec.name}:`, JSON.stringify(errorResponse))
+      
+      // Update status to failed
+      await env.DB.prepare(
+        "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
+      ).bind(JSON.stringify({
+        state: "Failed",
+        error: JSON.stringify(errorResponse)
+      }), resourceName).run()
+    }
   }
 }
 
