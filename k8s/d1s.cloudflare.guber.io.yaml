@@ -1,0 +1,54 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: d1s.cloudflare.guber.io
+spec:
+  group: cloudflare.guber.io
+  scope: Cluster
+  names:
+    plural: d1s
+    singular: d1
+    kind: D1
+    shortNames:
+      - d1
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required: ["name"]
+              properties:
+                name:
+                  type: string
+                  description: The name of the D1 database.
+                location:
+                  type: string
+                  description: Deployment region for the database (e.g. "us-east1", "western-us").
+                plan:
+                  type: string
+                  description: Service tier or pricing plan for the database.
+                binding:
+                  type: string
+                  description: Optional binding name if automatically attached to a Worker.
+            status:
+              type: object
+              properties:
+                state:
+                  type: string
+                  description: Current provisioning state (Creating, Ready, Failed, Deleting).
+                database_id:
+                  type: string
+                  description: Cloudflare-assigned UUID for the D1 database.
+                createdAt:
+                  type: string
+                  format: date-time
+                  description: Timestamp of creation in Cloudflare.
+                endpoint:
+                  type: string
+                  description: Connection endpoint for API clients.
+

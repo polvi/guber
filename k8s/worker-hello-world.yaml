@@ -1,0 +1,12 @@
+apiVersion: cloudflare.guber.io/v1
+kind: Worker
+metadata:
+  name: hello-world
+spec:
+  name: hello-world
+  script: |
+    export default {
+      async fetch(req, env) {
+        return new Response("Hello World")
+      }
+    }
