@@ -1,4 +1,4 @@
-apiVersion: cloudflare.guber.io/v1
+apiVersion: cloudflare.guber.proc.io/v1
 kind: Worker
 metadata:
   name: hello-world
