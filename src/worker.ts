@@ -1764,15 +1764,176 @@ async function reconcileWorkers(env: Env) {
       }
     }
     
-    // Health check existing workers
-    console.log("Starting worker health checks...")
+    // Check existing workers for binding updates and health
+    console.log("Starting worker binding checks and health checks...")
     for (const [fullName, apiResource] of apiWorkerMap) {
       if (cloudflareWorkerMap.has(fullName)) {
         try {
+          const spec = JSON.parse(apiResource.spec)
           const status = apiResource.status ? JSON.parse(apiResource.status) : {}
           const customDomain = `${apiResource.name}.${env.GUBER_NAME}.${env.GUBER_DOMAIN}`
           
-          // Test the worker endpoint
+          // Check if bindings need to be updated
+          let needsBindingUpdate = false
+          const expectedBindings: any[] = []
+          
+          if (spec.bindings) {
+            console.log(`[Reconcile] Checking bindings for existing worker ${fullName}`)
+            
+            // Build expected bindings from spec
+            if (spec.bindings.d1_databases) {
+              for (const d1Binding of spec.bindings.d1_databases) {
+                const d1Resource = await env.DB.prepare(
+                  "SELECT * FROM resources WHERE name=? AND kind='D1' AND group_name='cf.guber.proc.io' AND namespace IS NULL"
+                ).bind(d1Binding.database_name).first()
+                
+                if (d1Resource && d1Resource.status) {
+                  const d1Status = JSON.parse(d1Resource.status)
+                  if (d1Status.database_id) {
+                    expectedBindings.push({
+                      type: "d1",
+                      name: d1Binding.binding,
+                      database_id: d1Status.database_id
+                    })
+                  }
+                }
+              }
+            }
+            
+            if (spec.bindings.queues) {
+              for (const queueBinding of spec.bindings.queues) {
+                const queueResource = await env.DB.prepare(
+                  "SELECT * FROM resources WHERE name=? AND kind='Queue' AND group_name='cf.guber.proc.io' AND namespace IS NULL"
+                ).bind(queueBinding.queue_name).first()
+                
+                if (queueResource && queueResource.status) {
+                  const queueStatus = JSON.parse(queueResource.status)
+                  if (queueStatus.queue_id) {
+                    expectedBindings.push({
+                      type: "queue",
+                      name: queueBinding.binding,
+                      queue_name: queueStatus.queue_id
+                    })
+                  }
+                }
+              }
+            }
+            
+            // Get current worker metadata to check existing bindings
+            const workerResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullName}`, {
+              method: "GET",
+              headers: { "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}` }
+            })
+            
+            if (workerResponse.ok) {
+              const workerData = await workerResponse.json()
+              const currentBindings = workerData.result?.bindings || []
+              
+              // Compare expected vs current bindings
+              if (expectedBindings.length !== currentBindings.length) {
+                needsBindingUpdate = true
+                console.log(`[Reconcile] Binding count mismatch for ${fullName}: expected ${expectedBindings.length}, current ${currentBindings.length}`)
+              } else {
+                // Check if bindings match
+                for (const expectedBinding of expectedBindings) {
+                  const matchingBinding = currentBindings.find((cb: any) => 
+                    cb.name === expectedBinding.name && 
+                    cb.type === expectedBinding.type &&
+                    (expectedBinding.database_id ? cb.database_id === expectedBinding.database_id : true) &&
+                    (expectedBinding.queue_name ? cb.queue_name === expectedBinding.queue_name : true)
+                  )
+                  
+                  if (!matchingBinding) {
+                    needsBindingUpdate = true
+                    console.log(`[Reconcile] Missing or mismatched binding for ${fullName}:`, expectedBinding)
+                    break
+                  }
+                }
+              }
+            } else {
+              console.log(`[Reconcile] Could not fetch current worker metadata for ${fullName}`)
+            }
+          }
+          
+          // Update worker if bindings don't match
+          if (needsBindingUpdate) {
+            console.log(`[Reconcile] Updating bindings for worker ${fullName}`)
+            
+            // Get the worker script content
+            let script: string
+            if (spec.scriptUrl) {
+              const scriptResponse = await fetch(spec.scriptUrl, {
+                redirect: 'follow',
+                headers: { 'User-Agent': 'Guber-Worker-Provisioner/1.0' }
+              })
+              if (scriptResponse.ok) {
+                script = await scriptResponse.text()
+              } else {
+                console.error(`[Reconcile] Failed to fetch script for ${fullName} from ${spec.scriptUrl}`)
+                continue
+              }
+            } else if (spec.script) {
+              script = spec.script
+            } else {
+              console.error(`[Reconcile] No script source for worker ${fullName}`)
+              continue
+            }
+            
+            // Create updated worker deployment
+            const formData = new FormData()
+            
+            const metadata: any = {
+              main_module: "index.js",
+              compatibility_date: spec.compatibility_date || "2023-05-18"
+            }
+            
+            if (spec.compatibility_date) {
+              metadata.compatibility_date = spec.compatibility_date
+            }
+            if (spec.compatibility_flags) {
+              metadata.compatibility_flags = spec.compatibility_flags
+            }
+            
+            if (expectedBindings.length > 0) {
+              metadata.bindings = expectedBindings
+              console.log(`[Reconcile] Adding updated bindings to ${fullName}:`, JSON.stringify(expectedBindings, null, 2))
+            }
+            
+            formData.append('metadata', JSON.stringify(metadata))
+            formData.append('index.js', new Blob([script], { type: 'application/javascript+module' }), 'index.js')
+            
+            const updateResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullName}`, {
+              method: "PUT",
+              headers: { "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}` },
+              body: formData
+            })
+            
+            if (updateResponse.ok) {
+              console.log(`[Reconcile] Successfully updated bindings for worker ${fullName}`)
+              
+              // Update status to reflect binding update
+              const newStatus = {
+                ...status,
+                lastBindingUpdate: new Date().toISOString(),
+                bindingsUpdated: true
+              }
+              
+              const updateQuery = apiResource.namespace 
+                ? "UPDATE resources SET status=? WHERE name=? AND namespace=?"
+                : "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
+              
+              const updateParams = apiResource.namespace
+                ? [JSON.stringify(newStatus), apiResource.name, apiResource.namespace]
+                : [JSON.stringify(newStatus), apiResource.name]
+              
+              await env.DB.prepare(updateQuery).bind(...updateParams).run()
+            } else {
+              const error = await updateResponse.text()
+              console.error(`[Reconcile] Failed to update bindings for worker ${fullName}:`, error)
+            }
+          }
+          
+          // Test the worker endpoint for health check
           const healthResponse = await fetch(`https://${customDomain}`, {
             method: 'GET',
             headers: {
@@ -1817,15 +1978,15 @@ async function reconcileWorkers(env: Env) {
             console.log(`Updated worker ${fullName} health status: ${currentState} -> ${newStatus.state}`)
           }
         } catch (error) {
-          console.error(`Error health checking worker ${fullName}:`, error)
+          console.error(`Error checking worker ${fullName}:`, error)
           
-          // Update status to indicate health check failed
+          // Update status to indicate check failed
           const status = apiResource.status ? JSON.parse(apiResource.status) : {}
           const newStatus = {
             ...status,
             state: "Failed",
             lastHealthCheck: new Date().toISOString(),
-            healthCheckError: `Health check failed: ${error.message || String(error)}`
+            healthCheckError: `Worker check failed: ${error.message || String(error)}`
           }
           
           const updateQuery = apiResource.namespace 
