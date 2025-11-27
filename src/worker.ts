@@ -358,7 +358,7 @@ app.post("/apis/:group/:version/:plural", async c => {
   ).bind(uuid(), group, version, crd.kind, plural, name, JSON.stringify(body.spec), null).run()
 
   // If this is a D1 resource, queue it for provisioning
-  if (group === "cloudflare.guber.io" && crd.kind === "D1") {
+  if (group === "cloudflare.guber.io" && crd.kind === "D1" && c.env.D1_QUEUE) {
     await c.env.D1_QUEUE.send({
       action: "create",
       resourceName: name,
@@ -424,7 +424,7 @@ app.delete("/apis/:group/:version/:plural/:name", async c => {
   if (!result) return c.json({ message: "Not Found" }, 404)
 
   // If this is a D1 resource, queue it for deletion
-  if (group === "cloudflare.guber.io" && result.kind === "D1") {
+  if (group === "cloudflare.guber.io" && result.kind === "D1" && c.env.D1_QUEUE) {
     const spec = JSON.parse(result.spec)
     await c.env.D1_QUEUE.send({
       action: "delete",
