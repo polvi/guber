@@ -1110,6 +1110,22 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
     // Create multipart form data for the worker upload
     const formData = new FormData()
     
+    // Check for source map if scriptUrl is provided
+    let sourceMap: string | null = null
+    if (spec.scriptUrl) {
+      try {
+        const sourceMapUrl = spec.scriptUrl + '.map'
+        const sourceMapResponse = await fetch(sourceMapUrl)
+        if (sourceMapResponse.ok) {
+          sourceMap = await sourceMapResponse.text()
+          console.log(`Found source map at ${sourceMapUrl}`)
+        }
+      } catch (error) {
+        // Source map is optional, continue without it
+        console.log(`No source map found for ${spec.scriptUrl}`)
+      }
+    }
+    
     if (isModule) {
       // For module workers, use metadata with main_module
       const metadata = {
@@ -1117,6 +1133,11 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
       }
       formData.append('metadata', JSON.stringify(metadata))
       formData.append('index.js', new Blob([script], { type: 'application/javascript' }), 'index.js')
+      
+      // Add source map if available
+      if (sourceMap) {
+        formData.append('index.js.map', new Blob([sourceMap], { type: 'application/json' }), 'index.js.map')
+      }
     } else {
       // For classic workers, use metadata with body_part
       const metadata = {
@@ -1124,6 +1145,11 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
       }
       formData.append('metadata', JSON.stringify(metadata))
       formData.append('script', new Blob([script], { type: 'application/javascript' }), 'script')
+      
+      // Add source map if available
+      if (sourceMap) {
+        formData.append('script.map', new Blob([sourceMap], { type: 'application/json' }), 'script.map')
+      }
     }
     
     const deployResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullWorkerName}`, {
@@ -1409,6 +1435,22 @@ async function reconcileWorkers(env: Env) {
         // Create multipart form data for the worker upload
         const formData = new FormData()
         
+        // Check for source map if scriptUrl is provided
+        let sourceMap: string | null = null
+        if (spec.scriptUrl) {
+          try {
+            const sourceMapUrl = spec.scriptUrl + '.map'
+            const sourceMapResponse = await fetch(sourceMapUrl)
+            if (sourceMapResponse.ok) {
+              sourceMap = await sourceMapResponse.text()
+              console.log(`Found source map at ${sourceMapUrl}`)
+            }
+          } catch (error) {
+            // Source map is optional, continue without it
+            console.log(`No source map found for ${spec.scriptUrl}`)
+          }
+        }
+        
         if (isModule) {
           // For module workers, use metadata with main_module
           const metadata = {
@@ -1416,6 +1458,11 @@ async function reconcileWorkers(env: Env) {
           }
           formData.append('metadata', JSON.stringify(metadata))
           formData.append('index.js', new Blob([script], { type: 'application/javascript' }), 'index.js')
+          
+          // Add source map if available
+          if (sourceMap) {
+            formData.append('index.js.map', new Blob([sourceMap], { type: 'application/json' }), 'index.js.map')
+          }
         } else {
           // For classic workers, use metadata with body_part
           const metadata = {
@@ -1423,6 +1470,11 @@ async function reconcileWorkers(env: Env) {
           }
           formData.append('metadata', JSON.stringify(metadata))
           formData.append('script', new Blob([script], { type: 'application/javascript' }), 'script')
+          
+          // Add source map if available
+          if (sourceMap) {
+            formData.append('script.map', new Blob([sourceMap], { type: 'application/json' }), 'script.map')
+          }
         }
         
         const createResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullName}`, {
