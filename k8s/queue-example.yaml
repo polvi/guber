@@ -1,0 +1,10 @@
+apiVersion: cloudflare.guber.proc.io/v1
+kind: Queue
+metadata:
+  name: example-queue
+spec:
+  name: example-queue
+  settings:
+    delivery_delay: 0
+    message_retries: 3
+    visibility_timeout: 30
