@@ -1104,9 +1104,6 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
     }
     
     // Step 1: Deploy the worker script
-    // Determine if this is a module based on file extension or content
-    const isModule = spec.scriptUrl?.endsWith('.js') || spec.script?.includes('export default')
-    
     // Create multipart form data for the worker upload
     const formData = new FormData()
     
@@ -1126,48 +1123,25 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
       }
     }
     
-    if (isModule) {
-      // For module workers, use metadata with main_module
-      const metadata: any = {
-        main_module: "index.js"
-      }
-      
-      // Add compatibility settings if specified
-      if (spec.compatibility_date) {
-        metadata.compatibility_date = spec.compatibility_date
-      }
-      if (spec.compatibility_flags) {
-        metadata.compatibility_flags = spec.compatibility_flags
-      }
-      
-      formData.append('metadata', JSON.stringify(metadata))
-      formData.append('index.js', new Blob([script], { type: 'text/javascript' }), 'index.js')
-      
-      // Add source map if available
-      if (sourceMap) {
-        formData.append('index.js.map', new Blob([sourceMap], { type: 'text/plain' }), 'index.js.map')
-      }
-    } else {
-      // For classic workers, use metadata with body_part
-      const metadata: any = {
-        body_part: "script"
-      }
-      
-      // Add compatibility settings if specified
-      if (spec.compatibility_date) {
-        metadata.compatibility_date = spec.compatibility_date
-      }
-      if (spec.compatibility_flags) {
-        metadata.compatibility_flags = spec.compatibility_flags
-      }
-      
-      formData.append('metadata', JSON.stringify(metadata))
-      formData.append('script', new Blob([script], { type: 'text/javascript' }), 'script')
-      
-      // Add source map if available
-      if (sourceMap) {
-        formData.append('script.map', new Blob([sourceMap], { type: 'text/plain' }), 'script.map')
-      }
+    // Always use module format with main_module
+    const metadata: any = {
+      main_module: "index.js"
+    }
+    
+    // Add compatibility settings if specified
+    if (spec.compatibility_date) {
+      metadata.compatibility_date = spec.compatibility_date
+    }
+    if (spec.compatibility_flags) {
+      metadata.compatibility_flags = spec.compatibility_flags
+    }
+    
+    formData.append('metadata', JSON.stringify(metadata))
+    formData.append('index.js', new Blob([script], { type: 'text/javascript' }), 'index.js')
+    
+    // Add source map if available
+    if (sourceMap) {
+      formData.append('index.js.map', new Blob([sourceMap], { type: 'text/plain' }), 'index.js.map')
     }
     
     const deployResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullWorkerName}`, {
@@ -1447,9 +1421,6 @@ async function reconcileWorkers(env: Env) {
         }
         
         // Create worker script
-        // Determine if this is a module based on file extension or content
-        const isModule = spec.scriptUrl?.endsWith('.js') || spec.script?.includes('export default')
-        
         // Create multipart form data for the worker upload
         const formData = new FormData()
         
@@ -1469,48 +1440,25 @@ async function reconcileWorkers(env: Env) {
           }
         }
         
-        if (isModule) {
-          // For module workers, use metadata with main_module
-          const metadata: any = {
-            main_module: "index.js"
-          }
-          
-          // Add compatibility settings if specified
-          if (spec.compatibility_date) {
-            metadata.compatibility_date = spec.compatibility_date
-          }
-          if (spec.compatibility_flags) {
-            metadata.compatibility_flags = spec.compatibility_flags
-          }
-          
-          formData.append('metadata', JSON.stringify(metadata))
-          formData.append('index.js', new Blob([script], { type: 'text/javascript' }), 'index.js')
-          
-          // Add source map if available
-          if (sourceMap) {
-            formData.append('index.js.map', new Blob([sourceMap], { type: 'text/plain' }), 'index.js.map')
-          }
-        } else {
-          // For classic workers, use metadata with body_part
-          const metadata: any = {
-            body_part: "script"
-          }
-          
-          // Add compatibility settings if specified
-          if (spec.compatibility_date) {
-            metadata.compatibility_date = spec.compatibility_date
-          }
-          if (spec.compatibility_flags) {
-            metadata.compatibility_flags = spec.compatibility_flags
-          }
-          
-          formData.append('metadata', JSON.stringify(metadata))
-          formData.append('script', new Blob([script], { type: 'text/javascript' }), 'script')
-          
-          // Add source map if available
-          if (sourceMap) {
-            formData.append('script.map', new Blob([sourceMap], { type: 'text/plain' }), 'script.map')
-          }
+        // Always use module format with main_module
+        const metadata: any = {
+          main_module: "index.js"
+        }
+        
+        // Add compatibility settings if specified
+        if (spec.compatibility_date) {
+          metadata.compatibility_date = spec.compatibility_date
+        }
+        if (spec.compatibility_flags) {
+          metadata.compatibility_flags = spec.compatibility_flags
+        }
+        
+        formData.append('metadata', JSON.stringify(metadata))
+        formData.append('index.js', new Blob([script], { type: 'text/javascript' }), 'index.js')
+        
+        // Add source map if available
+        if (sourceMap) {
+          formData.append('index.js.map', new Blob([sourceMap], { type: 'text/plain' }), 'index.js.map')
         }
         
         const createResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullName}`, {
