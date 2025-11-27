@@ -57,6 +57,7 @@ metadata:
   name: example-db
 spec:
   name: example-db
+  location: western-us
 ---
 apiVersion: cf.guber.proc.io/v1
 kind: Queue
