@@ -7,15 +7,39 @@ spec:
   script: |
     export default {
       async fetch(request, env, ctx) {
-        // Use the bound D1 database
-        const result = await env.MY_DB.prepare("SELECT 1 as test").first();
-        
-        // Send a message to the bound queue
-        await env.MY_QUEUE.send({ message: "Hello from worker!" });
-        
-        return new Response(`Database test: ${result.test}, Queue message sent!`, {
-          headers: { 'Content-Type': 'text/plain' }
-        });
+        try {
+          let dbResult = "No DB binding";
+          let queueResult = "No Queue binding";
+          
+          // Check if D1 database binding exists
+          if (env.MY_DB) {
+            try {
+              const result = await env.MY_DB.prepare("SELECT 1 as test").first();
+              dbResult = `Database test: ${result.test}`;
+            } catch (error) {
+              dbResult = `Database error: ${error.message}`;
+            }
+          }
+          
+          // Check if Queue binding exists
+          if (env.MY_QUEUE) {
+            try {
+              await env.MY_QUEUE.send({ message: "Hello from worker!" });
+              queueResult = "Queue message sent!";
+            } catch (error) {
+              queueResult = `Queue error: ${error.message}`;
+            }
+          }
+          
+          return new Response(`${dbResult}, ${queueResult}`, {
+            headers: { 'Content-Type': 'text/plain' }
+          });
+        } catch (error) {
+          return new Response(`Worker error: ${error.message}`, {
+            status: 500,
+            headers: { 'Content-Type': 'text/plain' }
+          });
+        }
       }
     };
   compatibility_date: "2025-11-27"
