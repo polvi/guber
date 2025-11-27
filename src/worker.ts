@@ -1218,7 +1218,7 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
         }
         
         if (!depResource.status) {
-          console.log(`Dependency ${depKind}/${depName} has no status, deferring worker provisioning`)
+          console.log(`Dependency ${depKind}/${depName} has no status, deferring provisioning`)
           await env.DB.prepare(
             "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
           ).bind(JSON.stringify({
@@ -1231,7 +1231,7 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
         
         const depStatus = JSON.parse(depResource.status)
         if (depStatus.state !== "Ready") {
-          console.log(`Dependency ${depKind}/${depName} is not ready (state: ${depStatus.state}), deferring worker provisioning`)
+          console.log(`Dependency ${depKind}/${depName} not ready (${depStatus.state}), deferring provisioning`)
           await env.DB.prepare(
             "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
           ).bind(JSON.stringify({
@@ -1242,10 +1242,9 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
           return
         }
         
-        console.log(`✅ Dependency ${depKind}/${depName} is ready`)
       }
       
-      console.log(`All dependencies satisfied for worker ${fullWorkerName}, proceeding with provisioning`)
+      console.log(`All dependencies satisfied for worker ${fullWorkerName}`)
     }
     
     // Get the worker script content
@@ -1316,18 +1315,13 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
       if (spec.bindings.d1_databases) {
         console.log(`Processing ${spec.bindings.d1_databases.length} D1 database bindings`)
         for (const d1Binding of spec.bindings.d1_databases) {
-          console.log(`Looking up D1 binding: ${d1Binding.database_name} -> ${d1Binding.binding}`)
-          
           // Look up the D1 resource to get its database_id
           const d1Resource = await env.DB.prepare(
             "SELECT * FROM resources WHERE name=? AND kind='D1' AND group_name='cf.guber.proc.io' AND namespace IS NULL"
           ).bind(d1Binding.database_name).first()
           
-          console.log(`D1 resource lookup result:`, d1Resource)
-          
           if (d1Resource && d1Resource.status) {
             const status = JSON.parse(d1Resource.status)
-            console.log(`D1 resource status:`, status)
             if (status.database_id) {
               const binding = {
                 type: "d1",
@@ -1335,32 +1329,26 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
                 id: status.database_id
               }
               bindings.push(binding)
-              console.log(`✅ Added D1 binding:`, binding)
+              console.log(`Added D1 binding: ${d1Binding.database_name} -> ${d1Binding.binding}`)
             } else {
-              console.log(`❌ D1 resource ${d1Binding.database_name} has no database_id in status`)
+              console.log(`D1 resource ${d1Binding.database_name} has no database_id`)
             }
           } else {
-            console.log(`❌ D1 resource ${d1Binding.database_name} not found or has no status`)
+            console.log(`D1 resource ${d1Binding.database_name} not found`)
           }
         }
       }
       
       // Handle Queue bindings
       if (spec.bindings.queues) {
-        console.log(`Processing ${spec.bindings.queues.length} Queue bindings`)
         for (const queueBinding of spec.bindings.queues) {
-          console.log(`Looking up Queue binding: ${queueBinding.queue_name} -> ${queueBinding.binding}`)
-          
           // Look up the Queue resource to get its queue name
           const queueResource = await env.DB.prepare(
             "SELECT * FROM resources WHERE name=? AND kind='Queue' AND group_name='cf.guber.proc.io' AND namespace IS NULL"
           ).bind(queueBinding.queue_name).first()
           
-          console.log(`Queue resource lookup result:`, queueResource)
-          
           if (queueResource && queueResource.status) {
             const status = JSON.parse(queueResource.status)
-            console.log(`Queue resource status:`, status)
             if (status.queue_id) {
               // Build the full queue name that was created in Cloudflare
               const fullQueueName = buildFullDatabaseName(queueResource.name, queueResource.group_name, queueResource.plural, queueResource.namespace, env.GUBER_NAME)
@@ -1370,25 +1358,19 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
                 queue_name: fullQueueName
               }
               bindings.push(binding)
-              console.log(`✅ Added Queue binding:`, binding)
+              console.log(`Added Queue binding: ${queueBinding.queue_name} -> ${queueBinding.binding}`)
             } else {
-              console.log(`❌ Queue resource ${queueBinding.queue_name} has no queue_id in status`)
+              console.log(`Queue resource ${queueBinding.queue_name} has no queue_id`)
             }
           } else {
-            console.log(`❌ Queue resource ${queueBinding.queue_name} not found or has no status`)
+            console.log(`Queue resource ${queueBinding.queue_name} not found`)
           }
         }
       }
       
-      console.log(`Total bindings collected: ${bindings.length}`)
       if (bindings.length > 0) {
         metadata.bindings = bindings
-        console.log(`✅ Added bindings to metadata:`, JSON.stringify(bindings, null, 2))
-      } else {
-        console.log(`❌ No bindings to add to metadata`)
       }
-    } else {
-      console.log(`No bindings specified for worker ${fullWorkerName}`)
     }
     
     formData.append('metadata', JSON.stringify(metadata))
@@ -1399,23 +1381,7 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
       formData.append('index.js.map', new Blob([sourceMap], { type: 'text/plain' }), 'index.js.map')
     }
     
-    // Debug logging
-    console.log(`=== Worker Deployment Debug Info ===`)
-    console.log(`Worker Name: ${fullWorkerName}`)
-    console.log(`Script URL: ${spec.scriptUrl || 'inline'}`)
-    console.log(`Metadata: ${JSON.stringify(metadata, null, 2)}`)
-    console.log(`Script Content (first 500 chars): ${script.substring(0, 500)}...`)
-    console.log(`Script Content (last 200 chars): ...${script.substring(script.length - 200)}`)
-    console.log(`Has Source Map: ${sourceMap ? 'yes' : 'no'}`)
-    console.log(`FormData entries:`)
-    for (const [key, value] of formData.entries()) {
-      if (value instanceof Blob) {
-        console.log(`  ${key}: Blob (${value.type}, ${value.size} bytes)`)
-      } else {
-        console.log(`  ${key}: ${value}`)
-      }
-    }
-    console.log(`=== End Debug Info ===`)
+    console.log(`Deploying worker ${fullWorkerName} with ${bindings.length} bindings`)
     
     const deployResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullWorkerName}`, {
       method: "PUT",
@@ -1744,86 +1710,52 @@ async function reconcileWorkers(env: Env) {
         
         // Add bindings if specified
         if (spec.bindings) {
-          console.log(`[Reconcile] Processing bindings for worker ${fullName}:`, JSON.stringify(spec.bindings, null, 2))
           const bindings: any[] = []
-          
+            
           // Handle D1 database bindings
           if (spec.bindings.d1_databases) {
-            console.log(`[Reconcile] Processing ${spec.bindings.d1_databases.length} D1 database bindings`)
             for (const d1Binding of spec.bindings.d1_databases) {
-              console.log(`[Reconcile] Looking up D1 binding: ${d1Binding.database_name} -> ${d1Binding.binding}`)
-              
-              // Look up the D1 resource to get its database_id
               const d1Resource = await env.DB.prepare(
                 "SELECT * FROM resources WHERE name=? AND kind='D1' AND group_name='cf.guber.proc.io' AND namespace IS NULL"
               ).bind(d1Binding.database_name).first()
-              
-              console.log(`[Reconcile] D1 resource lookup result:`, d1Resource)
-              
+                
               if (d1Resource && d1Resource.status) {
                 const status = JSON.parse(d1Resource.status)
-                console.log(`[Reconcile] D1 resource status:`, status)
                 if (status.database_id) {
-                  const binding = {
+                  bindings.push({
                     type: "d1",
                     name: d1Binding.binding,
                     id: status.database_id
-                  }
-                  bindings.push(binding)
-                  console.log(`[Reconcile] ✅ Added D1 binding:`, binding)
-                } else {
-                  console.log(`[Reconcile] ❌ D1 resource ${d1Binding.database_name} has no database_id in status`)
+                  })
                 }
-              } else {
-                console.log(`[Reconcile] ❌ D1 resource ${d1Binding.database_name} not found or has no status`)
               }
             }
           }
-          
+            
           // Handle Queue bindings
           if (spec.bindings.queues) {
-            console.log(`[Reconcile] Processing ${spec.bindings.queues.length} Queue bindings`)
             for (const queueBinding of spec.bindings.queues) {
-              console.log(`[Reconcile] Looking up Queue binding: ${queueBinding.queue_name} -> ${queueBinding.binding}`)
-              
-              // Look up the Queue resource to get its queue name
               const queueResource = await env.DB.prepare(
                 "SELECT * FROM resources WHERE name=? AND kind='Queue' AND group_name='cf.guber.proc.io' AND namespace IS NULL"
               ).bind(queueBinding.queue_name).first()
-              
-              console.log(`[Reconcile] Queue resource lookup result:`, queueResource)
-              
+                
               if (queueResource && queueResource.status) {
                 const status = JSON.parse(queueResource.status)
-                console.log(`[Reconcile] Queue resource status:`, status)
                 if (status.queue_id) {
-                  // Build the full queue name that was created in Cloudflare
                   const fullQueueName = buildFullDatabaseName(queueResource.name, queueResource.group_name, queueResource.plural, queueResource.namespace, env.GUBER_NAME)
-                  const binding = {
+                  bindings.push({
                     type: "queue",
                     name: queueBinding.binding,
                     queue_name: fullQueueName
-                  }
-                  bindings.push(binding)
-                  console.log(`[Reconcile] ✅ Added Queue binding:`, binding)
-                } else {
-                  console.log(`[Reconcile] ❌ Queue resource ${queueBinding.queue_name} has no queue_id in status`)
+                  })
                 }
-              } else {
-                console.log(`[Reconcile] ❌ Queue resource ${queueBinding.queue_name} not found or has no status`)
               }
             }
           }
-          
-          console.log(`[Reconcile] Total bindings collected: ${bindings.length}`)
+            
           if (bindings.length > 0) {
             metadata.bindings = bindings
-            console.log(`[Reconcile] ✅ Added bindings to metadata:`, JSON.stringify(bindings, null, 2))
-          } else {
-            console.log(`[Reconcile] ❌ No bindings to add to metadata`)
           }
-        } else {
-          console.log(`[Reconcile] No bindings specified for worker ${fullName}`)
         }
         
         formData.append('metadata', JSON.stringify(metadata))
@@ -1834,15 +1766,7 @@ async function reconcileWorkers(env: Env) {
           formData.append('index.js.map', new Blob([sourceMap], { type: 'text/plain' }), 'index.js.map')
         }
         
-        // Debug logging for reconciliation
-        console.log(`=== Worker Reconciliation Debug Info ===`)
-        console.log(`Worker Name: ${fullName}`)
-        console.log(`Script URL: ${spec.scriptUrl || 'inline'}`)
-        console.log(`Metadata: ${JSON.stringify(metadata, null, 2)}`)
-        console.log(`Script Content (first 500 chars): ${script.substring(0, 500)}...`)
-        console.log(`Script Content (last 200 chars): ...${script.substring(script.length - 200)}`)
-        console.log(`Has Source Map: ${sourceMap ? 'yes' : 'no'}`)
-        console.log(`=== End Reconciliation Debug Info ===`)
+        console.log(`Reconciling worker ${fullName} with ${expectedBindings.length} bindings`)
         
         const createResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullName}`, {
           method: "PUT",
@@ -1955,8 +1879,6 @@ async function reconcileWorkers(env: Env) {
           let missingResourceIds = false
           
           if (spec.bindings) {
-            console.log(`[Reconcile] Checking bindings for existing worker ${fullName}`)
-            
             // Build expected bindings from spec
             if (spec.bindings.d1_databases) {
               for (const d1Binding of spec.bindings.d1_databases) {
@@ -1973,11 +1895,9 @@ async function reconcileWorkers(env: Env) {
                       id: d1Status.database_id
                     })
                   } else {
-                    console.log(`[Reconcile] D1 resource ${d1Binding.database_name} exists but has no database_id yet, will retry next tick`)
                     missingResourceIds = true
                   }
                 } else {
-                  console.log(`[Reconcile] D1 resource ${d1Binding.database_name} not found or has no status, will retry next tick`)
                   missingResourceIds = true
                 }
               }
@@ -1992,7 +1912,6 @@ async function reconcileWorkers(env: Env) {
                 if (queueResource && queueResource.status) {
                   const queueStatus = JSON.parse(queueResource.status)
                   if (queueStatus.queue_id) {
-                    // Build the full queue name that was created in Cloudflare
                     const fullQueueName = buildFullDatabaseName(queueResource.name, queueResource.group_name, queueResource.plural, queueResource.namespace, env.GUBER_NAME)
                     expectedBindings.push({
                       type: "queue",
@@ -2000,11 +1919,9 @@ async function reconcileWorkers(env: Env) {
                       queue_name: fullQueueName
                     })
                   } else {
-                    console.log(`[Reconcile] Queue resource ${queueBinding.queue_name} exists but has no queue_id yet, will retry next tick`)
                     missingResourceIds = true
                   }
                 } else {
-                  console.log(`[Reconcile] Queue resource ${queueBinding.queue_name} not found or has no status, will retry next tick`)
                   missingResourceIds = true
                 }
               }
@@ -2012,44 +1929,30 @@ async function reconcileWorkers(env: Env) {
             
             // Skip binding check if we're missing resource IDs
             if (missingResourceIds) {
-              console.log(`[Reconcile] Skipping binding update for ${fullName} - waiting for resource IDs to be available`)
               continue
             }
             
             // Get current worker metadata to check existing bindings
-            console.log(`[Reconcile] Fetching worker metadata for ${fullName}`)
-            console.log(`[Reconcile] Request URL: https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullName}/settings`)
-            
             const workerResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullName}/settings`, {
               method: "GET",
               headers: { "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}` }
             })
             
-            console.log(`[Reconcile] Worker metadata response status: ${workerResponse.status} ${workerResponse.statusText}`)
-            console.log(`[Reconcile] Worker metadata response headers:`, Object.fromEntries(workerResponse.headers.entries()))
-            
             if (workerResponse.ok) {
               let workerData
               try {
                 const responseText = await workerResponse.text()
-                console.log(`[Reconcile] Worker metadata response body:`, responseText)
-                
                 workerData = JSON.parse(responseText)
-                console.log(`[Reconcile] Parsed worker metadata:`, JSON.stringify(workerData, null, 2))
               } catch (parseError) {
-                console.error(`[Reconcile] Failed to parse worker metadata response:`, parseError)
-                console.log(`[Reconcile] Could not parse worker metadata for ${fullName}, skipping binding check`)
+                console.error(`Failed to parse worker metadata for ${fullName}:`, parseError)
                 continue
               }
               
               const currentBindings = workerData.result?.bindings || []
-              console.log(`[Reconcile] Current bindings for ${fullName}:`, JSON.stringify(currentBindings, null, 2))
-              console.log(`[Reconcile] Expected bindings for ${fullName}:`, JSON.stringify(expectedBindings, null, 2))
               
               // Compare expected vs current bindings
               if (expectedBindings.length !== currentBindings.length) {
                 needsBindingUpdate = true
-                console.log(`[Reconcile] Binding count mismatch for ${fullName}: expected ${expectedBindings.length}, current ${currentBindings.length}`)
               } else {
                 // Check if bindings match
                 for (const expectedBinding of expectedBindings) {
@@ -2062,26 +1965,16 @@ async function reconcileWorkers(env: Env) {
                   
                   if (!matchingBinding) {
                     needsBindingUpdate = true
-                    console.log(`[Reconcile] Missing or mismatched binding for ${fullName}:`, expectedBinding)
-                    console.log(`[Reconcile] Available bindings:`, currentBindings)
                     break
                   }
                 }
               }
-              
-              if (!needsBindingUpdate) {
-                console.log(`[Reconcile] Bindings are up to date for ${fullName}`)
-              }
-            } else {
-              const errorText = await workerResponse.text()
-              console.log(`[Reconcile] Could not fetch current worker metadata for ${fullName}`)
-              console.log(`[Reconcile] Error response:`, errorText)
             }
           }
           
           // Update worker if bindings don't match
           if (needsBindingUpdate) {
-            console.log(`[Reconcile] Updating bindings for worker ${fullName}`)
+            console.log(`Updating bindings for worker ${fullName}`)
             
             // Get the worker script content
             let script: string
@@ -2093,13 +1986,13 @@ async function reconcileWorkers(env: Env) {
               if (scriptResponse.ok) {
                 script = await scriptResponse.text()
               } else {
-                console.error(`[Reconcile] Failed to fetch script for ${fullName} from ${spec.scriptUrl}`)
+                console.error(`Failed to fetch script for ${fullName} from ${spec.scriptUrl}`)
                 continue
               }
             } else if (spec.script) {
               script = spec.script
             } else {
-              console.error(`[Reconcile] No script source for worker ${fullName}`)
+              console.error(`No script source for worker ${fullName}`)
               continue
             }
             
@@ -2120,7 +2013,6 @@ async function reconcileWorkers(env: Env) {
             
             if (expectedBindings.length > 0) {
               metadata.bindings = expectedBindings
-              console.log(`[Reconcile] Adding updated bindings to ${fullName}:`, JSON.stringify(expectedBindings, null, 2))
             }
             
             formData.append('metadata', JSON.stringify(metadata))
@@ -2133,7 +2025,7 @@ async function reconcileWorkers(env: Env) {
             })
             
             if (updateResponse.ok) {
-              console.log(`[Reconcile] Successfully updated bindings for worker ${fullName}`)
+              console.log(`Successfully updated bindings for worker ${fullName}`)
               
               // Update status to reflect binding update
               const newStatus = {
@@ -2153,7 +2045,7 @@ async function reconcileWorkers(env: Env) {
               await env.DB.prepare(updateQuery).bind(...updateParams).run()
             } else {
               const error = await updateResponse.text()
-              console.error(`[Reconcile] Failed to update bindings for worker ${fullName}:`, error)
+              console.error(`Failed to update bindings for worker ${fullName}:`, error)
             }
           }
           
