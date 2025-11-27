@@ -10,7 +10,7 @@ spec:
     })
 
     async function handleRequest(request) {
-      return new Response('Hello from inline Cloudflare Worker!', {
+      return new Response('Hello from Cloudflare Worker!', {
         headers: { 'Content-Type': 'text/plain' }
       })
     }
