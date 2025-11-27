@@ -6,6 +6,7 @@ type Env = {
     DB: D1Database
     D1_QUEUE: Queue
     CLOUDFLARE_API_TOKEN: string
+    CLOUDFLARE_ACCOUNT_ID: string
   } 
 }
 
@@ -612,7 +613,7 @@ export default {
 }
 
 async function provisionD1Database(env: Env, resourceName: string, spec: any) {
-  const response = await fetch("https://api.cloudflare.com/client/v4/accounts/YOUR_ACCOUNT_ID/d1/database", {
+  const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/d1/database`, {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
@@ -635,7 +636,7 @@ async function provisionD1Database(env: Env, resourceName: string, spec: any) {
       state: "Ready",
       database_id: databaseId,
       createdAt: new Date().toISOString(),
-      endpoint: `https://api.cloudflare.com/client/v4/accounts/YOUR_ACCOUNT_ID/d1/database/${databaseId}`
+      endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/d1/database/${databaseId}`
     }), resourceName).run()
     
     console.log(`D1 database ${spec.name} provisioned successfully with ID: ${databaseId}`)
@@ -664,7 +665,7 @@ async function deleteD1Database(env: Env, resourceName: string, spec: any) {
     const databaseId = status.database_id
     
     if (databaseId) {
-      const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/YOUR_ACCOUNT_ID/d1/database/${databaseId}`, {
+      const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/d1/database/${databaseId}`, {
         method: "DELETE",
         headers: {
           "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`
