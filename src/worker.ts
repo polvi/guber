@@ -645,7 +645,7 @@ export default {
 
 function buildFullDatabaseName(resourceName: string, group: string, plural: string, namespace: string | null, instanceName: string): string {
   // Construct full database name: name.namespace.resource-type.instance
-  const namespaceStr = namespace || "cluster"
+  const namespaceStr = namespace || "c"
   const resourceType = `${plural}.${group}`
   return `${resourceName}.${namespaceStr}.${resourceType}.${instanceName}`
 }
