@@ -1205,7 +1205,7 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
               const binding = {
                 type: "queue",
                 name: queueBinding.binding,
-                queue_name: status.queue_id
+                queue_name: queueBinding.queue_name
               }
               bindings.push(binding)
               console.log(`✅ Added Queue binding:`, binding)
@@ -1619,7 +1619,7 @@ async function reconcileWorkers(env: Env) {
             for (const queueBinding of spec.bindings.queues) {
               console.log(`[Reconcile] Looking up Queue binding: ${queueBinding.queue_name} -> ${queueBinding.binding}`)
               
-              // Look up the Queue resource to get its queue_id
+              // Look up the Queue resource to get its queue name
               const queueResource = await env.DB.prepare(
                 "SELECT * FROM resources WHERE name=? AND kind='Queue' AND group_name='cf.guber.proc.io' AND namespace IS NULL"
               ).bind(queueBinding.queue_name).first()
@@ -1630,10 +1630,12 @@ async function reconcileWorkers(env: Env) {
                 const status = JSON.parse(queueResource.status)
                 console.log(`[Reconcile] Queue resource status:`, status)
                 if (status.queue_id) {
+                  // Build the full queue name that was created in Cloudflare
+                  const fullQueueName = buildFullDatabaseName(queueResource.name, queueResource.group_name, queueResource.plural, queueResource.namespace, env.GUBER_NAME)
                   const binding = {
                     type: "queue",
                     name: queueBinding.binding,
-                    queue_name: status.queue_id
+                    queue_name: fullQueueName
                   }
                   bindings.push(binding)
                   console.log(`[Reconcile] ✅ Added Queue binding:`, binding)
@@ -1823,10 +1825,12 @@ async function reconcileWorkers(env: Env) {
                 if (queueResource && queueResource.status) {
                   const queueStatus = JSON.parse(queueResource.status)
                   if (queueStatus.queue_id) {
+                    // Build the full queue name that was created in Cloudflare
+                    const fullQueueName = buildFullDatabaseName(queueResource.name, queueResource.group_name, queueResource.plural, queueResource.namespace, env.GUBER_NAME)
                     expectedBindings.push({
                       type: "queue",
                       name: queueBinding.binding,
-                      queue_name: queueStatus.queue_id
+                      queue_name: fullQueueName
                     })
                   } else {
                     console.log(`[Reconcile] Queue resource ${queueBinding.queue_name} exists but has no queue_id yet, will retry next tick`)
