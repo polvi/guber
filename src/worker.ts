@@ -4,7 +4,7 @@ import { v4 as uuid } from "uuid"
 type Env = { 
   Bindings: { 
     DB: D1Database
-    D1_QUEUE: Queue
+    GUBER_BUS: Queue
     CLOUDFLARE_API_TOKEN: string
     CLOUDFLARE_ACCOUNT_ID: string
     GUBER_NAME: string
@@ -364,10 +364,11 @@ app.post("/apis/:group/:version/:plural", async c => {
     "INSERT INTO resources (id, group_name, version, kind, plural, name, spec, namespace) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
   ).bind(uuid(), group, version, crd.kind, plural, name, JSON.stringify(body.spec), null).run()
 
-  // If this is a D1 resource, queue it for provisioning
-  if (group === "cloudflare.guber.proc.io" && crd.kind === "D1" && c.env.D1_QUEUE) {
-    await c.env.D1_QUEUE.send({
+  // If this is a Cloudflare resource, queue it for provisioning
+  if (group === "cloudflare.guber.proc.io" && (crd.kind === "D1" || crd.kind === "Queue") && c.env.GUBER_BUS) {
+    await c.env.GUBER_BUS.send({
       action: "create",
+      resourceType: crd.kind.toLowerCase(),
       resourceName: name,
       group: group,
       kind: crd.kind,
@@ -434,12 +435,13 @@ app.delete("/apis/:group/:version/:plural/:name", async c => {
   ).bind(group, version, plural, name).first()
   if (!result) return c.json({ message: "Not Found" }, 404)
 
-  // If this is a D1 resource, queue it for deletion BEFORE deleting from DB
-  if (group === "cloudflare.guber.proc.io" && result.kind === "D1" && c.env.D1_QUEUE) {
+  // If this is a Cloudflare resource, queue it for deletion BEFORE deleting from DB
+  if (group === "cloudflare.guber.proc.io" && (result.kind === "D1" || result.kind === "Queue") && c.env.GUBER_BUS) {
     const spec = JSON.parse(result.spec)
     const status = result.status ? JSON.parse(result.status) : {}
-    await c.env.D1_QUEUE.send({
+    await c.env.GUBER_BUS.send({
       action: "delete",
+      resourceType: result.kind.toLowerCase(),
       resourceName: name,
       group: group,
       kind: result.kind,
@@ -611,12 +613,20 @@ export default {
   async queue(batch: MessageBatch<any>, env: Env): Promise<void> {
     for (const message of batch.messages) {
       try {
-        const { action, resourceName, group, kind, plural, namespace, spec, status } = message.body
+        const { action, resourceType, resourceName, group, kind, plural, namespace, spec, status } = message.body
         
         if (action === "create") {
-          await provisionD1Database(env, resourceName, group, kind, plural, namespace, spec)
+          if (resourceType === "d1") {
+            await provisionD1Database(env, resourceName, group, kind, plural, namespace, spec)
+          } else if (resourceType === "queue") {
+            await provisionQueue(env, resourceName, group, kind, plural, namespace, spec)
+          }
         } else if (action === "delete") {
-          await deleteD1Database(env, resourceName, group, kind, plural, namespace, spec, status)
+          if (resourceType === "d1") {
+            await deleteD1Database(env, resourceName, group, kind, plural, namespace, spec, status)
+          } else if (resourceType === "queue") {
+            await deleteQueue(env, resourceName, group, kind, plural, namespace, spec, status)
+          }
         }
         
         message.ack()
@@ -627,8 +637,9 @@ export default {
     }
   },
   async scheduled(event: ScheduledEvent, env: Env): Promise<void> {
-    console.log(`Running D1 reconciliation at ${new Date(event.scheduledTime).toISOString()}`)
+    console.log(`Running Cloudflare resource reconciliation at ${new Date(event.scheduledTime).toISOString()}`)
     await reconcileD1Databases(env)
+    await reconcileQueues(env)
   }
 }
 
@@ -765,6 +776,304 @@ async function deleteD1Database(env: Env, resourceName: string, group: string, k
     }
   } else {
     console.log(`No database ID found for ${fullDatabaseName}, skipping Cloudflare deletion`)
+  }
+}
+
+async function provisionQueue(env: Env, resourceName: string, group: string, kind: string, plural: string, namespace: string | null, spec: any) {
+  const fullQueueName = buildFullDatabaseName(resourceName, group, plural, namespace, env.GUBER_NAME)
+  
+  const requestBody: any = {
+    queue_name: fullQueueName
+  }
+  
+  // Add settings if specified
+  if (spec.settings) {
+    requestBody.settings = spec.settings
+  }
+  
+  const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/queues`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(requestBody)
+  })
+  
+  if (response.ok) {
+    const result = await response.json()
+    const queueId = result.result.queue_id
+    
+    // Update the resource status in the database
+    await env.DB.prepare(
+      "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
+    ).bind(JSON.stringify({
+      state: "Ready",
+      queue_id: queueId,
+      createdAt: new Date().toISOString(),
+      endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/queues/${queueId}`
+    }), resourceName).run()
+    
+    console.log(`Queue ${fullQueueName} provisioned successfully with ID: ${queueId}`)
+  } else {
+    const errorResponse = await response.json()
+    
+    // Check if the error is because the queue already exists
+    if (errorResponse.errors && errorResponse.errors.some((err: any) => err.code === 10026)) {
+      console.log(`Queue ${fullQueueName} already exists, attempting to find and match existing queue`)
+      
+      // List existing queues to find the one with matching name
+      const listResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/queues`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`
+        }
+      })
+      
+      if (listResponse.ok) {
+        const listResult = await listResponse.json()
+        const existingQueue = listResult.result.find((queue: any) => queue.queue_name === fullQueueName)
+        
+        if (existingQueue) {
+          const queueId = existingQueue.queue_id
+          
+          // Update the resource status to match the existing queue
+          await env.DB.prepare(
+            "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
+          ).bind(JSON.stringify({
+            state: "Ready",
+            queue_id: queueId,
+            createdAt: existingQueue.created_on,
+            endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/queues/${queueId}`
+          }), resourceName).run()
+          
+          console.log(`Matched existing Queue ${fullQueueName} with ID: ${queueId}`)
+        } else {
+          console.error(`Could not find existing queue ${fullQueueName} in account`)
+          await env.DB.prepare(
+            "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
+          ).bind(JSON.stringify({
+            state: "Failed",
+            error: "Queue exists but could not be found in account"
+          }), resourceName).run()
+        }
+      } else {
+        console.error(`Failed to list queues to find existing ${fullQueueName}`)
+        await env.DB.prepare(
+          "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
+        ).bind(JSON.stringify({
+          state: "Failed",
+          error: JSON.stringify(errorResponse)
+        }), resourceName).run()
+      }
+    } else {
+      console.error(`Failed to provision Queue ${fullQueueName}:`, JSON.stringify(errorResponse))
+      
+      // Update status to failed
+      await env.DB.prepare(
+        "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
+      ).bind(JSON.stringify({
+        state: "Failed",
+        error: JSON.stringify(errorResponse)
+      }), resourceName).run()
+    }
+  }
+}
+
+async function deleteQueue(env: Env, resourceName: string, group: string, kind: string, plural: string, namespace: string | null, spec: any, status?: any) {
+  const fullQueueName = buildFullDatabaseName(resourceName, group, plural, namespace, env.GUBER_NAME)
+  // Get queue ID from the passed status or spec
+  const queueId = status?.queue_id
+  
+  if (queueId) {
+    try {
+      const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/queues/${queueId}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`
+        }
+      })
+      
+      if (response.ok) {
+        console.log(`Queue ${fullQueueName} (ID: ${queueId}) deleted successfully`)
+      } else {
+        const error = await response.text()
+        console.error(`Failed to delete Queue ${fullQueueName} (ID: ${queueId}):`, error)
+      }
+    } catch (error) {
+      console.error(`Error deleting Queue ${fullQueueName}:`, error)
+    }
+  } else {
+    console.log(`No queue ID found for ${fullQueueName}, skipping Cloudflare deletion`)
+  }
+}
+
+async function reconcileQueues(env: Env) {
+  try {
+    console.log("Starting Queue reconciliation...")
+    
+    // Get all Queue resources from our API
+    const { results: apiResources } = await env.DB.prepare(
+      "SELECT * FROM resources WHERE group_name='cloudflare.guber.proc.io' AND kind='Queue'"
+    ).all()
+    
+    // Get all Queues from Cloudflare
+    const cloudflareResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/queues`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`
+      }
+    })
+    
+    if (!cloudflareResponse.ok) {
+      console.error("Failed to fetch Queues from Cloudflare:", await cloudflareResponse.text())
+      return
+    }
+    
+    const cloudflareResult = await cloudflareResponse.json()
+    const cloudflareQueues = cloudflareResult.result || []
+    
+    // Create maps for easier comparison
+    const apiQueueMap = new Map()
+    const cloudflareQueueMap = new Map()
+    
+    // Build API queue map with full names
+    for (const resource of (apiResources || [])) {
+      const fullQueueName = buildFullDatabaseName(resource.name, resource.group_name, resource.plural, resource.namespace, env.GUBER_NAME)
+      apiQueueMap.set(fullQueueName, resource)
+    }
+    
+    // Build Cloudflare queue map
+    for (const queue of cloudflareQueues) {
+      cloudflareQueueMap.set(queue.queue_name, queue)
+    }
+    
+    console.log(`Found ${apiQueueMap.size} Queue resources in API and ${cloudflareQueueMap.size} queues in Cloudflare`)
+    
+    // Find queues that exist in Cloudflare but not in our API (orphaned queues)
+    const orphanedQueues = []
+    for (const [queueName, cloudflareQueue] of cloudflareQueueMap) {
+      // Only consider queues that match our naming pattern
+      if (queueName.includes('.') && (queueName.includes('.queues.cloudflare.guber.proc.io') || queueName.includes('.queue.cloudflare.guber.proc.io'))) {
+        if (!apiQueueMap.has(queueName)) {
+          orphanedQueues.push(cloudflareQueue)
+        }
+      }
+    }
+    
+    // Find resources that exist in our API but not in Cloudflare (missing queues)
+    const missingQueues = []
+    for (const [fullName, apiResource] of apiQueueMap) {
+      if (!cloudflareQueueMap.has(fullName)) {
+        missingQueues.push({ fullName, resource: apiResource })
+      }
+    }
+    
+    console.log(`Found ${orphanedQueues.length} orphaned queues and ${missingQueues.length} missing queues`)
+    
+    // Delete orphaned queues from Cloudflare
+    for (const orphanedQueue of orphanedQueues) {
+      try {
+        console.log(`Deleting orphaned queue: ${orphanedQueue.queue_name} (ID: ${orphanedQueue.queue_id})`)
+        
+        const deleteResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/queues/${orphanedQueue.queue_id}`, {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`
+          }
+        })
+        
+        if (deleteResponse.ok) {
+          console.log(`Successfully deleted orphaned queue: ${orphanedQueue.queue_name}`)
+        } else {
+          const error = await deleteResponse.text()
+          console.error(`Failed to delete orphaned queue ${orphanedQueue.queue_name}:`, error)
+        }
+      } catch (error) {
+        console.error(`Error deleting orphaned queue ${orphanedQueue.queue_name}:`, error)
+      }
+    }
+    
+    // Create missing queues in Cloudflare
+    for (const { fullName, resource } of missingQueues) {
+      try {
+        console.log(`Creating missing queue: ${fullName}`)
+        
+        const spec = JSON.parse(resource.spec)
+        const requestBody: any = { queue_name: fullName }
+        
+        if (spec.settings) {
+          requestBody.settings = spec.settings
+        }
+        
+        const createResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/queues`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(requestBody)
+        })
+        
+        if (createResponse.ok) {
+          const result = await createResponse.json()
+          const queueId = result.result.queue_id
+          
+          // Update the resource status in our database
+          const updateQuery = resource.namespace 
+            ? "UPDATE resources SET status=? WHERE name=? AND namespace=?"
+            : "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
+          
+          const updateParams = resource.namespace
+            ? [JSON.stringify({
+                state: "Ready",
+                queue_id: queueId,
+                createdAt: new Date().toISOString(),
+                endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/queues/${queueId}`,
+                reconciledAt: new Date().toISOString()
+              }), resource.name, resource.namespace]
+            : [JSON.stringify({
+                state: "Ready",
+                queue_id: queueId,
+                createdAt: new Date().toISOString(),
+                endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/queues/${queueId}`,
+                reconciledAt: new Date().toISOString()
+              }), resource.name]
+          
+          await env.DB.prepare(updateQuery).bind(...updateParams).run()
+          
+          console.log(`Successfully created missing queue: ${fullName} with ID: ${queueId}`)
+        } else {
+          const error = await createResponse.text()
+          console.error(`Failed to create missing queue ${fullName}:`, error)
+          
+          // Update status to failed
+          const updateQuery = resource.namespace 
+            ? "UPDATE resources SET status=? WHERE name=? AND namespace=?"
+            : "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
+          
+          const updateParams = resource.namespace
+            ? [JSON.stringify({
+                state: "Failed",
+                error: error,
+                reconciledAt: new Date().toISOString()
+              }), resource.name, resource.namespace]
+            : [JSON.stringify({
+                state: "Failed", 
+                error: error,
+                reconciledAt: new Date().toISOString()
+              }), resource.name]
+          
+          await env.DB.prepare(updateQuery).bind(...updateParams).run()
+        }
+      } catch (error) {
+        console.error(`Error creating missing queue ${fullName}:`, error)
+      }
+    }
+    
+    console.log("Queue reconciliation completed")
+  } catch (error) {
+    console.error("Error during Queue reconciliation:", error)
   }
 }
 

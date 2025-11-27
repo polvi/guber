@@ -8,11 +8,11 @@ database_name = "guber-db"
 database_id = "3c5cfeb5-62cc-4ef7-8f66-df755f8ab318"
 
 [[queues.producers]]
-queue = "d1-provisioning-queue"
-binding = "D1_QUEUE"
+queue = "guber-bus"
+binding = "GUBER_BUS"
 
 [[queues.consumers]]
-queue = "d1-provisioning-queue"
+queue = "guber-bus"
 
 [vars]
 # Add your Cloudflare API token as a secret: wrangler secret put CLOUDFLARE_API_TOKEN
