@@ -9,7 +9,7 @@ spec:
       async fetch(request, env, ctx) {
         return new Response('Hello from Cloudflare Worker!', {
           headers: { 'Content-Type': 'text/plain' }
-        })
+        });
       }
-    }
+    };
   compatibility_date: "2025-11-27"

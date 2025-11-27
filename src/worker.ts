@@ -1135,7 +1135,8 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
     
     // Always use module format with main_module
     const metadata: any = {
-      main_module: "index.js"
+      main_module: "index.js",
+      compatibility_date: spec.compatibility_date || "2023-05-18"
     }
     
     // Add compatibility settings if specified
@@ -1147,7 +1148,7 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
     }
     
     formData.append('metadata', JSON.stringify(metadata))
-    formData.append('index.js', new Blob([script], { type: 'text/javascript' }), 'index.js')
+    formData.append('index.js', new Blob([script], { type: 'application/javascript+module' }), 'index.js')
     
     // Add source map if available
     if (sourceMap) {
@@ -1501,7 +1502,8 @@ async function reconcileWorkers(env: Env) {
         
         // Always use module format with main_module
         const metadata: any = {
-          main_module: "index.js"
+          main_module: "index.js",
+          compatibility_date: spec.compatibility_date || "2023-05-18"
         }
         
         // Add compatibility settings if specified
@@ -1513,7 +1515,7 @@ async function reconcileWorkers(env: Env) {
         }
         
         formData.append('metadata', JSON.stringify(metadata))
-        formData.append('index.js', new Blob([script], { type: 'text/javascript' }), 'index.js')
+        formData.append('index.js', new Blob([script], { type: 'application/javascript+module' }), 'index.js')
         
         // Add source map if available
         if (sourceMap) {
