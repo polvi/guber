@@ -427,10 +427,12 @@ app.delete("/apis/:group/:version/:plural/:name", async c => {
   // If this is a D1 resource, queue it for deletion
   if (group === "cloudflare.guber.io" && result.kind === "D1" && c.env.D1_QUEUE) {
     const spec = JSON.parse(result.spec)
+    const status = result.status ? JSON.parse(result.status) : {}
     await c.env.D1_QUEUE.send({
       action: "delete",
       resourceName: name,
-      spec: spec
+      spec: spec,
+      status: status
     })
   }
 
@@ -595,12 +597,12 @@ export default {
   async queue(batch: MessageBatch<any>, env: Env): Promise<void> {
     for (const message of batch.messages) {
       try {
-        const { action, resourceName, spec } = message.body
+        const { action, resourceName, spec, status } = message.body
         
         if (action === "create") {
           await provisionD1Database(env, resourceName, spec)
         } else if (action === "delete") {
-          await deleteD1Database(env, resourceName, spec)
+          await deleteD1Database(env, resourceName, spec, status)
         }
         
         message.ack()
@@ -660,17 +662,12 @@ async function provisionD1Database(env: Env, resourceName: string, spec: any) {
   }
 }
 
-async function deleteD1Database(env: Env, resourceName: string, spec: any) {
-  // First get the database ID from the resource status
-  const resource = await env.DB.prepare(
-    "SELECT status FROM resources WHERE name=? AND namespace IS NULL"
-  ).bind(resourceName).first()
+async function deleteD1Database(env: Env, resourceName: string, spec: any, status?: any) {
+  // Get database ID from the passed status or spec
+  const databaseId = status?.database_id
   
-  if (resource && resource.status) {
-    const status = JSON.parse(resource.status)
-    const databaseId = status.database_id
-    
-    if (databaseId) {
+  if (databaseId) {
+    try {
       const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/d1/database/${databaseId}`, {
         method: "DELETE",
         headers: {
@@ -679,11 +676,15 @@ async function deleteD1Database(env: Env, resourceName: string, spec: any) {
       })
       
       if (response.ok) {
-        console.log(`D1 database ${spec.name} deleted successfully`)
+        console.log(`D1 database ${spec.name} (ID: ${databaseId}) deleted successfully`)
       } else {
         const error = await response.text()
-        console.error(`Failed to delete D1 database ${spec.name}:`, error)
+        console.error(`Failed to delete D1 database ${spec.name} (ID: ${databaseId}):`, error)
       }
+    } catch (error) {
+      console.error(`Error deleting D1 database ${spec.name}:`, error)
     }
+  } else {
+    console.log(`No database ID found for ${spec.name}, skipping Cloudflare deletion`)
   }
 }
