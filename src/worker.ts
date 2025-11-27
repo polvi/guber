@@ -365,7 +365,7 @@ app.post("/apis/:group/:version/:plural", async c => {
   ).bind(uuid(), group, version, crd.kind, plural, name, JSON.stringify(body.spec), null).run()
 
   // If this is a Cloudflare resource, queue it for provisioning
-  if (group === "cf.guber.proc.io" && (crd.kind === "D1" || crd.kind === "Queue") && c.env.GUBER_BUS) {
+  if (group === "cf.guber.proc.io" && (crd.kind === "D1" || crd.kind === "Queue" || crd.kind === "Worker") && c.env.GUBER_BUS) {
     await c.env.GUBER_BUS.send({
       action: "create",
       resourceType: crd.kind.toLowerCase(),
@@ -436,7 +436,7 @@ app.delete("/apis/:group/:version/:plural/:name", async c => {
   if (!result) return c.json({ message: "Not Found" }, 404)
 
   // If this is a Cloudflare resource, queue it for deletion BEFORE deleting from DB
-  if (group === "cf.guber.proc.io" && (result.kind === "D1" || result.kind === "Queue") && c.env.GUBER_BUS) {
+  if (group === "cf.guber.proc.io" && (result.kind === "D1" || result.kind === "Queue" || result.kind === "Worker") && c.env.GUBER_BUS) {
     const spec = JSON.parse(result.spec)
     const status = result.status ? JSON.parse(result.status) : {}
     await c.env.GUBER_BUS.send({
@@ -620,12 +620,16 @@ export default {
             await provisionD1Database(env, resourceName, group, kind, plural, namespace, spec)
           } else if (resourceType === "queue") {
             await provisionQueue(env, resourceName, group, kind, plural, namespace, spec)
+          } else if (resourceType === "worker") {
+            await provisionWorker(env, resourceName, group, kind, plural, namespace, spec)
           }
         } else if (action === "delete") {
           if (resourceType === "d1") {
             await deleteD1Database(env, resourceName, group, kind, plural, namespace, spec, status)
           } else if (resourceType === "queue") {
             await deleteQueue(env, resourceName, group, kind, plural, namespace, spec, status)
+          } else if (resourceType === "worker") {
+            await deleteWorker(env, resourceName, group, kind, plural, namespace, spec, status)
           }
         }
         
@@ -640,6 +644,7 @@ export default {
     console.log(`Running Cloudflare resource reconciliation at ${new Date(event.scheduledTime).toISOString()}`)
     await reconcileD1Databases(env)
     await reconcileQueues(env)
+    await reconcileWorkers(env)
   }
 }
 
@@ -1074,6 +1079,259 @@ async function reconcileQueues(env: Env) {
     console.log("Queue reconciliation completed")
   } catch (error) {
     console.error("Error during Queue reconciliation:", error)
+  }
+}
+
+async function provisionWorker(env: Env, resourceName: string, group: string, kind: string, plural: string, namespace: string | null, spec: any) {
+  const fullWorkerName = buildFullDatabaseName(resourceName, group, plural, namespace, env.GUBER_NAME)
+  
+  const requestBody: any = {
+    name: fullWorkerName
+  }
+  
+  // Add script content if provided
+  if (spec.script) {
+    requestBody.script = spec.script
+  }
+  
+  // Add compatibility settings
+  if (spec.compatibility_date) {
+    requestBody.compatibility_date = spec.compatibility_date
+  }
+  
+  if (spec.compatibility_flags) {
+    requestBody.compatibility_flags = spec.compatibility_flags
+  }
+  
+  // Add bindings if provided
+  if (spec.bindings) {
+    requestBody.bindings = spec.bindings
+  }
+  
+  const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullWorkerName}`, {
+    method: "PUT",
+    headers: {
+      "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
+      "Content-Type": "application/javascript"
+    },
+    body: spec.script || "export default { async fetch() { return new Response('Hello World'); } }"
+  })
+  
+  if (response.ok) {
+    const result = await response.json()
+    const subdomain = `${fullWorkerName}.${env.CLOUDFLARE_ACCOUNT_ID}.workers.dev`
+    
+    // Update the resource status in the database
+    await env.DB.prepare(
+      "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
+    ).bind(JSON.stringify({
+      state: "Ready",
+      worker_id: fullWorkerName,
+      createdAt: new Date().toISOString(),
+      endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullWorkerName}`,
+      subdomain: subdomain
+    }), resourceName).run()
+    
+    console.log(`Worker ${fullWorkerName} provisioned successfully`)
+  } else {
+    const errorResponse = await response.json()
+    console.error(`Failed to provision Worker ${fullWorkerName}:`, JSON.stringify(errorResponse))
+    
+    // Update status to failed
+    await env.DB.prepare(
+      "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
+    ).bind(JSON.stringify({
+      state: "Failed",
+      error: JSON.stringify(errorResponse)
+    }), resourceName).run()
+  }
+}
+
+async function deleteWorker(env: Env, resourceName: string, group: string, kind: string, plural: string, namespace: string | null, spec: any, status?: any) {
+  const fullWorkerName = buildFullDatabaseName(resourceName, group, plural, namespace, env.GUBER_NAME)
+  
+  try {
+    const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullWorkerName}`, {
+      method: "DELETE",
+      headers: {
+        "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`
+      }
+    })
+    
+    if (response.ok) {
+      console.log(`Worker ${fullWorkerName} deleted successfully`)
+    } else {
+      const error = await response.text()
+      console.error(`Failed to delete Worker ${fullWorkerName}:`, error)
+    }
+  } catch (error) {
+    console.error(`Error deleting Worker ${fullWorkerName}:`, error)
+  }
+}
+
+async function reconcileWorkers(env: Env) {
+  try {
+    console.log("Starting Worker reconciliation...")
+    
+    // Get all Worker resources from our API
+    const { results: apiResources } = await env.DB.prepare(
+      "SELECT * FROM resources WHERE group_name='cf.guber.proc.io' AND kind='Worker'"
+    ).all()
+    
+    // Get all Workers from Cloudflare
+    const cloudflareResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`
+      }
+    })
+    
+    if (!cloudflareResponse.ok) {
+      console.error("Failed to fetch Workers from Cloudflare:", await cloudflareResponse.text())
+      return
+    }
+    
+    const cloudflareResult = await cloudflareResponse.json()
+    const cloudflareWorkers = cloudflareResult.result || []
+    
+    // Create maps for easier comparison
+    const apiWorkerMap = new Map()
+    const cloudflareWorkerMap = new Map()
+    
+    // Build API worker map with full names
+    for (const resource of (apiResources || [])) {
+      const fullWorkerName = buildFullDatabaseName(resource.name, resource.group_name, resource.plural, resource.namespace, env.GUBER_NAME)
+      apiWorkerMap.set(fullWorkerName, resource)
+    }
+    
+    // Build Cloudflare worker map
+    for (const worker of cloudflareWorkers) {
+      cloudflareWorkerMap.set(worker.id, worker)
+    }
+    
+    console.log(`Found ${apiWorkerMap.size} Worker resources in API and ${cloudflareWorkerMap.size} workers in Cloudflare`)
+    
+    // Find workers that exist in Cloudflare but not in our API (orphaned workers)
+    const orphanedWorkers = []
+    for (const [workerName, cloudflareWorker] of cloudflareWorkerMap) {
+      // Only consider workers that match our naming pattern
+      if (workerName.includes('-') && (workerName.includes('-workers-cf-guber-proc-io') || workerName.includes('-worker-cf-guber-proc-io'))) {
+        if (!apiWorkerMap.has(workerName)) {
+          orphanedWorkers.push(cloudflareWorker)
+        }
+      }
+    }
+    
+    // Find resources that exist in our API but not in Cloudflare (missing workers)
+    const missingWorkers = []
+    for (const [fullName, apiResource] of apiWorkerMap) {
+      if (!cloudflareWorkerMap.has(fullName)) {
+        missingWorkers.push({ fullName, resource: apiResource })
+      }
+    }
+    
+    console.log(`Found ${orphanedWorkers.length} orphaned workers and ${missingWorkers.length} missing workers`)
+    
+    // Delete orphaned workers from Cloudflare
+    for (const orphanedWorker of orphanedWorkers) {
+      try {
+        console.log(`Deleting orphaned worker: ${orphanedWorker.id}`)
+        
+        const deleteResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${orphanedWorker.id}`, {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`
+          }
+        })
+        
+        if (deleteResponse.ok) {
+          console.log(`Successfully deleted orphaned worker: ${orphanedWorker.id}`)
+        } else {
+          const error = await deleteResponse.text()
+          console.error(`Failed to delete orphaned worker ${orphanedWorker.id}:`, error)
+        }
+      } catch (error) {
+        console.error(`Error deleting orphaned worker ${orphanedWorker.id}:`, error)
+      }
+    }
+    
+    // Create missing workers in Cloudflare
+    for (const { fullName, resource } of missingWorkers) {
+      try {
+        console.log(`Creating missing worker: ${fullName}`)
+        
+        const spec = JSON.parse(resource.spec)
+        const script = spec.script || "export default { async fetch() { return new Response('Hello World'); } }"
+        
+        const createResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullName}`, {
+          method: "PUT",
+          headers: {
+            "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
+            "Content-Type": "application/javascript"
+          },
+          body: script
+        })
+        
+        if (createResponse.ok) {
+          const subdomain = `${fullName}.${env.CLOUDFLARE_ACCOUNT_ID}.workers.dev`
+          
+          // Update the resource status in our database
+          const updateQuery = resource.namespace 
+            ? "UPDATE resources SET status=? WHERE name=? AND namespace=?"
+            : "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
+          
+          const updateParams = resource.namespace
+            ? [JSON.stringify({
+                state: "Ready",
+                worker_id: fullName,
+                createdAt: new Date().toISOString(),
+                endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullName}`,
+                subdomain: subdomain,
+                reconciledAt: new Date().toISOString()
+              }), resource.name, resource.namespace]
+            : [JSON.stringify({
+                state: "Ready",
+                worker_id: fullName,
+                createdAt: new Date().toISOString(),
+                endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullName}`,
+                subdomain: subdomain,
+                reconciledAt: new Date().toISOString()
+              }), resource.name]
+          
+          await env.DB.prepare(updateQuery).bind(...updateParams).run()
+          
+          console.log(`Successfully created missing worker: ${fullName}`)
+        } else {
+          const error = await createResponse.text()
+          console.error(`Failed to create missing worker ${fullName}:`, error)
+          
+          // Update status to failed
+          const updateQuery = resource.namespace 
+            ? "UPDATE resources SET status=? WHERE name=? AND namespace=?"
+            : "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
+          
+          const updateParams = resource.namespace
+            ? [JSON.stringify({
+                state: "Failed",
+                error: error,
+                reconciledAt: new Date().toISOString()
+              }), resource.name, resource.namespace]
+            : [JSON.stringify({
+                state: "Failed", 
+                error: error,
+                reconciledAt: new Date().toISOString()
+              }), resource.name]
+          
+          await env.DB.prepare(updateQuery).bind(...updateParams).run()
+        }
+      } catch (error) {
+        console.error(`Error creating missing worker ${fullName}:`, error)
+      }
+    }
+    
+    console.log("Worker reconciliation completed")
+  } catch (error) {
+    console.error("Error during Worker reconciliation:", error)
   }
 }
 

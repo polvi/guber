@@ -1,0 +1,67 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: workers.cf.guber.proc.io
+spec:
+  group: cf.guber.proc.io
+  scope: Cluster
+  names:
+    plural: workers
+    singular: worker
+    kind: Worker
+    shortNames:
+      - worker
+      - w
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required: ["name"]
+              properties:
+                name:
+                  type: string
+                  description: The name of the Cloudflare Worker.
+                script:
+                  type: string
+                  description: The JavaScript/TypeScript code for the Worker.
+                bindings:
+                  type: object
+                  description: Environment bindings for the Worker (KV, D1, etc.).
+                routes:
+                  type: array
+                  items:
+                    type: string
+                  description: Custom routes/domains for the Worker.
+                compatibility_date:
+                  type: string
+                  description: Compatibility date for the Worker runtime.
+                compatibility_flags:
+                  type: array
+                  items:
+                    type: string
+                  description: Compatibility flags for the Worker runtime.
+            status:
+              type: object
+              properties:
+                state:
+                  type: string
+                  description: Current provisioning state (Creating, Ready, Failed, Deleting).
+                worker_id:
+                  type: string
+                  description: Cloudflare-assigned identifier for the Worker.
+                createdAt:
+                  type: string
+                  format: date-time
+                  description: Timestamp of creation in Cloudflare.
+                endpoint:
+                  type: string
+                  description: Worker endpoint URL.
+                subdomain:
+                  type: string
+                  description: Worker subdomain on workers.dev.

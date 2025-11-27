@@ -1,0 +1,15 @@
+apiVersion: cf.guber.proc.io/v1
+kind: Worker
+metadata:
+  name: example-worker
+spec:
+  name: example-worker
+  script: |
+    export default {
+      async fetch(request, env, ctx) {
+        return new Response('Hello from Cloudflare Worker!', {
+          headers: { 'Content-Type': 'text/plain' }
+        });
+      }
+    };
+  compatibility_date: "2023-05-18"
