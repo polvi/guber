@@ -644,10 +644,10 @@ export default {
 }
 
 function buildFullDatabaseName(resourceName: string, group: string, plural: string, namespace: string | null, instanceName: string): string {
-  // Construct full database name: name.namespace.resource-type.instance
+  // Construct full database name: name-namespace-resource-type-instance
   const namespaceStr = namespace || "c"
-  const resourceType = `${plural}.${group}`
-  return `${resourceName}.${namespaceStr}.${resourceType}.${instanceName}`
+  const resourceType = `${plural}-${group.replace(/\./g, '-')}`
+  return `${resourceName}-${namespaceStr}-${resourceType}-${instanceName}`
 }
 
 async function provisionD1Database(env: Env, resourceName: string, group: string, kind: string, plural: string, namespace: string | null, spec: any) {
@@ -954,7 +954,7 @@ async function reconcileQueues(env: Env) {
     const orphanedQueues = []
     for (const [queueName, cloudflareQueue] of cloudflareQueueMap) {
       // Only consider queues that match our naming pattern
-      if (queueName.includes('.') && (queueName.includes('.queues.cf.guber.proc.io') || queueName.includes('.queue.cf.guber.proc.io'))) {
+      if (queueName.includes('-') && (queueName.includes('-queues-cf-guber-proc-io') || queueName.includes('-queue-cf-guber-proc-io'))) {
         if (!apiQueueMap.has(queueName)) {
           orphanedQueues.push(cloudflareQueue)
         }
@@ -1123,7 +1123,7 @@ async function reconcileD1Databases(env: Env) {
     const orphanedDatabases = []
     for (const [dbName, cloudflareDb] of cloudflareDatabaseMap) {
       // Only consider databases that match our naming pattern
-      if (dbName.includes('.') && (dbName.includes('.d1s.cf.guber.proc.io') || dbName.includes('.d1.cf.guber.proc.io'))) {
+      if (dbName.includes('-') && (dbName.includes('-d1s-cf-guber-proc-io') || dbName.includes('-d1-cf-guber-proc-io'))) {
         if (!apiDatabaseMap.has(dbName)) {
           orphanedDatabases.push(cloudflareDb)
         }
