@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "bun run wrangler dev",
     "deploy": "bun run wrangler deploy",
-    "db:init": "bun run wrangler d1 execute guber-db --file=./schema.sql",
     "db:reset": "./scripts/reset-db.sh",
     "build": "bun run wrangler deploy --dry-run"
   },
