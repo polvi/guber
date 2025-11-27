@@ -115,7 +115,8 @@ app.get("/apis/:group/:version", async c => {
           singularName: "customresourcedefinition",
           namespaced: false,
           kind: "CustomResourceDefinition",
-          verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+          verbs: ["create", "delete", "get", "list", "patch", "update", "watch"],
+          shortNames: ["crd", "crds"]
         }
       ]
     })
