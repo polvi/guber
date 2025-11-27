@@ -1089,7 +1089,7 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
   
   try {
     // Get the worker script content
-    let script = spec.script || "addEventListener('fetch', event => { event.respondWith(new Response('Hello World')); })"
+    let script: string
     
     if (spec.scriptUrl) {
       const scriptResponse = await fetch(spec.scriptUrl)
@@ -1097,6 +1097,10 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
         throw new Error(`Failed to fetch script from ${spec.scriptUrl}: ${scriptResponse.status} ${scriptResponse.statusText}`)
       }
       script = await scriptResponse.text()
+    } else if (spec.script) {
+      script = spec.script
+    } else {
+      throw new Error("Worker must have either 'script' or 'scriptUrl' specified")
     }
     
     // Step 1: Deploy the worker script
@@ -1362,7 +1366,20 @@ async function reconcileWorkers(env: Env) {
         
         const spec = JSON.parse(resource.spec)
         const customDomain = `${resource.name}.${env.GUBER_NAME}.${env.GUBER_DOMAIN}`
-        const script = spec.script || "addEventListener('fetch', event => { event.respondWith(new Response('Hello World')); })"
+        
+        // Get the worker script content
+        let script: string
+        if (spec.scriptUrl) {
+          const scriptResponse = await fetch(spec.scriptUrl)
+          if (!scriptResponse.ok) {
+            throw new Error(`Failed to fetch script from ${spec.scriptUrl}: ${scriptResponse.status} ${scriptResponse.statusText}`)
+          }
+          script = await scriptResponse.text()
+        } else if (spec.script) {
+          script = spec.script
+        } else {
+          throw new Error("Worker must have either 'script' or 'scriptUrl' specified")
+        }
         
         // Create worker script
         const createResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullName}`, {
