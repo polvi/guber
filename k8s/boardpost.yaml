@@ -1,8 +1,0 @@
-apiVersion: bulletin/v1
-kind: BoardPost
-metadata:
-  name: first-post
-spec:
-  title: BBQ at Hangar 5
-  body: Friday 1800Z
-
