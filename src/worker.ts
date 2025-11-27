@@ -1172,7 +1172,7 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
               const binding = {
                 type: "d1",
                 name: d1Binding.binding,
-                database_id: status.database_id
+                id: status.database_id
               }
               bindings.push(binding)
               console.log(`✅ Added D1 binding:`, binding)
@@ -1600,7 +1600,7 @@ async function reconcileWorkers(env: Env) {
                   const binding = {
                     type: "d1",
                     name: d1Binding.binding,
-                    database_id: status.database_id
+                    id: status.database_id
                   }
                   bindings.push(binding)
                   console.log(`[Reconcile] ✅ Added D1 binding:`, binding)
@@ -1783,6 +1783,7 @@ async function reconcileWorkers(env: Env) {
           // Check if bindings need to be updated
           let needsBindingUpdate = false
           const expectedBindings: any[] = []
+          let missingResourceIds = false
           
           if (spec.bindings) {
             console.log(`[Reconcile] Checking bindings for existing worker ${fullName}`)
@@ -1800,9 +1801,15 @@ async function reconcileWorkers(env: Env) {
                     expectedBindings.push({
                       type: "d1",
                       name: d1Binding.binding,
-                      database_id: d1Status.database_id
+                      id: d1Status.database_id
                     })
+                  } else {
+                    console.log(`[Reconcile] D1 resource ${d1Binding.database_name} exists but has no database_id yet, will retry next tick`)
+                    missingResourceIds = true
                   }
+                } else {
+                  console.log(`[Reconcile] D1 resource ${d1Binding.database_name} not found or has no status, will retry next tick`)
+                  missingResourceIds = true
                 }
               }
             }
@@ -1821,9 +1828,21 @@ async function reconcileWorkers(env: Env) {
                       name: queueBinding.binding,
                       queue_name: queueStatus.queue_id
                     })
+                  } else {
+                    console.log(`[Reconcile] Queue resource ${queueBinding.queue_name} exists but has no queue_id yet, will retry next tick`)
+                    missingResourceIds = true
                   }
+                } else {
+                  console.log(`[Reconcile] Queue resource ${queueBinding.queue_name} not found or has no status, will retry next tick`)
+                  missingResourceIds = true
                 }
               }
+            }
+            
+            // Skip binding check if we're missing resource IDs
+            if (missingResourceIds) {
+              console.log(`[Reconcile] Skipping binding update for ${fullName} - waiting for resource IDs to be available`)
+              continue
             }
             
             // Get current worker metadata to check existing bindings
@@ -1866,7 +1885,7 @@ async function reconcileWorkers(env: Env) {
                   const matchingBinding = currentBindings.find((cb: any) => 
                     cb.name === expectedBinding.name && 
                     cb.type === expectedBinding.type &&
-                    (expectedBinding.database_id ? cb.database_id === expectedBinding.database_id : true) &&
+                    (expectedBinding.id ? cb.id === expectedBinding.id : true) &&
                     (expectedBinding.queue_name ? cb.queue_name === expectedBinding.queue_name : true)
                   )
                   
