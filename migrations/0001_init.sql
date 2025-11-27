@@ -1,3 +1,4 @@
+-- Migration number: 0001 	 2025-11-27T14:36:24.149Z
 -- Table for CRD definitions (like apiextensions.k8s.io/v1/CRDs)
 CREATE TABLE crds (
   name TEXT PRIMARY KEY,         -- e.g. "boardposts.aopa.bulletin"
