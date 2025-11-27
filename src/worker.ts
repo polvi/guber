@@ -1132,7 +1132,7 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
         main_module: "index.js"
       }
       formData.append('metadata', JSON.stringify(metadata))
-      formData.append('index.js', new Blob([script], { type: 'application/javascript' }), 'index.js')
+      formData.append('index.js', new Blob([script], { type: 'text/javascript' }), 'index.js')
       
       // Add source map if available
       if (sourceMap) {
@@ -1144,7 +1144,7 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
         body_part: "script"
       }
       formData.append('metadata', JSON.stringify(metadata))
-      formData.append('script', new Blob([script], { type: 'application/javascript' }), 'script')
+      formData.append('script', new Blob([script], { type: 'text/javascript' }), 'script')
       
       // Add source map if available
       if (sourceMap) {
@@ -1457,7 +1457,7 @@ async function reconcileWorkers(env: Env) {
             main_module: "index.js"
           }
           formData.append('metadata', JSON.stringify(metadata))
-          formData.append('index.js', new Blob([script], { type: 'application/javascript' }), 'index.js')
+          formData.append('index.js', new Blob([script], { type: 'text/javascript' }), 'index.js')
           
           // Add source map if available
           if (sourceMap) {
@@ -1469,7 +1469,7 @@ async function reconcileWorkers(env: Env) {
             body_part: "script"
           }
           formData.append('metadata', JSON.stringify(metadata))
-          formData.append('script', new Blob([script], { type: 'application/javascript' }), 'script')
+          formData.append('script', new Blob([script], { type: 'text/javascript' }), 'script')
           
           // Add source map if available
           if (sourceMap) {
