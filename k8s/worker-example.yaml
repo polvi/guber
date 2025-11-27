@@ -4,21 +4,5 @@ metadata:
   name: example-worker
 spec:
   name: example-worker
-  script: |
-    addEventListener('fetch', event => {
-      event.respondWith(handleRequest(event.request))
-    })
-
-    async function handleRequest(request) {
-      return new Response('Hello from Cloudflare Worker!', {
-        headers: { 'Content-Type': 'text/plain' }
-      })
-    }
+  scriptUrl: "https://github.com/polvi/first-worker/releases/download/v0.0.2/index.js"
   compatibility_date: "2023-05-18"
-# This worker will be available at: example-worker.{GUBER_NAME}.{GUBER_DOMAIN}
-
-# Alternative using scriptUrl:
-# spec:
-#   name: example-worker
-#   scriptUrl: "https://github.com/your-org/your-repo/releases/download/v1.0.0/example-worker.js"
-#   compatibility_date: "2023-05-18"
