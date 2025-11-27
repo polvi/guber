@@ -1136,7 +1136,7 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
       
       // Add source map if available
       if (sourceMap) {
-        formData.append('index.js.map', new Blob([sourceMap], { type: 'application/json' }), 'index.js.map')
+        formData.append('index.js.map', new Blob([sourceMap], { type: 'text/plain' }), 'index.js.map')
       }
     } else {
       // For classic workers, use metadata with body_part
@@ -1148,7 +1148,7 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
       
       // Add source map if available
       if (sourceMap) {
-        formData.append('script.map', new Blob([sourceMap], { type: 'application/json' }), 'script.map')
+        formData.append('script.map', new Blob([sourceMap], { type: 'text/plain' }), 'script.map')
       }
     }
     
@@ -1461,7 +1461,7 @@ async function reconcileWorkers(env: Env) {
           
           // Add source map if available
           if (sourceMap) {
-            formData.append('index.js.map', new Blob([sourceMap], { type: 'application/json' }), 'index.js.map')
+            formData.append('index.js.map', new Blob([sourceMap], { type: 'text/plain' }), 'index.js.map')
           }
         } else {
           // For classic workers, use metadata with body_part
@@ -1473,7 +1473,7 @@ async function reconcileWorkers(env: Env) {
           
           // Add source map if available
           if (sourceMap) {
-            formData.append('script.map', new Blob([sourceMap], { type: 'application/json' }), 'script.map')
+            formData.append('script.map', new Blob([sourceMap], { type: 'text/plain' }), 'script.map')
           }
         }
         
