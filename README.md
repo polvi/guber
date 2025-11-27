@@ -64,12 +64,10 @@ bun dev
 
 ## Example Usage
 
-First, set up kubectl to use the local Guber instance, then apply the example CRDs.
+First, set up kubectl to use the local Guber instance:
 
 ```bash
 export KUBECONFIG=k8s/kubeconfig
-kubectl apply -f k8s/boardposts.bulletin.yaml --validate=false
-kubectl apply -f k8s/boardpost.yaml --validate=false
 ```
 
 Note: The kubeconfig is pre-configured to work with the development server running on `http://localhost:8787`.
@@ -93,6 +91,11 @@ kubectl apply -f k8s/worker-example.yaml --validate=false
 kubectl get d1s
 kubectl get queues
 kubectl get workers
+
+# Get detailed information about a specific resource
+kubectl describe worker example-worker
+kubectl describe d1 example-db
+kubectl describe queue example-queue
 ```
 
 Workers will be automatically deployed to `{worker-name}.{GUBER_NAME}.{GUBER_DOMAIN}`.
@@ -105,14 +108,13 @@ Once running and with KUBECONFIG set, you can use kubectl to interact with your 
 # List all CRDs
 kubectl get crds
 
-# List BoardPost resources
-kubectl get boardposts
+# List all Cloudflare resources
+kubectl get d1s,queues,workers
 
-# Get a specific BoardPost
-kubectl get boardpost first-post
-
-# Delete a BoardPost
-kubectl delete boardpost first-post --validate=false
+# Delete resources
+kubectl delete worker example-worker --validate=false
+kubectl delete d1 example-db --validate=false
+kubectl delete queue example-queue --validate=false
 ```
 
 ## Testing Reconciliation
@@ -124,5 +126,9 @@ curl http://127.0.0.1:8787/cdn-cgi/handler/scheduled
 ```
 
 The example manifests in `k8s/` demonstrate:
-- `boardposts.bulletin.yaml`: A CRD defining a BoardPost resource type
-- `boardpost.yaml`: An instance of a BoardPost resource
+- `d1s.cf.guber.proc.io.yaml`: CRD for Cloudflare D1 databases
+- `qs.cf.guber.proc.io.yaml`: CRD for Cloudflare Queues
+- `workers.cf.guber.proc.io.yaml`: CRD for Cloudflare Workers
+- `d1-example-db.yaml`: Example D1 database resource
+- `q-example.yaml`: Example Queue resource
+- `worker-example.yaml`: Example Worker resource
