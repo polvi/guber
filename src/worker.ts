@@ -1762,7 +1762,7 @@ async function reconcileWorkers(env: Env) {
           formData.append('index.js.map', new Blob([sourceMap], { type: 'text/plain' }), 'index.js.map')
         }
         
-        console.log(`Reconciling worker ${fullName} with ${expectedBindings.length} bindings`)
+        console.log(`Reconciling worker ${fullName} with ${bindings.length} bindings`)
         
         const createResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullName}`, {
           method: "PUT",
