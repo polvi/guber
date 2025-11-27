@@ -7,6 +7,7 @@ type Env = {
     D1_QUEUE: Queue
     CLOUDFLARE_API_TOKEN: string
     CLOUDFLARE_ACCOUNT_ID: string
+    GUBER_NAME: string
   } 
 }
 
@@ -631,15 +632,15 @@ export default {
   }
 }
 
-function buildFullDatabaseName(resourceName: string, group: string, plural: string, namespace: string | null): string {
-  // Construct full database name: name.namespace.resource-type
+function buildFullDatabaseName(resourceName: string, group: string, plural: string, namespace: string | null, instanceName: string): string {
+  // Construct full database name: name.namespace.resource-type.instance
   const namespaceStr = namespace || "cluster"
   const resourceType = `${plural}.${group}`
-  return `${resourceName}.${namespaceStr}.${resourceType}`
+  return `${resourceName}.${namespaceStr}.${resourceType}.${instanceName}`
 }
 
 async function provisionD1Database(env: Env, resourceName: string, group: string, kind: string, plural: string, namespace: string | null, spec: any) {
-  const fullDatabaseName = buildFullDatabaseName(resourceName, group, plural, namespace)
+  const fullDatabaseName = buildFullDatabaseName(resourceName, group, plural, namespace, env.GUBER_NAME)
   
   const requestBody: any = {
     name: fullDatabaseName
@@ -740,7 +741,7 @@ async function provisionD1Database(env: Env, resourceName: string, group: string
 }
 
 async function deleteD1Database(env: Env, resourceName: string, group: string, kind: string, plural: string, namespace: string | null, spec: any, status?: any) {
-  const fullDatabaseName = buildFullDatabaseName(resourceName, group, plural, namespace)
+  const fullDatabaseName = buildFullDatabaseName(resourceName, group, plural, namespace, env.GUBER_NAME)
   // Get database ID from the passed status or spec
   const databaseId = status?.database_id
   
@@ -798,7 +799,7 @@ async function reconcileD1Databases(env: Env) {
     
     // Build API database map with full names
     for (const resource of (apiResources || [])) {
-      const fullDatabaseName = buildFullDatabaseName(resource.name, resource.group_name, resource.plural, resource.namespace)
+      const fullDatabaseName = buildFullDatabaseName(resource.name, resource.group_name, resource.plural, resource.namespace, env.GUBER_NAME)
       apiDatabaseMap.set(fullDatabaseName, resource)
     }
     
