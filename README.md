@@ -28,6 +28,8 @@ bun db:init
 export KUBECONFIG=k8s/kubeconfig
 ```
 
+Note: The kubeconfig is pre-configured to work with the development server running on `http://localhost:8787`.
+
 4. Apply the example CRD and resource:
 ```bash
 kubectl apply -f k8s/boardposts.bulletin.yaml --validate=false
