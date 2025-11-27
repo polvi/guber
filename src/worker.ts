@@ -1770,7 +1770,14 @@ async function reconcileWorkers(env: Env) {
       if (cloudflareWorkerMap.has(fullName)) {
         try {
           const spec = JSON.parse(apiResource.spec)
-          const status = apiResource.status ? JSON.parse(apiResource.status) : {}
+          let status = {}
+          try {
+            status = apiResource.status ? JSON.parse(apiResource.status) : {}
+          } catch (statusParseError) {
+            console.error(`Failed to parse status for worker ${fullName}:`, statusParseError)
+            console.error(`Status content:`, apiResource.status)
+            status = {}
+          }
           const customDomain = `${apiResource.name}.${env.GUBER_NAME}.${env.GUBER_DOMAIN}`
           
           // Check if bindings need to be updated
