@@ -1107,13 +1107,31 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
     // Determine if this is a module based on file extension or content
     const isModule = spec.scriptUrl?.endsWith('.js') || spec.script?.includes('export default')
     
+    // Create multipart form data for the worker upload
+    const formData = new FormData()
+    
+    if (isModule) {
+      // For module workers, use metadata with main_module
+      const metadata = {
+        main_module: "index.js"
+      }
+      formData.append('metadata', JSON.stringify(metadata))
+      formData.append('index.js', new Blob([script], { type: 'application/javascript' }), 'index.js')
+    } else {
+      // For classic workers, use metadata with body_part
+      const metadata = {
+        body_part: "script"
+      }
+      formData.append('metadata', JSON.stringify(metadata))
+      formData.append('script', new Blob([script], { type: 'application/javascript' }), 'script')
+    }
+    
     const deployResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullWorkerName}`, {
       method: "PUT",
       headers: {
-        "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
-        "Content-Type": isModule ? "application/javascript+module" : "application/javascript"
+        "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`
       },
-      body: script
+      body: formData
     })
     
     if (!deployResponse.ok) {
@@ -1388,13 +1406,31 @@ async function reconcileWorkers(env: Env) {
         // Determine if this is a module based on file extension or content
         const isModule = spec.scriptUrl?.endsWith('.js') || spec.script?.includes('export default')
         
+        // Create multipart form data for the worker upload
+        const formData = new FormData()
+        
+        if (isModule) {
+          // For module workers, use metadata with main_module
+          const metadata = {
+            main_module: "index.js"
+          }
+          formData.append('metadata', JSON.stringify(metadata))
+          formData.append('index.js', new Blob([script], { type: 'application/javascript' }), 'index.js')
+        } else {
+          // For classic workers, use metadata with body_part
+          const metadata = {
+            body_part: "script"
+          }
+          formData.append('metadata', JSON.stringify(metadata))
+          formData.append('script', new Blob([script], { type: 'application/javascript' }), 'script')
+        }
+        
         const createResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullName}`, {
           method: "PUT",
           headers: {
-            "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
-            "Content-Type": isModule ? "application/javascript+module" : "application/javascript"
+            "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`
           },
-          body: script
+          body: formData
         })
         
         if (createResponse.ok) {
