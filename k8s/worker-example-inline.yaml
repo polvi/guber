@@ -5,9 +5,6 @@ metadata:
 spec:
   name: example-worker-inline
   script: |
-    // SPDX-FileCopyrightText: 2025 Alex Polvi
-    // SPDX-License-Identifier: AGPL-3.0-or-later
-
     // src/index.ts
     var index_default = {
       async fetch(request, env, ctx) {
