@@ -16,7 +16,7 @@ const app = new Hono<Env>();
 
 // Register all controllers
 for (const controller of config.controllers) {
-	console.log("Registering controller", controller);
+  console.log("Registering controller", controller);
   controller.register(app);
 }
 
@@ -732,7 +732,7 @@ export default {
         return;
       }
     }
-    
+
     // Default behavior if no controller handles queues
     for (const message of batch.messages) {
       message.ack();
@@ -742,7 +742,7 @@ export default {
     console.log(
       `Running scheduled tasks at ${new Date(event.scheduledTime).toISOString()}`,
     );
-    
+
     // Delegate to controllers that support scheduled handling
     for (const controller of config.controllers) {
       if (controller.handleScheduled) {
@@ -751,8 +751,3 @@ export default {
     }
   },
 };
-
-
-
-
-

@@ -4,4 +4,3 @@ import cloudflare from "./src/controllers/cloudflare";
 export default defineConfig({
   controllers: [cloudflare()],
 });
-

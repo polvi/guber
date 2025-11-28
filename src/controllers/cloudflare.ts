@@ -11,10 +11,10 @@ class CloudflareController implements Controller {
     // Hook into resource creation to add Cloudflare provisioning
     app.post("/apis/:group/:version/:plural", async (c) => {
       const { group, version, plural } = c.req.param();
-      
+
       // Let main API handle the database operations first
       const response = await c.next();
-      
+
       // Only add provisioning for cf.guber.proc.io resources that were successfully created
       if (group === "cf.guber.proc.io" && response && response.status === 201) {
         const body = await c.req.json();
@@ -29,7 +29,9 @@ class CloudflareController implements Controller {
         // Queue for provisioning if it's a Cloudflare resource type
         if (
           crd &&
-          (crd.kind === "D1" || crd.kind === "Queue" || crd.kind === "Worker") &&
+          (crd.kind === "D1" ||
+            crd.kind === "Queue" ||
+            crd.kind === "Worker") &&
           c.env.GUBER_BUS
         ) {
           await c.env.GUBER_BUS.send({
@@ -51,7 +53,7 @@ class CloudflareController implements Controller {
     // Hook into resource deletion to add Cloudflare cleanup
     app.delete("/apis/:group/:version/:plural/:name", async (c) => {
       const { group, version, plural, name } = c.req.param();
-      
+
       // Only handle cf.guber.proc.io resources
       if (group === "cf.guber.proc.io") {
         // Get the resource before main API deletes it
@@ -1228,7 +1230,9 @@ class CloudflareController implements Controller {
                 );
               }
             } else {
-              console.log(`Queue resource ${queueBinding.queue_name} not found`);
+              console.log(
+                `Queue resource ${queueBinding.queue_name} not found`,
+              );
             }
           }
         }
@@ -1408,7 +1412,10 @@ class CloudflareController implements Controller {
           console.log(`Custom domain ${customDomain} deleted successfully`);
         } else {
           const error = await domainResponse.text();
-          console.error(`Failed to delete custom domain ${customDomain}:`, error);
+          console.error(
+            `Failed to delete custom domain ${customDomain}:`,
+            error,
+          );
         }
       }
 
@@ -1805,7 +1812,9 @@ class CloudflareController implements Controller {
             if (domainResponse.ok) {
               const domainResult = await domainResponse.json();
               domainId = domainResult.result?.id;
-              console.log(`Successfully created custom domain: ${customDomain}`);
+              console.log(
+                `Successfully created custom domain: ${customDomain}`,
+              );
             } else {
               const domainError = await domainResponse.text();
               console.error(
@@ -1844,7 +1853,10 @@ class CloudflareController implements Controller {
             console.log(`Successfully reconciled missing worker: ${fullName}`);
           } else {
             const error = await createResponse.text();
-            console.error(`Failed to create missing worker ${fullName}:`, error);
+            console.error(
+              `Failed to create missing worker ${fullName}:`,
+              error,
+            );
 
             // Update status to failed
             const updateQuery = resource.namespace
