@@ -20,6 +20,24 @@ for (const controller of config.controllers) {
   controller.register(app);
 }
 
+// Helper function to notify controllers of resource events
+async function notifyControllers(
+  event: 'created' | 'deleted',
+  context: ResourceContext
+) {
+  for (const controller of config.controllers) {
+    try {
+      if (event === 'created' && controller.onResourceCreated) {
+        await controller.onResourceCreated(context);
+      } else if (event === 'deleted' && controller.onResourceDeleted) {
+        await controller.onResourceDeleted(context);
+      }
+    } catch (error) {
+      console.error(`Controller ${controller.constructor?.name || 'unknown'} failed to handle ${event} event:`, error);
+    }
+  }
+}
+
 // --- Discovery endpoints for kubectl compatibility ---
 
 // Root API discovery
@@ -432,7 +450,7 @@ app.post("/apis/:group/:version/:plural", async (c) => {
     )
     .run();
 
-  return c.json(
+  const response = c.json(
     {
       apiVersion: `${group}/${version}`,
       kind: crd.kind,
@@ -441,6 +459,20 @@ app.post("/apis/:group/:version/:plural", async (c) => {
     },
     201,
   );
+
+  // Notify controllers of resource creation
+  await notifyControllers('created', {
+    group,
+    version,
+    plural,
+    name,
+    namespace: null,
+    kind: crd.kind,
+    spec: body.spec,
+    env: c.env,
+  });
+
+  return response;
 });
 
 // Get single cluster-scoped resource
@@ -499,6 +531,19 @@ app.delete("/apis/:group/:version/:plural/:name", async (c) => {
     .bind(group, version, plural, name)
     .first();
   if (!result) return c.json({ message: "Not Found" }, 404);
+
+  // Notify controllers of resource deletion BEFORE deleting from DB
+  await notifyControllers('deleted', {
+    group,
+    version,
+    plural,
+    name,
+    namespace: null,
+    kind: result.kind,
+    spec: JSON.parse(result.spec),
+    status: result.status ? JSON.parse(result.status) : {},
+    env: c.env,
+  });
 
   // Delete the resource
   await c.env.DB.prepare(
@@ -615,7 +660,7 @@ app.post("/apis/:group/:version/namespaces/:namespace/:plural", async (c) => {
     )
     .run();
 
-  return c.json(
+  const response = c.json(
     {
       apiVersion: `${group}/${version}`,
       kind: crd.kind,
@@ -628,6 +673,20 @@ app.post("/apis/:group/:version/namespaces/:namespace/:plural", async (c) => {
     },
     201,
   );
+
+  // Notify controllers of resource creation
+  await notifyControllers('created', {
+    group,
+    version,
+    plural,
+    name,
+    namespace,
+    kind: crd.kind,
+    spec: body.spec,
+    env: c.env,
+  });
+
+  return response;
 });
 
 // Get single namespaced resource
@@ -698,6 +757,19 @@ app.delete(
       .bind(group, version, plural, name, namespace)
       .first();
     if (!result) return c.json({ message: "Not Found" }, 404);
+
+    // Notify controllers of resource deletion BEFORE deleting from DB
+    await notifyControllers('deleted', {
+      group,
+      version,
+      plural,
+      name,
+      namespace,
+      kind: result.kind,
+      spec: JSON.parse(result.spec),
+      status: result.status ? JSON.parse(result.status) : {},
+      env: c.env,
+    });
 
     // Delete the resource
     await c.env.DB.prepare(

@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { v4 as uuid } from "uuid";
-import type { Controller } from "./config";
+import type { Controller, ResourceContext } from "../config";
 
 export default function cloudflare(): Controller {
   return new CloudflareController();
@@ -8,93 +8,56 @@ export default function cloudflare(): Controller {
 
 class CloudflareController implements Controller {
   register(app: Hono<any>): void {
-    // Hook into resource creation to add Cloudflare provisioning
-    app.use("/apis/:group/:version/:plural", async (c, next) => {
-      const { group, version, plural } = c.req.param();
+    // No middleware registration needed - we use post-processing hooks
+  }
 
-      // For POST requests to cf.guber.proc.io resources
-      if (c.req.method === "POST" && group === "cf.guber.proc.io") {
-        // Let main API handle the database operations first
-        await next();
+  async onResourceCreated(context: ResourceContext): Promise<void> {
+    const { group, kind, name, spec, env } = context;
 
-        // Only add provisioning for cf.guber.proc.io resources that were successfully created
-        if (c.res.status === 201) {
-          const body = await c.req.json();
-          const name = body.metadata?.name || uuid();
+    // Only handle cf.guber.proc.io resources
+    if (group !== "cf.guber.proc.io") return;
 
-          const crd = await c.env.DB.prepare(
-            "SELECT * FROM crds WHERE group_name=? AND version=? AND plural=?",
-          )
-            .bind(group, version, plural)
-            .first();
+    // Queue for provisioning if it's a Cloudflare resource type
+    if (
+      (kind === "D1" || kind === "Queue" || kind === "Worker") &&
+      env.GUBER_BUS
+    ) {
+      await env.GUBER_BUS.send({
+        action: "create",
+        resourceType: kind.toLowerCase(),
+        resourceName: name,
+        group: context.group,
+        kind: context.kind,
+        plural: context.plural,
+        namespace: context.namespace,
+        spec: spec,
+      });
+    }
+  }
 
-          // Queue for provisioning if it's a Cloudflare resource type
-          if (
-            crd &&
-            (crd.kind === "D1" ||
-              crd.kind === "Queue" ||
-              crd.kind === "Worker") &&
-            c.env.GUBER_BUS
-          ) {
-            await c.env.GUBER_BUS.send({
-              action: "create",
-              resourceType: crd.kind.toLowerCase(),
-              resourceName: name,
-              group: group,
-              kind: crd.kind,
-              plural: plural,
-              namespace: null,
-              spec: body.spec,
-            });
-          }
-        }
-      } else {
-        await next();
-      }
-    });
+  async onResourceDeleted(context: ResourceContext): Promise<void> {
+    const { group, kind, name, spec, status, env } = context;
 
-    // Hook into resource deletion to add Cloudflare cleanup
-    app.use("/apis/:group/:version/:plural/:name", async (c, next) => {
-      const { group, version, plural, name } = c.req.param();
+    // Only handle cf.guber.proc.io resources
+    if (group !== "cf.guber.proc.io") return;
 
-      // For DELETE requests to cf.guber.proc.io resources
-      if (c.req.method === "DELETE" && group === "cf.guber.proc.io") {
-        // Get the resource before main API deletes it
-        const result = await c.env.DB.prepare(
-          "SELECT * FROM resources WHERE group_name=? AND version=? AND plural=? AND name=? AND namespace IS NULL",
-        )
-          .bind(group, version, plural, name)
-          .first();
-
-        // Queue for deletion BEFORE main API deletes from DB
-        if (
-          result &&
-          (result.kind === "D1" ||
-            result.kind === "Queue" ||
-            result.kind === "Worker") &&
-          c.env.GUBER_BUS
-        ) {
-          const spec = JSON.parse(result.spec);
-          const status = result.status ? JSON.parse(result.status) : {};
-          await c.env.GUBER_BUS.send({
-            action: "delete",
-            resourceType: result.kind.toLowerCase(),
-            resourceName: name,
-            group: group,
-            kind: result.kind,
-            plural: plural,
-            namespace: null,
-            spec: spec,
-            status: status,
-          });
-        }
-
-        // Let main API handle the database deletion
-        await next();
-      } else {
-        await next();
-      }
-    });
+    // Queue for deletion if it's a Cloudflare resource type
+    if (
+      (kind === "D1" || kind === "Queue" || kind === "Worker") &&
+      env.GUBER_BUS
+    ) {
+      await env.GUBER_BUS.send({
+        action: "delete",
+        resourceType: kind.toLowerCase(),
+        resourceName: name,
+        group: context.group,
+        kind: context.kind,
+        plural: context.plural,
+        namespace: context.namespace,
+        spec: spec,
+        status: status,
+      });
+    }
   }
 
   async handleQueue(batch: any, env: any): Promise<void> {
