@@ -16,6 +16,7 @@ const app = new Hono<Env>();
 
 // Register all controllers
 for (const controller of config.controllers) {
+	console.log("Registering controller", controller);
   controller.register(app);
 }
 
