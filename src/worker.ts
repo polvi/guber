@@ -1305,9 +1305,9 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
     }
     
     // Add bindings if specified
+    const bindings: any[] = []
+    
     if (spec.bindings) {
-      const bindings: any[] = []
-      
       // Handle D1 database bindings
       if (spec.bindings.d1_databases) {
         for (const d1Binding of spec.bindings.d1_databases) {
@@ -1363,10 +1363,10 @@ async function provisionWorker(env: Env, resourceName: string, group: string, ki
           }
         }
       }
-      
-      if (bindings.length > 0) {
-        metadata.bindings = bindings
-      }
+    }
+    
+    if (bindings.length > 0) {
+      metadata.bindings = bindings
     }
     
     formData.append('metadata', JSON.stringify(metadata))
