@@ -8,122 +8,85 @@ export default function cloudflare(): Controller {
 
 class CloudflareController implements Controller {
   register(app: Hono<any>): void {
-    // Create cluster-scoped resource with Cloudflare provisioning
+    // Hook into resource creation to add Cloudflare provisioning
     app.post("/apis/:group/:version/:plural", async (c) => {
       const { group, version, plural } = c.req.param();
       
-      // Only handle cf.guber.proc.io resources
-      if (group !== "cf.guber.proc.io") {
-        return c.next();
-      }
+      // Let main API handle the database operations first
+      const response = await c.next();
+      
+      // Only add provisioning for cf.guber.proc.io resources that were successfully created
+      if (group === "cf.guber.proc.io" && response && response.status === 201) {
+        const body = await c.req.json();
+        const name = body.metadata?.name || uuid();
 
-      const body = await c.req.json();
-      const name = body.metadata?.name || uuid();
-
-      const crd = await c.env.DB.prepare(
-        "SELECT * FROM crds WHERE group_name=? AND version=? AND plural=?",
-      )
-        .bind(group, version, plural)
-        .first();
-      if (!crd) return c.json({ message: "Unknown resource type" }, 404);
-
-      await c.env.DB.prepare(
-        "INSERT INTO resources (id, group_name, version, kind, plural, name, spec, namespace) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-      )
-        .bind(
-          uuid(),
-          group,
-          version,
-          crd.kind,
-          plural,
-          name,
-          JSON.stringify(body.spec),
-          null,
+        const crd = await c.env.DB.prepare(
+          "SELECT * FROM crds WHERE group_name=? AND version=? AND plural=?",
         )
-        .run();
+          .bind(group, version, plural)
+          .first();
 
-      // Queue for provisioning
-      if (
-        (crd.kind === "D1" || crd.kind === "Queue" || crd.kind === "Worker") &&
-        c.env.GUBER_BUS
-      ) {
-        await c.env.GUBER_BUS.send({
-          action: "create",
-          resourceType: crd.kind.toLowerCase(),
-          resourceName: name,
-          group: group,
-          kind: crd.kind,
-          plural: plural,
-          namespace: null,
-          spec: body.spec,
-        });
+        // Queue for provisioning if it's a Cloudflare resource type
+        if (
+          crd &&
+          (crd.kind === "D1" || crd.kind === "Queue" || crd.kind === "Worker") &&
+          c.env.GUBER_BUS
+        ) {
+          await c.env.GUBER_BUS.send({
+            action: "create",
+            resourceType: crd.kind.toLowerCase(),
+            resourceName: name,
+            group: group,
+            kind: crd.kind,
+            plural: plural,
+            namespace: null,
+            spec: body.spec,
+          });
+        }
       }
 
-      return c.json(
-        {
-          apiVersion: `${group}/${version}`,
-          kind: crd.kind,
-          metadata: { name, creationTimestamp: new Date().toISOString() },
-          spec: body.spec,
-        },
-        201,
-      );
+      return response;
     });
 
-    // Delete cluster-scoped resource with Cloudflare cleanup
+    // Hook into resource deletion to add Cloudflare cleanup
     app.delete("/apis/:group/:version/:plural/:name", async (c) => {
       const { group, version, plural, name } = c.req.param();
       
       // Only handle cf.guber.proc.io resources
-      if (group !== "cf.guber.proc.io") {
-        return c.next();
+      if (group === "cf.guber.proc.io") {
+        // Get the resource before main API deletes it
+        const result = await c.env.DB.prepare(
+          "SELECT * FROM resources WHERE group_name=? AND version=? AND plural=? AND name=? AND namespace IS NULL",
+        )
+          .bind(group, version, plural, name)
+          .first();
+
+        // Queue for deletion BEFORE main API deletes from DB
+        if (
+          result &&
+          (result.kind === "D1" ||
+            result.kind === "Queue" ||
+            result.kind === "Worker") &&
+          c.env.GUBER_BUS
+        ) {
+          const spec = JSON.parse(result.spec);
+          const status = result.status ? JSON.parse(result.status) : {};
+          await c.env.GUBER_BUS.send({
+            action: "delete",
+            resourceType: result.kind.toLowerCase(),
+            resourceName: name,
+            group: group,
+            kind: result.kind,
+            plural: plural,
+            namespace: null,
+            spec: spec,
+            status: status,
+          });
+        }
       }
 
-      // Get the resource before deleting it
-      const result = await c.env.DB.prepare(
-        "SELECT * FROM resources WHERE group_name=? AND version=? AND plural=? AND name=? AND namespace IS NULL",
-      )
-        .bind(group, version, plural, name)
-        .first();
-      if (!result) return c.json({ message: "Not Found" }, 404);
-
-      // Queue for deletion BEFORE deleting from DB
-      if (
-        (result.kind === "D1" ||
-          result.kind === "Queue" ||
-          result.kind === "Worker") &&
-        c.env.GUBER_BUS
-      ) {
-        const spec = JSON.parse(result.spec);
-        const status = result.status ? JSON.parse(result.status) : {};
-        await c.env.GUBER_BUS.send({
-          action: "delete",
-          resourceType: result.kind.toLowerCase(),
-          resourceName: name,
-          group: group,
-          kind: result.kind,
-          plural: plural,
-          namespace: null,
-          spec: spec,
-          status: status,
-        });
-      }
-
-      // Delete the resource
-      await c.env.DB.prepare(
-        "DELETE FROM resources WHERE group_name=? AND version=? AND plural=? AND name=? AND namespace IS NULL",
-      )
-        .bind(group, version, plural, name)
-        .run();
-
-      // Return the deleted object
-      return c.json({
-        apiVersion: `${group}/${version}`,
-        kind: result.kind,
-        metadata: { name: result.name, creationTimestamp: result.created_at },
-        spec: JSON.parse(result.spec),
-        status: result.status ? JSON.parse(result.status) : {},
-      });
+      // Let main API handle the database deletion
+      return await c.next();
     });
   }
 
