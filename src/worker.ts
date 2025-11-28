@@ -1,22 +1,6 @@
 import { Hono } from "hono";
 import { v4 as uuid } from "uuid";
 
-type Env = {
-  Bindings: {
-    DB: D1Database;
-    GUBER_BUS: Queue;
-    CLOUDFLARE_API_TOKEN: string;
-    CLOUDFLARE_ACCOUNT_ID: string;
-    GUBER_NAME: string;
-    GUBER_DOMAIN: string;
-  };
-};
-
-interface ScheduledEvent {
-  scheduledTime: number;
-  cron: string;
-}
-
 const app = new Hono<Env>();
 
 // --- Discovery endpoints for kubectl compatibility ---
