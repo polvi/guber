@@ -7,7 +7,8 @@
     "dev": "bun run wrangler dev",
     "deploy": "bun run wrangler deploy",
     "db:reset": "./scripts/reset-db.sh",
-    "build": "bun run wrangler deploy --dry-run"
+    "build": "bun run wrangler deploy --dry-run",
+    "fmt": "bun run prettier -w . && git add -A && git commit -m'chore: formatting'"
   },
   "dependencies": {
     "cloudflare": "^5.2.0",
