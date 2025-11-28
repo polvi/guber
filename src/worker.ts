@@ -1,18 +1,6 @@
 import { Hono } from "hono";
 import { v4 as uuid } from "uuid";
-import type { Controller } from "./cloudflare";
-
-// Config system
-export interface GuberConfig {
-  controllers: Controller[];
-}
-
-export function defineConfig(config: GuberConfig): GuberConfig {
-  return config;
-}
-
-// Export config for use in guber.config.ts
-export { defineConfig as defineConfig };
+import type { GuberConfig } from "./config";
 
 // Load config
 let config: GuberConfig;
