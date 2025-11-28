@@ -51,4 +51,3 @@ spec:
                 endpoint:
                   type: string
                   description: Connection endpoint for API clients.
-

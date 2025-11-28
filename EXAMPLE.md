@@ -2,10 +2,10 @@ Perfect — let’s make this concrete.
 
 Below is a **minimal but fully Kubernetes-compatible API server** that runs on **Cloudflare Workers + Hono + D1**, supporting:
 
-* Real `/apis/apiextensions.k8s.io/v1/customresourcedefinitions`
-* Dynamic `/apis/<group>/<version>/<resource>` CRUD endpoints
-* K8s-style object shapes (`apiVersion`, `kind`, `metadata`, `spec`, `status`)
-* List endpoints returning `kind: XList`
+- Real `/apis/apiextensions.k8s.io/v1/customresourcedefinitions`
+- Dynamic `/apis/<group>/<version>/<resource>` CRUD endpoints
+- K8s-style object shapes (`apiVersion`, `kind`, `metadata`, `spec`, `status`)
+- List endpoints returning `kind: XList`
 
 This is your starting point for **Guber v0**, a CRD-based API fabric running entirely at the edge.
 
@@ -45,70 +45,86 @@ CREATE TABLE resources (
 ## 2. **Hono app (src/worker.ts)**
 
 ```ts
-import { Hono } from "hono"
-import { v4 as uuid } from "uuid"
+import { Hono } from "hono";
+import { v4 as uuid } from "uuid";
 
-type Env = { Bindings: { DB: D1Database } }
+type Env = { Bindings: { DB: D1Database } };
 
-const app = new Hono<Env>()
+const app = new Hono<Env>();
 
 // --- 1. apiextensions.k8s.io/v1/customresourcedefinitions ---
-app.get("/apis/apiextensions.k8s.io/v1/customresourcedefinitions", async c => {
-  const { results } = await c.env.DB.prepare("SELECT * FROM crds").all()
-  return c.json({
-    apiVersion: "apiextensions.k8s.io/v1",
-    kind: "CustomResourceDefinitionList",
-    items: results.map((r: any) => ({
+app.get(
+  "/apis/apiextensions.k8s.io/v1/customresourcedefinitions",
+  async (c) => {
+    const { results } = await c.env.DB.prepare("SELECT * FROM crds").all();
+    return c.json({
+      apiVersion: "apiextensions.k8s.io/v1",
+      kind: "CustomResourceDefinitionList",
+      items: results.map((r: any) => ({
+        apiVersion: "apiextensions.k8s.io/v1",
+        kind: "CustomResourceDefinition",
+        metadata: { name: r.name, creationTimestamp: r.created_at },
+        spec: {
+          group: r.group_name,
+          versions: [{ name: r.version, served: true, storage: true }],
+          scope: r.scope,
+          names: { plural: r.plural, kind: r.kind },
+        },
+      })),
+    });
+  },
+);
+
+app.post(
+  "/apis/apiextensions.k8s.io/v1/customresourcedefinitions",
+  async (c) => {
+    const body = await c.req.json();
+    const spec = body.spec;
+    const group = spec.group;
+    const version = spec.versions[0].name;
+    const kind = spec.names.kind;
+    const plural = spec.names.plural;
+    const name = `${plural}.${group}`;
+
+    await c.env.DB.prepare(
+      "INSERT INTO crds (name, group_name, version, kind, plural) VALUES (?, ?, ?, ?, ?)",
+    )
+      .bind(name, group, version, kind, plural)
+      .run();
+
+    return c.json(
+      {
+        apiVersion: "apiextensions.k8s.io/v1",
+        kind: "CustomResourceDefinition",
+        metadata: { name },
+        spec,
+      },
+      201,
+    );
+  },
+);
+
+app.get(
+  "/apis/apiextensions.k8s.io/v1/customresourcedefinitions/:name",
+  async (c) => {
+    const { name } = c.req.param();
+    const result = await c.env.DB.prepare("SELECT * FROM crds WHERE name=?")
+      .bind(name)
+      .first();
+    if (!result) return c.json({ message: "Not Found" }, 404);
+    return c.json({
       apiVersion: "apiextensions.k8s.io/v1",
       kind: "CustomResourceDefinition",
-      metadata: { name: r.name, creationTimestamp: r.created_at },
+      metadata: { name: result.name, creationTimestamp: result.created_at },
       spec: {
-        group: r.group_name,
-        versions: [{ name: r.version, served: true, storage: true }],
-        scope: r.scope,
-        names: { plural: r.plural, kind: r.kind },
+        group: result.group_name,
+        versions: [{ name: result.version, served: true, storage: true }],
+        scope: result.scope,
+        names: { plural: result.plural, kind: result.kind },
       },
-    })),
-  })
-})
-
-app.post("/apis/apiextensions.k8s.io/v1/customresourcedefinitions", async c => {
-  const body = await c.req.json()
-  const spec = body.spec
-  const group = spec.group
-  const version = spec.versions[0].name
-  const kind = spec.names.kind
-  const plural = spec.names.plural
-  const name = `${plural}.${group}`
-
-  await c.env.DB.prepare(
-    "INSERT INTO crds (name, group_name, version, kind, plural) VALUES (?, ?, ?, ?, ?)"
-  ).bind(name, group, version, kind, plural).run()
-
-  return c.json({
-    apiVersion: "apiextensions.k8s.io/v1",
-    kind: "CustomResourceDefinition",
-    metadata: { name },
-    spec,
-  }, 201)
-})
-
-app.get("/apis/apiextensions.k8s.io/v1/customresourcedefinitions/:name", async c => {
-  const { name } = c.req.param()
-  const result = await c.env.DB.prepare("SELECT * FROM crds WHERE name=?").bind(name).first()
-  if (!result) return c.json({ message: "Not Found" }, 404)
-  return c.json({
-    apiVersion: "apiextensions.k8s.io/v1",
-    kind: "CustomResourceDefinition",
-    metadata: { name: result.name, creationTimestamp: result.created_at },
-    spec: {
-      group: result.group_name,
-      versions: [{ name: result.version, served: true, storage: true }],
-      scope: result.scope,
-      names: { plural: result.plural, kind: result.kind },
-    },
-  })
-})
+    });
+  },
+);
 ```
 
 ---
@@ -121,11 +137,13 @@ any CRD you register automatically gets its own endpoint.
 ```ts
 app.route("/apis/:group/:version/:plural", (r) => {
   // List
-  r.get("/", async c => {
-    const { group, version, plural } = c.req.param()
+  r.get("/", async (c) => {
+    const { group, version, plural } = c.req.param();
     const { results } = await c.env.DB.prepare(
-      "SELECT * FROM resources WHERE group_name=? AND version=? AND plural=?"
-    ).bind(group, version, plural).all()
+      "SELECT * FROM resources WHERE group_name=? AND version=? AND plural=?",
+    )
+      .bind(group, version, plural)
+      .all();
 
     const items = results.map((r: any) => ({
       apiVersion: `${group}/${version}`,
@@ -136,46 +154,63 @@ app.route("/apis/:group/:version/:plural", (r) => {
       },
       spec: JSON.parse(r.spec),
       status: r.status ? JSON.parse(r.status) : {},
-    }))
+    }));
 
-    const kind = items[0]?.kind || plural[0].toUpperCase() + plural.slice(1)
+    const kind = items[0]?.kind || plural[0].toUpperCase() + plural.slice(1);
     return c.json({
       apiVersion: `${group}/${version}`,
       kind: `${kind}List`,
       items,
-    })
-  })
+    });
+  });
 
   // Create
-  r.post("/", async c => {
-    const { group, version, plural } = c.req.param()
-    const body = await c.req.json()
-    const name = body.metadata?.name || uuid()
+  r.post("/", async (c) => {
+    const { group, version, plural } = c.req.param();
+    const body = await c.req.json();
+    const name = body.metadata?.name || uuid();
 
     const crd = await c.env.DB.prepare(
-      "SELECT * FROM crds WHERE group_name=? AND version=? AND plural=?"
-    ).bind(group, version, plural).first()
-    if (!crd) return c.json({ message: "Unknown resource type" }, 404)
+      "SELECT * FROM crds WHERE group_name=? AND version=? AND plural=?",
+    )
+      .bind(group, version, plural)
+      .first();
+    if (!crd) return c.json({ message: "Unknown resource type" }, 404);
 
     await c.env.DB.prepare(
-      "INSERT INTO resources (id, group_name, version, kind, plural, name, spec) VALUES (?, ?, ?, ?, ?, ?, ?)"
-    ).bind(uuid(), group, version, crd.kind, plural, name, JSON.stringify(body.spec)).run()
+      "INSERT INTO resources (id, group_name, version, kind, plural, name, spec) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    )
+      .bind(
+        uuid(),
+        group,
+        version,
+        crd.kind,
+        plural,
+        name,
+        JSON.stringify(body.spec),
+      )
+      .run();
 
-    return c.json({
-      apiVersion: `${group}/${version}`,
-      kind: crd.kind,
-      metadata: { name, creationTimestamp: new Date().toISOString() },
-      spec: body.spec,
-    }, 201)
-  })
+    return c.json(
+      {
+        apiVersion: `${group}/${version}`,
+        kind: crd.kind,
+        metadata: { name, creationTimestamp: new Date().toISOString() },
+        spec: body.spec,
+      },
+      201,
+    );
+  });
 
   // Get single resource
-  r.get("/:name", async c => {
-    const { group, version, plural, name } = c.req.param()
+  r.get("/:name", async (c) => {
+    const { group, version, plural, name } = c.req.param();
     const result = await c.env.DB.prepare(
-      "SELECT * FROM resources WHERE group_name=? AND version=? AND plural=? AND name=?"
-    ).bind(group, version, plural, name).first()
-    if (!result) return c.json({ message: "Not Found" }, 404)
+      "SELECT * FROM resources WHERE group_name=? AND version=? AND plural=? AND name=?",
+    )
+      .bind(group, version, plural, name)
+      .first();
+    if (!result) return c.json({ message: "Not Found" }, 404);
 
     return c.json({
       apiVersion: `${group}/${version}`,
@@ -183,40 +218,44 @@ app.route("/apis/:group/:version/:plural", (r) => {
       metadata: { name: result.name, creationTimestamp: result.created_at },
       spec: JSON.parse(result.spec),
       status: result.status ? JSON.parse(result.status) : {},
-    })
-  })
+    });
+  });
 
   // Patch
-  r.patch("/:name", async c => {
-    const { group, version, plural, name } = c.req.param()
-    const body = await c.req.json()
+  r.patch("/:name", async (c) => {
+    const { group, version, plural, name } = c.req.param();
+    const body = await c.req.json();
     const current = await c.env.DB.prepare(
-      "SELECT * FROM resources WHERE group_name=? AND version=? AND plural=? AND name=?"
-    ).bind(group, version, plural, name).first()
-    if (!current) return c.json({ message: "Not Found" }, 404)
+      "SELECT * FROM resources WHERE group_name=? AND version=? AND plural=? AND name=?",
+    )
+      .bind(group, version, plural, name)
+      .first();
+    if (!current) return c.json({ message: "Not Found" }, 404);
 
-    const updatedSpec = { ...JSON.parse(current.spec), ...body.spec }
-    await c.env.DB.prepare(
-      "UPDATE resources SET spec=? WHERE name=?"
-    ).bind(JSON.stringify(updatedSpec), name).run()
+    const updatedSpec = { ...JSON.parse(current.spec), ...body.spec };
+    await c.env.DB.prepare("UPDATE resources SET spec=? WHERE name=?")
+      .bind(JSON.stringify(updatedSpec), name)
+      .run();
 
     return c.json({
       apiVersion: `${group}/${version}`,
       kind: current.kind,
       metadata: { name, creationTimestamp: current.created_at },
       spec: updatedSpec,
-    })
-  })
+    });
+  });
 
   // Delete
-  r.delete("/:name", async c => {
-    const { group, version, plural, name } = c.req.param()
+  r.delete("/:name", async (c) => {
+    const { group, version, plural, name } = c.req.param();
     await c.env.DB.prepare(
-      "DELETE FROM resources WHERE group_name=? AND version=? AND plural=? AND name=?"
-    ).bind(group, version, plural, name).run()
-    return c.json({ status: "Success" })
-  })
-})
+      "DELETE FROM resources WHERE group_name=? AND version=? AND plural=? AND name=?",
+    )
+      .bind(group, version, plural, name)
+      .run();
+    return c.json({ status: "Success" });
+  });
+});
 ```
 
 ---
@@ -285,13 +324,12 @@ You’ll get:
 
 ## 5. **Why this matters**
 
-* Fully **Kubernetes API-compatible** shape and URL structure
-* CRDs can be registered dynamically — no redeploys
-* Works with `kubectl --server=https://your-worker` (with small proxy)
-* D1-backed for persistence at the edge
-* A foundation for later features (validation, controllers, hooks, typed clients)
+- Fully **Kubernetes API-compatible** shape and URL structure
+- CRDs can be registered dynamically — no redeploys
+- Works with `kubectl --server=https://your-worker` (with small proxy)
+- D1-backed for persistence at the edge
+- A foundation for later features (validation, controllers, hooks, typed clients)
 
 ---
 
 Would you like me to show how to make it **`kubectl`-compatible** (so you can actually run `kubectl get boardposts --server=https://your-worker`)? That just requires a small discovery endpoint and proper `application/json;as=Table` response support.
-

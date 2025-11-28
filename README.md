@@ -5,6 +5,7 @@ Guber is a minimal Kubernetes-style API server running on Cloudflare Workers tha
 ## What is Guber?
 
 Guber mimics the Kubernetes API server's CRD functionality, allowing you to:
+
 - Define custom resource types using CRDs
 - Create, read, update, and delete custom resources
 - Use standard kubectl commands to interact with your custom APIs
@@ -23,7 +24,7 @@ Guber requires several environment variables to be configured:
 
 ### Domain Setup
 
-For Cloudflare Workers to work with custom domains, you need to ensure your domain is managed by Cloudflare. 
+For Cloudflare Workers to work with custom domains, you need to ensure your domain is managed by Cloudflare.
 
 This allows workers to be deployed at URLs like `example-worker.dev.proc.io`.
 
@@ -119,6 +120,7 @@ curl http://127.0.0.1:8787/cdn-cgi/handler/scheduled
 ```
 
 The example manifests in `k8s/` demonstrate:
+
 - `d1s.cf.guber.proc.io.yaml`: CRD for Cloudflare D1 databases
 - `qs.cf.guber.proc.io.yaml`: CRD for Cloudflare Queues
 - `workers.cf.guber.proc.io.yaml`: CRD for Cloudflare Workers
