@@ -278,8 +278,8 @@ class CloudflareController implements Controller {
 
     for (const resource of results || []) {
       try {
-        const spec = JSON.parse(resource.spec);
-        const status = resource.status ? JSON.parse(resource.status) : {};
+        const spec = resource.spec;
+        const status = resource.status || {};
 
         if (spec.dependencies && status.pendingDependencies) {
           const hasDependency = spec.dependencies.some(
@@ -300,7 +300,18 @@ class CloudflareController implements Controller {
 
             for (const dependency of spec.dependencies) {
               const depGroup = dependency.group || "cf.guber.proc.io";
-              const depResource = await getApisCfGuberProcIoV1WorkersName(dependency.name);
+              let depResource = null;
+              try {
+                if (depKind === 'Worker') {
+                  depResource = await getApisCfGuberProcIoV1WorkersName(depName);
+                } else if (depKind === 'D1') {
+                  depResource = await getApisCfGuberProcIoV1D1sName(depName);
+                } else if (depKind === 'Queue') {
+                  depResource = await getApisCfGuberProcIoV1QsName(depName);
+                }
+              } catch (error) {
+                depResource = null;
+              }
 
               if (!depResource || !depResource.status) {
                 allDependenciesReady = false;
@@ -939,7 +950,7 @@ class CloudflareController implements Controller {
         try {
           console.log(`Creating missing queue: ${fullName}`);
 
-          const spec = JSON.parse(resource.spec);
+          const spec = resource.spec;
           const requestBody: any = { queue_name: fullName };
 
           if (spec.settings) {
@@ -1720,7 +1731,7 @@ class CloudflareController implements Controller {
         try {
           console.log(`Creating missing worker: ${fullName}`);
 
-          const spec = JSON.parse(resource.spec);
+          const spec = resource.spec;
           const customDomain = `${resource.name}.${env.GUBER_NAME}.${env.GUBER_DOMAIN}`;
 
           // Get the worker script content
@@ -1992,18 +2003,8 @@ class CloudflareController implements Controller {
       for (const [fullName, apiResource] of apiWorkerMap) {
         if (cloudflareWorkerMap.has(fullName)) {
           try {
-            const spec = JSON.parse(apiResource.spec);
-            let status = {};
-            try {
-              status = apiResource.status ? JSON.parse(apiResource.status) : {};
-            } catch (statusParseError) {
-              console.error(
-                `Failed to parse status for worker ${fullName}:`,
-                statusParseError,
-              );
-              console.error(`Status content:`, apiResource.status);
-              status = {};
-            }
+            const spec = apiResource.spec;
+            const status = apiResource.status || {};
             const customDomain = `${apiResource.name}.${env.GUBER_NAME}.${env.GUBER_DOMAIN}`;
 
             // Check if bindings need to be updated
@@ -2257,21 +2258,12 @@ class CloudflareController implements Controller {
                 }
               }
 
-              const updateQuery = apiResource.namespace
-                ? "UPDATE resources SET status=? WHERE name=? AND namespace=?"
-                : "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL";
-
-              const updateParams = apiResource.namespace
-                ? [
-                    JSON.stringify(newStatus),
-                    apiResource.name,
-                    apiResource.namespace,
-                  ]
-                : [JSON.stringify(newStatus), apiResource.name];
-
-              await env.DB.prepare(updateQuery)
-                .bind(...updateParams)
-                .run();
+              await patchApisCfGuberProcIoV1WorkersName(apiResource.name, {
+                apiVersion: "cf.guber.proc.io/v1",
+                kind: "Worker",
+                metadata: { name: apiResource.name },
+                status: newStatus,
+              });
 
               console.log(
                 `Updated worker ${fullName} health status: ${currentState} -> ${newStatus.state}`,
@@ -2281,16 +2273,7 @@ class CloudflareController implements Controller {
             console.error(`Error checking worker ${fullName}:`, error);
 
             // Update status to indicate check failed
-            let status = {};
-            try {
-              status = apiResource.status ? JSON.parse(apiResource.status) : {};
-            } catch (parseError) {
-              console.error(
-                `Failed to parse existing status for worker ${fullName}:`,
-                parseError,
-              );
-              status = {};
-            }
+            const status = apiResource.status || {};
 
             const newStatus = {
               ...status,
@@ -2543,7 +2526,7 @@ class CloudflareController implements Controller {
         try {
           console.log(`Creating missing database: ${fullName}`);
 
-          const spec = JSON.parse(resource.spec);
+          const spec = resource.spec;
           const requestBody: any = { name: fullName };
 
           if (spec.location) {
