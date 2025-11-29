@@ -27,6 +27,19 @@ export default defineConfig({
     },
    */
   },
+  guberApiextensions: {
+    output: {
+      mode: "tags-split",
+      target: "src/client/gen/apiextensions/index.ts",
+      schemas: "src/client/gen/apiextensions/models",
+      client: "fetch",
+      mock: "true",
+      baseUrl: "http://fake/",
+    },
+    input: {
+      target: "http://localhost:8787/openapi/v3/apis/apiextensions.k8s.io/v1",
+    },
+  },
   guberCloudflare: {
     output: {
       mode: "tags-split",
