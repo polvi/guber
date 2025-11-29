@@ -1,0 +1,43 @@
+import { defineConfig } from "orval";
+
+export default defineConfig({
+  guberCore: {
+    output: {
+      mode: "tags-split",
+      target: "src/client/gen/core/index.ts",
+      schemas: "src/client/gen/core/models",
+      client: "fetch",
+      mock: "true",
+      baseUrl: "http://fake/",
+      /*
+      override: {
+        mutator: {
+          path: "./src/client/custom-fetch.ts",
+          name: "customFetch"
+        }
+      }
+     */
+    },
+    input: {
+      target: "http://localhost:8787/openapi/v3/api/v1",
+    },
+    /*
+    hooks: {
+      afterAllFilesWrite: "bun fmt",
+    },
+   */
+  },
+  guberCloudflare: {
+    output: {
+      mode: "tags-split",
+      target: "src/client/gen/cloudflare/index.ts",
+      schemas: "src/client/gen/cloudflare/models",
+      client: "fetch",
+      mock: "true",
+      baseUrl: "http://fake/",
+    },
+    input: {
+      target: "http://localhost:8787/openapi/v3/apis/cf.guber.proc.io/v1",
+    },
+  },
+});

@@ -41,6 +41,334 @@ async function notifyControllers(
   }
 }
 
+// --- OpenAPI v3 endpoints for kubectl validation ---
+
+// OpenAPI v3 index endpoint
+app.get("/openapi/v3", async (c) => {
+  const paths: Record<string, { serverRelativeURL: string }> = {};
+
+  // Core API v1
+  paths["api/v1"] = { serverRelativeURL: "/openapi/v3/api/v1" };
+
+  // Get all unique group/version combinations from CRDs
+  const { results } = await c.env.DB.prepare(
+    "SELECT DISTINCT group_name, version FROM crds",
+  ).all();
+
+  const gvSet = new Set<string>();
+  for (const row of results || []) {
+    gvSet.add(`${row.group_name}/${row.version}`);
+  }
+
+  // Add CRD group/versions
+  for (const gv of gvSet) {
+    paths[`apis/${gv}`] = { serverRelativeURL: `/openapi/v3/apis/${gv}` };
+  }
+
+  return c.json({ paths });
+});
+
+// OpenAPI v3 spec for core v1
+app.get("/openapi/v3/api/v1", async (c) => {
+  const spec = {
+    openapi: "3.0.0",
+    info: {
+      title: "Kubernetes API",
+      version: "v1",
+      description: "Kubernetes API server OpenAPI specification",
+    },
+    servers: [{ url: new URL(c.req.url).origin }],
+    paths: {
+      "/api/v1/namespaces/{name}": {
+        patch: {
+          parameters: [
+            {
+              name: "name",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+            {
+              name: "fieldValidation",
+              in: "query",
+              schema: {
+                type: "string",
+                enum: ["Ignore", "Warn", "Strict"],
+              },
+            },
+          ],
+          "x-kubernetes-group-version-kind": {
+            group: "",
+            version: "v1",
+            kind: "Namespace",
+          },
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/io.k8s.api.core.v1.Namespace",
+                },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "OK",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/io.k8s.api.core.v1.Namespace",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    components: {
+      schemas: {
+        "io.k8s.api.core.v1.Namespace": {
+          type: "object",
+          required: ["apiVersion", "kind", "metadata"],
+          properties: {
+            apiVersion: {
+              type: "string",
+              enum: ["v1"],
+            },
+            kind: {
+              type: "string",
+              enum: ["Namespace"],
+            },
+            metadata: {
+              $ref: "#/components/schemas/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta",
+            },
+            spec: {
+              type: "object",
+              properties: {
+                finalizers: {
+                  type: "array",
+                  items: { type: "string" },
+                },
+              },
+            },
+            status: {
+              type: "object",
+              properties: {
+                phase: {
+                  type: "string",
+                  enum: ["Active", "Terminating"],
+                },
+              },
+            },
+          },
+        },
+        "io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta": {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            namespace: { type: "string" },
+            creationTimestamp: { type: "string", format: "date-time" },
+            labels: {
+              type: "object",
+              additionalProperties: { type: "string" },
+            },
+            annotations: {
+              type: "object",
+              additionalProperties: { type: "string" },
+            },
+          },
+        },
+      },
+    },
+  };
+
+  return c.json(spec);
+});
+
+// OpenAPI v3 spec for CRD group/version
+app.get("/openapi/v3/apis/:group/:version", async (c) => {
+  const { group, version } = c.req.param();
+
+  const { results } = await c.env.DB.prepare(
+    "SELECT * FROM crds WHERE group_name=? AND version=?",
+  )
+    .bind(group, version)
+    .all();
+
+  if (!results || results.length === 0) {
+    return c.json({ message: "Not Found" }, 404);
+  }
+
+  const spec = {
+    openapi: "3.0.0",
+    info: {
+      title: `${group}/${version}`,
+      version: version,
+      description: `OpenAPI specification for ${group}/${version}`,
+    },
+    servers: [{ url: new URL(c.req.url).origin }],
+    paths: {} as Record<string, any>,
+    components: {
+      schemas: {} as Record<string, any>,
+    },
+  };
+
+  for (const crd of results) {
+    const plural = crd.plural;
+    const kind = crd.kind;
+    const scope = crd.scope;
+
+    // Create a basic schema for the CRD if none exists
+    const schema = {
+      type: "object",
+      required: ["apiVersion", "kind", "metadata"],
+      properties: {
+        apiVersion: {
+          type: "string",
+          enum: [`${group}/${version}`],
+        },
+        kind: {
+          type: "string",
+          enum: [kind],
+        },
+        metadata: {
+          $ref: "#/components/schemas/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta",
+        },
+        spec: {
+          type: "object",
+          additionalProperties: true,
+        },
+        status: {
+          type: "object",
+          additionalProperties: true,
+        },
+      },
+    };
+
+    // Add paths for cluster-scoped resources
+    if (scope === "Cluster") {
+      spec.paths[`/apis/${group}/${version}/${plural}/{name}`] = {
+        patch: {
+          parameters: [
+            {
+              name: "name",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+            {
+              name: "fieldValidation",
+              in: "query",
+              schema: {
+                type: "string",
+                enum: ["Ignore", "Warn", "Strict"],
+              },
+            },
+          ],
+          "x-kubernetes-group-version-kind": {
+            group,
+            version,
+            kind,
+          },
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: { $ref: `#/components/schemas/${kind}` },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "OK",
+              content: {
+                "application/json": {
+                  schema: { $ref: `#/components/schemas/${kind}` },
+                },
+              },
+            },
+          },
+        },
+      };
+    } else {
+      // Add paths for namespaced resources
+      spec.paths[
+        `/apis/${group}/${version}/namespaces/{namespace}/${plural}/{name}`
+      ] = {
+        patch: {
+          parameters: [
+            {
+              name: "namespace",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+            {
+              name: "name",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+            {
+              name: "fieldValidation",
+              in: "query",
+              schema: {
+                type: "string",
+                enum: ["Ignore", "Warn", "Strict"],
+              },
+            },
+          ],
+          "x-kubernetes-group-version-kind": {
+            group,
+            version,
+            kind,
+          },
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: { $ref: `#/components/schemas/${kind}` },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "OK",
+              content: {
+                "application/json": {
+                  schema: { $ref: `#/components/schemas/${kind}` },
+                },
+              },
+            },
+          },
+        },
+      };
+    }
+
+    // Add schema for this CRD
+    spec.components.schemas[kind] = schema;
+  }
+
+  // Add common ObjectMeta schema
+  spec.components.schemas["io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta"] = {
+    type: "object",
+    properties: {
+      name: { type: "string" },
+      namespace: { type: "string" },
+      creationTimestamp: { type: "string", format: "date-time" },
+      labels: {
+        type: "object",
+        additionalProperties: { type: "string" },
+      },
+      annotations: {
+        type: "object",
+        additionalProperties: { type: "string" },
+      },
+    },
+  };
+
+  return c.json(spec);
+});
+
 // --- Discovery endpoints for kubectl compatibility ---
 
 // Root API discovery

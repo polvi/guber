@@ -8,7 +8,8 @@
     "deploy": "bun run wrangler deploy",
     "db:reset": "./scripts/reset-db.sh",
     "build": "bun run wrangler deploy --dry-run",
-    "fmt": "bun run prettier -w . && git add -A && git commit -m'chore: formatting'"
+    "fmt": "bun run prettier -w . && git add -A && git commit -m'chore: formatting'",
+    "gen:client": "rm -rf src/client/gen && bunx orval && bunx prettier -w ."
   },
   "dependencies": {
     "cloudflare": "^5.2.0",
@@ -18,6 +19,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20251126.0",
     "@types/uuid": "^11.0.0",
+    "orval": "^7.17.0",
     "typescript": "^5.9.3",
     "wrangler": "^4.51.0"
   }
