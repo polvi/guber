@@ -2648,9 +2648,9 @@ class CloudflareController implements Controller {
             console.log(
               `Dependency ${depKind}/${depName} not found, deferring provisioning`,
             );
-            const workerScriptDeploymentUpdate: WorkerScriptDeployment = {
+            const workerScriptVersionUpdate: WorkerScriptVersion = {
               apiVersion: "cf.guber.proc.io/v1",
-              kind: "WorkerScriptDeployment",
+              kind: "WorkerScriptVersion",
               metadata: {
                 name: resourceName,
                 namespace: undefined,
@@ -2662,9 +2662,9 @@ class CloudflareController implements Controller {
               },
             };
 
-            await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
+            await patchApisCfGuberProcIoV1WorkerscriptversionsName(
               resourceName,
-              workerScriptDeploymentUpdate,
+              workerScriptVersionUpdate,
             );
             return false;
           }
@@ -2673,9 +2673,9 @@ class CloudflareController implements Controller {
             console.log(
               `Dependency ${depKind}/${depName} has no status, deferring provisioning`,
             );
-            const workerScriptDeploymentUpdate: WorkerScriptDeployment = {
+            const workerScriptVersionUpdate: WorkerScriptVersion = {
               apiVersion: "cf.guber.proc.io/v1",
-              kind: "WorkerScriptDeployment",
+              kind: "WorkerScriptVersion",
               metadata: {
                 name: resourceName,
                 namespace: undefined,
@@ -2687,9 +2687,9 @@ class CloudflareController implements Controller {
               },
             };
 
-            await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
+            await patchApisCfGuberProcIoV1WorkerscriptversionsName(
               resourceName,
-              workerScriptDeploymentUpdate,
+              workerScriptVersionUpdate,
             );
             return false;
           }
@@ -2699,9 +2699,9 @@ class CloudflareController implements Controller {
             console.log(
               `Dependency ${depKind}/${depName} not ready (${depStatus.state}), deferring provisioning`,
             );
-            const workerScriptDeploymentUpdate: WorkerScriptDeployment = {
+            const workerScriptVersionUpdate: WorkerScriptVersion = {
               apiVersion: "cf.guber.proc.io/v1",
-              kind: "WorkerScriptDeployment",
+              kind: "WorkerScriptVersion",
               metadata: {
                 name: resourceName,
                 namespace: undefined,
@@ -2713,9 +2713,9 @@ class CloudflareController implements Controller {
               },
             };
 
-            await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
+            await patchApisCfGuberProcIoV1WorkerscriptversionsName(
               resourceName,
-              workerScriptDeploymentUpdate,
+              workerScriptVersionUpdate,
             );
             return false;
           }
@@ -3086,9 +3086,9 @@ class CloudflareController implements Controller {
       );
 
       // Update status to failed using the generated client
-      const workerScriptDeploymentUpdate: WorkerScriptDeployment = {
+      const workerScriptVersionUpdate: WorkerScriptVersion = {
         apiVersion: "cf.guber.proc.io/v1",
-        kind: "WorkerScriptDeployment",
+        kind: "WorkerScriptVersion",
         metadata: {
           name: resourceName,
           namespace: undefined,
@@ -3099,9 +3099,9 @@ class CloudflareController implements Controller {
         },
       };
 
-      await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
+      await patchApisCfGuberProcIoV1WorkerscriptversionsName(
         resourceName,
-        workerScriptDeploymentUpdate,
+        workerScriptVersionUpdate,
       );
 
       return false;
@@ -3215,18 +3215,25 @@ class CloudflareController implements Controller {
                     `[Reconcile] Target worker ${status.pendingWorker} still not ready (${targetWorkerStatus.state}) for version ${resource.name}`,
                   );
 
-                  // Update the worker check timestamp
-                  const updatedStatus = {
-                    ...status,
-                    lastWorkerCheck: new Date().toISOString(),
-                    message: `Waiting for target worker to be ready: ${status.pendingWorker} (current state: ${targetWorkerStatus.state})`,
+                  // Update the worker check timestamp using the generated client
+                  const workerScriptVersionUpdate: WorkerScriptVersion = {
+                    apiVersion: "cf.guber.proc.io/v1",
+                    kind: "WorkerScriptVersion",
+                    metadata: {
+                      name: resource.name,
+                      namespace: resource.namespace || undefined,
+                    },
+                    status: {
+                      ...status,
+                      lastWorkerCheck: new Date().toISOString(),
+                      message: `Waiting for target worker to be ready: ${status.pendingWorker} (current state: ${targetWorkerStatus.state})`,
+                    },
                   };
 
-                  await env.DB.prepare(
-                    "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-                  )
-                    .bind(JSON.stringify(updatedStatus), resource.name)
-                    .run();
+                  await patchApisCfGuberProcIoV1WorkerscriptversionsName(
+                    resource.name,
+                    workerScriptVersionUpdate,
+                  );
                   continue;
                 }
               } else {
@@ -3234,18 +3241,25 @@ class CloudflareController implements Controller {
                   `[Reconcile] Target worker ${status.pendingWorker} not found or has no status for version ${resource.name}`,
                 );
 
-                // Update status to indicate worker still missing
-                const updatedStatus = {
-                  ...status,
-                  lastWorkerCheck: new Date().toISOString(),
-                  message: `Waiting for target worker to be provisioned: ${status.pendingWorker}`,
+                // Update status to indicate worker still missing using the generated client
+                const workerScriptVersionUpdate: WorkerScriptVersion = {
+                  apiVersion: "cf.guber.proc.io/v1",
+                  kind: "WorkerScriptVersion",
+                  metadata: {
+                    name: resource.name,
+                    namespace: resource.namespace || undefined,
+                  },
+                  status: {
+                    ...status,
+                    lastWorkerCheck: new Date().toISOString(),
+                    message: `Waiting for target worker to be provisioned: ${status.pendingWorker}`,
+                  },
                 };
 
-                await env.DB.prepare(
-                  "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-                )
-                  .bind(JSON.stringify(updatedStatus), resource.name)
-                  .run();
+                await patchApisCfGuberProcIoV1WorkerscriptversionsName(
+                  resource.name,
+                  workerScriptVersionUpdate,
+                );
                 continue;
               }
             }
@@ -3335,31 +3349,45 @@ class CloudflareController implements Controller {
                   `Worker script version ${resource.name} (ID: ${status.version_id}) no longer exists in Cloudflare`,
                 );
 
-                // Update status to indicate the version is missing
-                const updatedStatus = {
-                  ...status,
-                  state: "Failed",
-                  error: "Version no longer exists in Cloudflare",
-                  lastHealthCheck: new Date().toISOString(),
+                // Update status to indicate the version is missing using the generated client
+                const workerScriptVersionUpdate: WorkerScriptVersion = {
+                  apiVersion: "cf.guber.proc.io/v1",
+                  kind: "WorkerScriptVersion",
+                  metadata: {
+                    name: resource.name,
+                    namespace: resource.namespace || undefined,
+                  },
+                  status: {
+                    ...status,
+                    state: "Failed",
+                    error: "Version no longer exists in Cloudflare",
+                    lastHealthCheck: new Date().toISOString(),
+                  },
                 };
 
-                await env.DB.prepare(
-                  "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-                )
-                  .bind(JSON.stringify(updatedStatus), resource.name)
-                  .run();
+                await patchApisCfGuberProcIoV1WorkerscriptversionsName(
+                  resource.name,
+                  workerScriptVersionUpdate,
+                );
               } else {
-                // Update last health check timestamp
-                const updatedStatus = {
-                  ...status,
-                  lastHealthCheck: new Date().toISOString(),
+                // Update last health check timestamp using the generated client
+                const workerScriptVersionUpdate: WorkerScriptVersion = {
+                  apiVersion: "cf.guber.proc.io/v1",
+                  kind: "WorkerScriptVersion",
+                  metadata: {
+                    name: resource.name,
+                    namespace: resource.namespace || undefined,
+                  },
+                  status: {
+                    ...status,
+                    lastHealthCheck: new Date().toISOString(),
+                  },
                 };
 
-                await env.DB.prepare(
-                  "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-                )
-                  .bind(JSON.stringify(updatedStatus), resource.name)
-                  .run();
+                await patchApisCfGuberProcIoV1WorkerscriptversionsName(
+                  resource.name,
+                  workerScriptVersionUpdate,
+                );
               }
             } catch (error) {
               console.error(
