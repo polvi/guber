@@ -375,7 +375,7 @@ export class GitHubController implements Controller {
             return false;
           }
 
-          const depStatus = JSON.parse(depResource.status);
+          const depStatus = depResource.status;
           if (depStatus.state !== "Ready") {
             console.log(
               `Dependency ${depKind}/${depName} not ready (${depStatus.state}), deferring provisioning`,
@@ -865,7 +865,9 @@ export class GitHubController implements Controller {
       await this.reconcilePendingReleaseDeploys(env);
 
       // Get all ReleaseDeploy resources from our API
-      // This is GitHub controller code, not Cloudflare - skip
+      const { results: apiResources } = await env.DB.prepare(
+        "SELECT * FROM resources WHERE group_name='gh.guber.proc.io' AND kind='ReleaseDeploy'",
+      ).all();
 
       console.log(
         `Found ${apiResources?.length || 0} ReleaseDeploy resources in API`,
@@ -943,11 +945,22 @@ export class GitHubController implements Controller {
                   lastHealthCheck: new Date().toISOString(),
                 };
 
-                await env.DB.prepare(
-                  "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-                )
-                  .bind(JSON.stringify(updatedStatus), resource.name)
-                  .run();
+                // Update status using the generated GitHub client
+                const releaseDeployUpdate: ReleaseDeploy = {
+                  apiVersion: "gh.guber.proc.io/v1",
+                  kind: "ReleaseDeploy",
+                  metadata: {
+                    name: resource.name,
+                    namespace: resource.namespace || undefined,
+                  },
+                  status: updatedStatus,
+                };
+
+                await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+                  "default",
+                  resource.name,
+                  releaseDeployUpdate,
+                );
               }
             } catch (error) {
               console.error(
@@ -1261,7 +1274,7 @@ export class GitHubController implements Controller {
               continue;
             }
 
-            const depStatus = JSON.parse(depResource.status);
+            const depStatus = depResource.status;
             if (depStatus.state !== "Ready") {
               allDependenciesReady = false;
               unresolvedDependencies.push(dependency);
