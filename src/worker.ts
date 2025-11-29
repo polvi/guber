@@ -14,10 +14,6 @@ try {
 
 const app = new Hono<Env>();
 
-// Import and register controllers
-import { registerControllers } from "./controllers";
-registerControllers(app);
-
 // Helper function to notify controllers of resource events
 async function notifyControllers(
   event: "created" | "deleted",
