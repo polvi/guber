@@ -19,7 +19,7 @@ class CloudflareController implements Controller {
 
     // Queue for provisioning if it's a Cloudflare resource type
     if (
-      (kind === "D1" || kind === "Queue" || kind === "Worker" || kind === "WorkerScriptVersion") &&
+      (kind === "D1" || kind === "Queue" || kind === "Worker" || kind === "WorkerScriptVersion" || kind === "WorkerScriptDeployment") &&
       env.GUBER_BUS
     ) {
       await env.GUBER_BUS.send({
@@ -43,7 +43,7 @@ class CloudflareController implements Controller {
 
     // Queue for deletion if it's a Cloudflare resource type
     if (
-      (kind === "D1" || kind === "Queue" || kind === "Worker" || kind === "WorkerScriptVersion") &&
+      (kind === "D1" || kind === "Queue" || kind === "Worker" || kind === "WorkerScriptVersion" || kind === "WorkerScriptDeployment") &&
       env.GUBER_BUS
     ) {
       await env.GUBER_BUS.send({
@@ -118,6 +118,16 @@ class CloudflareController implements Controller {
               namespace,
               spec,
             );
+          } else if (resourceType === "workerscriptdeployment") {
+            provisioningSuccessful = await this.provisionWorkerScriptDeployment(
+              env,
+              resourceName,
+              group,
+              kind,
+              plural,
+              namespace,
+              spec,
+            );
           }
 
           // After successful provisioning, check for dependent resources
@@ -174,6 +184,17 @@ class CloudflareController implements Controller {
               spec,
               status,
             );
+          } else if (resourceType === "workerscriptdeployment") {
+            await this.deleteWorkerScriptDeployment(
+              env,
+              resourceName,
+              group,
+              kind,
+              plural,
+              namespace,
+              spec,
+              status,
+            );
           }
         }
 
@@ -193,6 +214,7 @@ class CloudflareController implements Controller {
     await this.reconcileQueues(env);
     await this.reconcileWorkers(env);
     await this.reconcileWorkerScriptVersions(env);
+    await this.reconcileWorkerScriptDeployments(env);
   }
 
   private async checkAndProvisionDependentResources(
@@ -210,7 +232,7 @@ class CloudflareController implements Controller {
       `
       SELECT * FROM resources 
       WHERE group_name='cf.guber.proc.io' 
-      AND (kind='Worker' OR kind='WorkerScriptVersion')
+      AND (kind='Worker' OR kind='WorkerScriptVersion' OR kind='WorkerScriptDeployment')
       AND json_extract(status, '$.state') = 'Pending'
     `,
     ).all();
@@ -3237,6 +3259,554 @@ class CloudflareController implements Controller {
       console.log("WorkerScriptVersion reconciliation completed");
     } catch (error) {
       console.error("Error during WorkerScriptVersion reconciliation:", error);
+    }
+  }
+
+  private async provisionWorkerScriptDeployment(
+    env: any,
+    resourceName: string,
+    group: string,
+    kind: string,
+    plural: string,
+    namespace: string | null,
+    spec: any,
+  ): Promise<boolean> {
+    try {
+      // Check dependencies first
+      if (spec.dependencies && spec.dependencies.length > 0) {
+        console.log(
+          `Checking ${spec.dependencies.length} dependencies for worker script deployment ${resourceName}`,
+        );
+
+        for (const dependency of spec.dependencies) {
+          const depGroup = dependency.group || "cf.guber.proc.io";
+          const depKind = dependency.kind;
+          const depName = dependency.name;
+
+          const depResource = await env.DB.prepare(
+            "SELECT * FROM resources WHERE name=? AND kind=? AND group_name=? AND namespace IS NULL",
+          )
+            .bind(depName, depKind, depGroup)
+            .first();
+
+          if (!depResource) {
+            console.log(
+              `Dependency ${depKind}/${depName} not found, deferring provisioning`,
+            );
+            await env.DB.prepare(
+              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+            )
+              .bind(
+                JSON.stringify({
+                  state: "Pending",
+                  message: `Waiting for dependency: ${depKind}/${depName}`,
+                  pendingDependencies: [dependency],
+                }),
+                resourceName,
+              )
+              .run();
+            return false;
+          }
+
+          if (!depResource.status) {
+            console.log(
+              `Dependency ${depKind}/${depName} has no status, deferring provisioning`,
+            );
+            await env.DB.prepare(
+              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+            )
+              .bind(
+                JSON.stringify({
+                  state: "Pending",
+                  message: `Waiting for dependency to be provisioned: ${depKind}/${depName}`,
+                  pendingDependencies: [dependency],
+                }),
+                resourceName,
+              )
+              .run();
+            return false;
+          }
+
+          const depStatus = JSON.parse(depResource.status);
+          if (depStatus.state !== "Ready") {
+            console.log(
+              `Dependency ${depKind}/${depName} not ready (${depStatus.state}), deferring provisioning`,
+            );
+            await env.DB.prepare(
+              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+            )
+              .bind(
+                JSON.stringify({
+                  state: "Pending",
+                  message: `Waiting for dependency to be ready: ${depKind}/${depName} (current state: ${depStatus.state})`,
+                  pendingDependencies: [dependency],
+                }),
+                resourceName,
+              )
+              .run();
+            return false;
+          }
+        }
+
+        console.log(`All dependencies satisfied for worker script deployment ${resourceName}`);
+      }
+
+      // Check if scriptName refers to a Worker resource in our system
+      const workerResource = await env.DB.prepare(
+        "SELECT * FROM resources WHERE name=? AND kind='Worker' AND group_name='cf.guber.proc.io' AND namespace IS NULL",
+      )
+        .bind(spec.scriptName)
+        .first();
+
+      if (!workerResource) {
+        console.log(
+          `Target worker ${spec.scriptName} not found, deferring deployment creation`,
+        );
+        await env.DB.prepare(
+          "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+        )
+          .bind(
+            JSON.stringify({
+              state: "Pending",
+              message: `Waiting for target worker to be created: ${spec.scriptName}`,
+              pendingWorker: spec.scriptName,
+            }),
+            resourceName,
+          )
+          .run();
+        return false;
+      }
+
+      // Check if the worker is ready and has an endpoint
+      if (!workerResource.status) {
+        console.log(
+          `Target worker ${spec.scriptName} has no status, deferring deployment creation`,
+        );
+        await env.DB.prepare(
+          "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+        )
+          .bind(
+            JSON.stringify({
+              state: "Pending",
+              message: `Waiting for target worker to be provisioned: ${spec.scriptName}`,
+              pendingWorker: spec.scriptName,
+            }),
+            resourceName,
+          )
+          .run();
+        return false;
+      }
+
+      const workerStatus = JSON.parse(workerResource.status);
+      if (workerStatus.state !== "Ready") {
+        console.log(
+          `Target worker ${spec.scriptName} is not ready (${workerStatus.state}), deferring deployment creation`,
+        );
+        await env.DB.prepare(
+          "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+        )
+          .bind(
+            JSON.stringify({
+              state: "Pending",
+              message: `Waiting for target worker to be ready: ${spec.scriptName} (current state: ${workerStatus.state})`,
+              pendingWorker: spec.scriptName,
+            }),
+            resourceName,
+          )
+          .run();
+        return false;
+      }
+
+      if (!workerStatus.endpoint) {
+        console.log(
+          `Target worker ${spec.scriptName} has no endpoint, deferring deployment creation`,
+        );
+        await env.DB.prepare(
+          "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+        )
+          .bind(
+            JSON.stringify({
+              state: "Pending",
+              message: `Waiting for target worker endpoint: ${spec.scriptName}`,
+              pendingWorker: spec.scriptName,
+            }),
+            resourceName,
+          )
+          .run();
+        return false;
+      }
+
+      // Extract script name from worker endpoint
+      const actualScriptName = workerStatus.endpoint.split('/workers/scripts/')[1];
+      
+      if (!actualScriptName) {
+        throw new Error(`Could not extract script name from worker endpoint: ${workerStatus.endpoint}`);
+      }
+
+      // Validate that version percentages add up to 100
+      const totalPercentage = spec.versions.reduce((sum: number, version: any) => sum + version.percentage, 0);
+      if (totalPercentage !== 100) {
+        throw new Error(`Version percentages must add up to 100, got ${totalPercentage}`);
+      }
+
+      // Validate that all version IDs exist (optional - could be done by checking against WorkerScriptVersion resources)
+      for (const version of spec.versions) {
+        if (!version.version_id || !version.percentage) {
+          throw new Error(`Each version must have version_id and percentage specified`);
+        }
+      }
+
+      // Build deployment request body
+      const deploymentBody: any = {
+        strategy: spec.strategy,
+        versions: spec.versions,
+      };
+
+      // Add annotations if specified
+      if (spec.annotations) {
+        deploymentBody.annotations = {};
+        if (spec.annotations.message) {
+          deploymentBody.annotations["workers/message"] = spec.annotations.message;
+        }
+        if (spec.annotations.triggered_by) {
+          deploymentBody.annotations["workers/triggered_by"] = spec.annotations.triggered_by;
+        }
+      }
+
+      console.log(
+        `Creating worker script deployment for ${actualScriptName} (from ${spec.scriptName}) with ${spec.versions.length} versions`,
+      );
+
+      // Build deployment URL with optional force parameter
+      let deploymentUrl = `${workerStatus.endpoint}/deployments`;
+      if (spec.force) {
+        deploymentUrl += '?force=true';
+      }
+
+      const deploymentResponse = await fetch(
+        deploymentUrl,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(deploymentBody),
+        },
+      );
+
+      if (!deploymentResponse.ok) {
+        const errorResponse = await deploymentResponse.json();
+        throw new Error(
+          `Failed to create worker script deployment: ${JSON.stringify(errorResponse)}`,
+        );
+      }
+
+      const result = await deploymentResponse.json();
+      const deploymentId = result.result.id;
+
+      console.log(`Worker script deployment created successfully with ID: ${deploymentId}`);
+
+      // Update the resource status in the database
+      await env.DB.prepare(
+        "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+      )
+        .bind(
+          JSON.stringify({
+            state: "Ready",
+            deployment_id: deploymentId,
+            script_name: actualScriptName,
+            target_worker: spec.scriptName,
+            createdAt: new Date().toISOString(),
+            endpoint: `${workerStatus.endpoint}/deployments/${deploymentId}`,
+            metadata: result.result || {},
+          }),
+          resourceName,
+        )
+        .run();
+
+      console.log(
+        `Worker script deployment ${resourceName} provisioned successfully`,
+      );
+      return true;
+    } catch (error) {
+      console.error(`Failed to provision WorkerScriptDeployment ${resourceName}:`, error);
+
+      // Update status to failed
+      await env.DB.prepare(
+        "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+      )
+        .bind(
+          JSON.stringify({
+            state: "Failed",
+            error: error.message || String(error),
+          }),
+          resourceName,
+        )
+        .run();
+
+      return false;
+    }
+  }
+
+  private async deleteWorkerScriptDeployment(
+    env: any,
+    resourceName: string,
+    group: string,
+    kind: string,
+    plural: string,
+    namespace: string | null,
+    spec: any,
+    status?: any,
+  ) {
+    try {
+      // Get deployment ID from the passed status
+      const deploymentId = status?.deployment_id;
+
+      if (deploymentId && spec.scriptName) {
+        console.log(`Deleting worker script deployment ${resourceName} (ID: ${deploymentId}) from script ${spec.scriptName}`);
+
+        // Note: Cloudflare API doesn't provide a direct delete endpoint for deployments
+        // Deployments are typically managed through creating new deployments
+        // We'll just log this for now as deployments are usually kept for history
+        console.log(
+          `Worker script deployment ${resourceName} marked for deletion (deployments are typically retained by Cloudflare)`,
+        );
+      } else {
+        console.log(
+          `No deployment ID or script name found for ${resourceName}, skipping Cloudflare deletion`,
+        );
+      }
+    } catch (error) {
+      console.error(`Error deleting WorkerScriptDeployment ${resourceName}:`, error);
+    }
+  }
+
+  private async reconcileWorkerScriptDeployments(env: any) {
+    try {
+      console.log("Starting WorkerScriptDeployment reconciliation...");
+
+      // Get all WorkerScriptDeployment resources from our API
+      const { results: apiResources } = await env.DB.prepare(
+        "SELECT * FROM resources WHERE group_name='cf.guber.proc.io' AND kind='WorkerScriptDeployment'",
+      ).all();
+
+      console.log(`Found ${apiResources?.length || 0} WorkerScriptDeployment resources in API`);
+
+      // Check each deployment resource for dependency resolution and health
+      for (const resource of apiResources || []) {
+        try {
+          const spec = JSON.parse(resource.spec);
+          let status = {};
+          try {
+            status = resource.status ? JSON.parse(resource.status) : {};
+          } catch (statusParseError) {
+            console.error(
+              `Failed to parse status for worker script deployment ${resource.name}:`,
+              statusParseError,
+            );
+            status = {};
+          }
+
+          // Check if this is a pending deployment waiting for dependencies or target worker
+          if (status.state === "Pending" && (spec.dependencies || status.pendingWorker)) {
+            // First check if we're waiting for a target worker
+            if (status.pendingWorker) {
+              const targetWorkerResource = await env.DB.prepare(
+                "SELECT * FROM resources WHERE name=? AND kind='Worker' AND group_name='cf.guber.proc.io' AND namespace IS NULL",
+              )
+                .bind(status.pendingWorker)
+                .first();
+
+              if (targetWorkerResource && targetWorkerResource.status) {
+                const targetWorkerStatus = JSON.parse(targetWorkerResource.status);
+                if (targetWorkerStatus.state === "Ready") {
+                  console.log(
+                    `[Reconcile] Target worker ${status.pendingWorker} is now ready for deployment ${resource.name}, re-queuing for provisioning`,
+                  );
+
+                  // Queue for provisioning
+                  if (env.GUBER_BUS) {
+                    await env.GUBER_BUS.send({
+                      action: "create",
+                      resourceType: "workerscriptdeployment",
+                      resourceName: resource.name,
+                      group: resource.group_name,
+                      kind: resource.kind,
+                      plural: resource.plural,
+                      namespace: resource.namespace,
+                      spec: spec,
+                    });
+                  }
+                  continue; // Skip dependency check since we're re-queuing
+                } else {
+                  console.log(
+                    `[Reconcile] Target worker ${status.pendingWorker} still not ready (${targetWorkerStatus.state}) for deployment ${resource.name}`,
+                  );
+                  
+                  // Update the worker check timestamp
+                  const updatedStatus = {
+                    ...status,
+                    lastWorkerCheck: new Date().toISOString(),
+                    message: `Waiting for target worker to be ready: ${status.pendingWorker} (current state: ${targetWorkerStatus.state})`,
+                  };
+
+                  await env.DB.prepare(
+                    "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+                  )
+                    .bind(JSON.stringify(updatedStatus), resource.name)
+                    .run();
+                  continue;
+                }
+              } else {
+                console.log(
+                  `[Reconcile] Target worker ${status.pendingWorker} not found or has no status for deployment ${resource.name}`,
+                );
+                
+                // Update status to indicate worker still missing
+                const updatedStatus = {
+                  ...status,
+                  lastWorkerCheck: new Date().toISOString(),
+                  message: `Waiting for target worker to be provisioned: ${status.pendingWorker}`,
+                };
+
+                await env.DB.prepare(
+                  "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+                )
+                  .bind(JSON.stringify(updatedStatus), resource.name)
+                  .run();
+                continue;
+              }
+            }
+
+            // Then check dependencies if any
+            if (spec.dependencies) {
+              let allDependenciesReady = true;
+              const unresolvedDependencies = [];
+
+              for (const dependency of spec.dependencies) {
+                const depGroup = dependency.group || "cf.guber.proc.io";
+                const depResource = await env.DB.prepare(
+                  "SELECT * FROM resources WHERE name=? AND kind=? AND group_name=? AND namespace IS NULL",
+                )
+                  .bind(dependency.name, dependency.kind, depGroup)
+                  .first();
+
+                if (!depResource || !depResource.status) {
+                  allDependenciesReady = false;
+                  unresolvedDependencies.push(dependency);
+                  continue;
+                }
+
+                const depStatus = JSON.parse(depResource.status);
+                if (depStatus.state !== "Ready") {
+                  allDependenciesReady = false;
+                  unresolvedDependencies.push(dependency);
+                }
+              }
+
+              if (allDependenciesReady) {
+                console.log(
+                  `[Reconcile] All dependencies resolved for worker script deployment ${resource.name}, re-queuing for provisioning`,
+                );
+
+                // Queue for provisioning
+                if (env.GUBER_BUS) {
+                  await env.GUBER_BUS.send({
+                    action: "create",
+                    resourceType: "workerscriptdeployment",
+                    resourceName: resource.name,
+                    group: resource.group_name,
+                    kind: resource.kind,
+                    plural: resource.plural,
+                    namespace: resource.namespace,
+                    spec: spec,
+                  });
+                }
+              } else {
+                console.log(
+                  `[Reconcile] Worker script deployment ${resource.name} still has unresolved dependencies:`,
+                  unresolvedDependencies.map((d) => `${d.kind}/${d.name}`),
+                );
+
+                // Update the dependency check timestamp
+                const updatedStatus = {
+                  ...status,
+                  lastDependencyCheck: new Date().toISOString(),
+                  pendingDependencies: unresolvedDependencies,
+                };
+
+                await env.DB.prepare(
+                  "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+                )
+                  .bind(JSON.stringify(updatedStatus), resource.name)
+                  .run();
+              }
+            }
+          }
+
+          // For ready deployments, verify they still exist in Cloudflare
+          if (status.state === "Ready" && status.deployment_id && status.endpoint) {
+            try {
+              const deploymentResponse = await fetch(
+                status.endpoint,
+                {
+                  method: "GET",
+                  headers: {
+                    Authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
+                  },
+                },
+              );
+
+              if (!deploymentResponse.ok) {
+                console.log(
+                  `Worker script deployment ${resource.name} (ID: ${status.deployment_id}) no longer exists in Cloudflare`,
+                );
+
+                // Update status to indicate the deployment is missing
+                const updatedStatus = {
+                  ...status,
+                  state: "Failed",
+                  error: "Deployment no longer exists in Cloudflare",
+                  lastHealthCheck: new Date().toISOString(),
+                };
+
+                await env.DB.prepare(
+                  "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+                )
+                  .bind(JSON.stringify(updatedStatus), resource.name)
+                  .run();
+              } else {
+                // Update last health check timestamp
+                const updatedStatus = {
+                  ...status,
+                  lastHealthCheck: new Date().toISOString(),
+                };
+
+                await env.DB.prepare(
+                  "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+                )
+                  .bind(JSON.stringify(updatedStatus), resource.name)
+                  .run();
+              }
+            } catch (error) {
+              console.error(
+                `Error checking worker script deployment ${resource.name}:`,
+                error,
+              );
+            }
+          }
+        } catch (error) {
+          console.error(
+            `Error processing worker script deployment ${resource.name}:`,
+            error,
+          );
+        }
+      }
+
+      console.log("WorkerScriptDeployment reconciliation completed");
+    } catch (error) {
+      console.error("Error during WorkerScriptDeployment reconciliation:", error);
     }
   }
 }

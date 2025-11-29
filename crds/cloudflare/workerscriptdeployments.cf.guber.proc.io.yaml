@@ -1,0 +1,97 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: workerscriptdeployments.cf.guber.proc.io
+spec:
+  group: cf.guber.proc.io
+  scope: Cluster
+  names:
+    plural: workerscriptdeployments
+    singular: workerscriptdeployment
+    kind: WorkerScriptDeployment
+    shortNames:
+      - wsd
+      - deployment
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required: ["scriptName", "strategy", "versions"]
+              properties:
+                scriptName:
+                  type: string
+                  description: The name of the Worker script to deploy.
+                strategy:
+                  type: string
+                  enum: ["percentage"]
+                  description: Deployment strategy (currently only "percentage" is supported).
+                versions:
+                  type: array
+                  items:
+                    type: object
+                    required: ["version_id", "percentage"]
+                    properties:
+                      version_id:
+                        type: string
+                        description: The ID of the Worker script version to deploy.
+                      percentage:
+                        type: integer
+                        minimum: 0
+                        maximum: 100
+                        description: Percentage of traffic to route to this version.
+                  description: List of versions and their traffic percentages.
+                annotations:
+                  type: object
+                  description: Annotations for the deployment.
+                  properties:
+                    message:
+                      type: string
+                      description: Message describing this deployment.
+                    triggered_by:
+                      type: string
+                      description: Who or what triggered this deployment.
+                force:
+                  type: boolean
+                  description: Force deployment even if normally blocked (e.g., rolling back when secrets changed).
+                  default: false
+                dependencies:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      kind:
+                        type: string
+                        description: The kind of resource this deployment depends on (Worker, WorkerScriptVersion, etc.).
+                      name:
+                        type: string
+                        description: The name of the resource this deployment depends on.
+                      group:
+                        type: string
+                        description: The API group of the resource (defaults to cf.guber.proc.io).
+                        default: "cf.guber.proc.io"
+                  description: Resources that must be ready before this deployment can be created.
+            status:
+              type: object
+              properties:
+                state:
+                  type: string
+                  description: Current provisioning state (Creating, Ready, Failed, Deleting).
+                deployment_id:
+                  type: string
+                  description: Cloudflare-assigned identifier for the deployment.
+                createdAt:
+                  type: string
+                  format: date-time
+                  description: Timestamp of creation in Cloudflare.
+                endpoint:
+                  type: string
+                  description: API endpoint for this deployment.
+                metadata:
+                  type: object
+                  description: Metadata returned by Cloudflare for this deployment.
