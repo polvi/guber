@@ -1932,21 +1932,11 @@ class CloudflareController implements Controller {
               statusData.domainId = domainId;
             }
 
-            const updateParams = resource.namespace
-              ? [JSON.stringify(statusData), resource.name, resource.namespace]
-              : [JSON.stringify(statusData), resource.name];
-
-            await patchApisCfGuberProcIoV1D1sName(resource.name, {
+            await patchApisCfGuberProcIoV1WorkersName(resource.name, {
               apiVersion: "cf.guber.proc.io/v1",
-              kind: "D1",
+              kind: "Worker",
               metadata: { name: resource.name },
-              status: {
-                state: "Ready",
-                database_id: databaseId,
-                createdAt: new Date().toISOString(),
-                endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/d1/database/${databaseId}`,
-                reconciledAt: new Date().toISOString(),
-              },
+              status: statusData,
             });
 
             console.log(`Successfully reconciled missing worker: ${fullName}`);
