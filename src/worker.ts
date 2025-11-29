@@ -50,6 +50,9 @@ app.get("/openapi/v3", async (c) => {
   // Core API v1
   paths["api/v1"] = { serverRelativeURL: "/openapi/v3/api/v1" };
 
+  // apiextensions.k8s.io/v1 for CRDs
+  paths["apis/apiextensions.k8s.io/v1"] = { serverRelativeURL: "/openapi/v3/apis/apiextensions.k8s.io/v1" };
+
   // Get all unique group/version combinations from CRDs
   const { results } = await c.env.DB.prepare(
     "SELECT DISTINCT group_name, version FROM crds",
@@ -159,6 +162,276 @@ app.get("/openapi/v3/api/v1", async (c) => {
                   type: "string",
                   enum: ["Active", "Terminating"],
                 },
+              },
+            },
+          },
+        },
+        "io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta": {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            namespace: { type: "string" },
+            creationTimestamp: { type: "string", format: "date-time" },
+            labels: {
+              type: "object",
+              additionalProperties: { type: "string" },
+            },
+            annotations: {
+              type: "object",
+              additionalProperties: { type: "string" },
+            },
+          },
+        },
+      },
+    },
+  };
+
+  return c.json(spec);
+});
+
+// OpenAPI v3 spec for apiextensions.k8s.io/v1
+app.get("/openapi/v3/apis/apiextensions.k8s.io/v1", async (c) => {
+  const spec = {
+    openapi: "3.0.0",
+    info: {
+      title: "apiextensions.k8s.io/v1",
+      version: "v1",
+      description: "OpenAPI specification for apiextensions.k8s.io/v1",
+    },
+    servers: [{ url: new URL(c.req.url).origin }],
+    paths: {
+      "/apis/apiextensions.k8s.io/v1/customresourcedefinitions": {
+        get: {
+          "x-kubernetes-group-version-kind": {
+            group: "apiextensions.k8s.io",
+            version: "v1",
+            kind: "CustomResourceDefinition",
+          },
+          responses: {
+            "200": {
+              description: "OK",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.CustomResourceDefinitionList",
+                  },
+                },
+              },
+            },
+          },
+        },
+        post: {
+          "x-kubernetes-group-version-kind": {
+            group: "apiextensions.k8s.io",
+            version: "v1",
+            kind: "CustomResourceDefinition",
+          },
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.CustomResourceDefinition",
+                },
+              },
+            },
+          },
+          responses: {
+            "201": {
+              description: "Created",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.CustomResourceDefinition",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      "/apis/apiextensions.k8s.io/v1/customresourcedefinitions/{name}": {
+        get: {
+          parameters: [
+            {
+              name: "name",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+          ],
+          "x-kubernetes-group-version-kind": {
+            group: "apiextensions.k8s.io",
+            version: "v1",
+            kind: "CustomResourceDefinition",
+          },
+          responses: {
+            "200": {
+              description: "OK",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.CustomResourceDefinition",
+                  },
+                },
+              },
+            },
+          },
+        },
+        delete: {
+          parameters: [
+            {
+              name: "name",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+          ],
+          "x-kubernetes-group-version-kind": {
+            group: "apiextensions.k8s.io",
+            version: "v1",
+            kind: "CustomResourceDefinition",
+          },
+          responses: {
+            "200": {
+              description: "OK",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.CustomResourceDefinition",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    components: {
+      schemas: {
+        "io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.CustomResourceDefinition": {
+          type: "object",
+          required: ["apiVersion", "kind", "metadata", "spec"],
+          properties: {
+            apiVersion: {
+              type: "string",
+              enum: ["apiextensions.k8s.io/v1"],
+            },
+            kind: {
+              type: "string",
+              enum: ["CustomResourceDefinition"],
+            },
+            metadata: {
+              $ref: "#/components/schemas/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta",
+            },
+            spec: {
+              type: "object",
+              required: ["group", "names", "scope", "versions"],
+              properties: {
+                group: {
+                  type: "string",
+                  description: "group is the API group of the defined custom resource",
+                },
+                names: {
+                  type: "object",
+                  required: ["kind", "plural"],
+                  properties: {
+                    kind: {
+                      type: "string",
+                      description: "kind is the serialized kind of the resource",
+                    },
+                    plural: {
+                      type: "string",
+                      description: "plural is the plural name of the resource to serve",
+                    },
+                    shortNames: {
+                      type: "array",
+                      items: { type: "string" },
+                      description: "shortNames are short names for the resource",
+                    },
+                  },
+                },
+                scope: {
+                  type: "string",
+                  enum: ["Cluster", "Namespaced"],
+                  description: "scope indicates whether the defined custom resource is cluster- or namespace-scoped",
+                },
+                versions: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    required: ["name", "served", "storage"],
+                    properties: {
+                      name: {
+                        type: "string",
+                        description: "name is the version name",
+                      },
+                      served: {
+                        type: "boolean",
+                        description: "served is a flag enabling/disabling this version from being served via REST APIs",
+                      },
+                      storage: {
+                        type: "boolean",
+                        description: "storage indicates this version should be used when persisting custom resources to storage",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            status: {
+              type: "object",
+              properties: {
+                acceptedNames: {
+                  type: "object",
+                  properties: {
+                    kind: { type: "string" },
+                    plural: { type: "string" },
+                    shortNames: {
+                      type: "array",
+                      items: { type: "string" },
+                    },
+                  },
+                },
+                conditions: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      type: { type: "string" },
+                      status: { type: "string" },
+                      lastTransitionTime: { type: "string", format: "date-time" },
+                      reason: { type: "string" },
+                      message: { type: "string" },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        "io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.CustomResourceDefinitionList": {
+          type: "object",
+          required: ["apiVersion", "kind", "items"],
+          properties: {
+            apiVersion: {
+              type: "string",
+              enum: ["apiextensions.k8s.io/v1"],
+            },
+            kind: {
+              type: "string",
+              enum: ["CustomResourceDefinitionList"],
+            },
+            metadata: {
+              type: "object",
+              properties: {
+                continue: { type: "string" },
+                resourceVersion: { type: "string" },
+              },
+            },
+            items: {
+              type: "array",
+              items: {
+                $ref: "#/components/schemas/io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.CustomResourceDefinition",
               },
             },
           },
