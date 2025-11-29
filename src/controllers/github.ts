@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 import { v4 as uuid } from "uuid";
 import type { Controller, ResourceContext } from "../config";
-import { patchApisCfGuberProcIoV1WorkerscriptversionsName } from "../client/gen/cloudflare/default/default";
 import type { WorkerScriptVersion } from "../client/gen/cloudflare/models";
 
 export default function github(): Controller {
