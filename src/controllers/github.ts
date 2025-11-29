@@ -760,58 +760,127 @@ export class GitHubController implements Controller {
     status?: any,
   ) {
     try {
-      // Get deployment ID from the passed status
-      const deploymentId = status?.deployment_id;
-
-      if (deploymentId && spec.repository) {
-        console.log(
-          `Marking GitHub deployment ${resourceName} (ID: ${deploymentId}) as inactive`,
-        );
-
-        // GitHub doesn't allow deleting deployments, but we can mark them as inactive
-        const statusPayload = {
-          state: "inactive",
-          description: "Deployment marked as inactive by Guber",
-        };
-
-        const headers: Record<string, string> = {
-          "Content-Type": "application/json",
-          Accept: "application/vnd.github.v3+json",
-          "User-Agent": "Guber-GitHub-Controller/1.0",
-        };
-
-        if (env.GITHUB_TOKEN) {
-          headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
-        }
-
-        const statusResponse = await fetch(
-          `https://api.github.com/repos/${spec.repository}/deployments/${deploymentId}/statuses`,
-          {
-            method: "POST",
-            headers,
-            body: JSON.stringify(statusPayload),
-          },
-        );
-
-        if (statusResponse.ok) {
-          console.log(
-            `GitHub deployment ${resourceName} (ID: ${deploymentId}) marked as inactive`,
-          );
-        } else {
-          const error = await statusResponse.text();
-          console.error(
-            `Failed to mark GitHub deployment ${resourceName} (ID: ${deploymentId}) as inactive:`,
-            error,
-          );
-        }
-      } else {
-        console.log(
-          `No deployment ID or repository found for ${resourceName}, skipping GitHub cleanup`,
-        );
+      // Clean up associated Cloudflare resources if they were created
+      if (status && spec.createCloudflareResources) {
+        await this.cleanupCloudflareResources(env, resourceName, status);
       }
     } catch (error) {
       console.error(`Error deleting ReleaseDeploy ${resourceName}:`, error);
     }
+  }
+
+  private async cleanupCloudflareResources(
+    env: any,
+    releaseDeployName: string,
+    status: any,
+  ) {
+    console.log(
+      `🧹 Cleaning up Cloudflare resources for ReleaseDeploy ${releaseDeployName}`,
+    );
+
+    // Delete WorkerScriptDeployment first (if it exists)
+    if (status.workerScriptDeploymentName) {
+      try {
+        // Use the generated client to delete via API
+        const response = await env.GUBER_API.fetch(
+          new Request(
+            `http://fake/apis/cf.guber.proc.io/v1/workerscriptdeployments/${status.workerScriptDeploymentName}`,
+            {
+              method: "DELETE",
+              headers: {
+                "Content-Type": "application/json",
+              },
+            },
+          ),
+        );
+
+        if (response.ok) {
+          console.log(
+            `✅ Deleted WorkerScriptDeployment ${status.workerScriptDeploymentName}`,
+          );
+        } else {
+          const errorText = await response.text();
+          console.error(
+            `❌ Failed to delete WorkerScriptDeployment ${status.workerScriptDeploymentName}: ${response.status} ${errorText}`,
+          );
+        }
+      } catch (error) {
+        console.error(
+          `❌ Failed to delete WorkerScriptDeployment ${status.workerScriptDeploymentName}:`,
+          error,
+        );
+      }
+    }
+
+    // Delete WorkerScriptVersion (if it exists)
+    if (status.workerScriptVersionName) {
+      try {
+        // Use the generated client to delete via API
+        const response = await env.GUBER_API.fetch(
+          new Request(
+            `http://fake/apis/cf.guber.proc.io/v1/workerscriptversions/${status.workerScriptVersionName}`,
+            {
+              method: "DELETE",
+              headers: {
+                "Content-Type": "application/json",
+              },
+            },
+          ),
+        );
+
+        if (response.ok) {
+          console.log(
+            `✅ Deleted WorkerScriptVersion ${status.workerScriptVersionName}`,
+          );
+        } else {
+          const errorText = await response.text();
+          console.error(
+            `❌ Failed to delete WorkerScriptVersion ${status.workerScriptVersionName}: ${response.status} ${errorText}`,
+          );
+        }
+      } catch (error) {
+        console.error(
+          `❌ Failed to delete WorkerScriptVersion ${status.workerScriptVersionName}:`,
+          error,
+        );
+      }
+    }
+
+    // Delete Worker (if it exists)
+    if (status.workerName) {
+      try {
+        // Use the generated client to delete via API
+        const response = await env.GUBER_API.fetch(
+          new Request(
+            `http://fake/apis/cf.guber.proc.io/v1/workers/${status.workerName}`,
+            {
+              method: "DELETE",
+              headers: {
+                "Content-Type": "application/json",
+              },
+            },
+          ),
+        );
+
+        if (response.ok) {
+          console.log(`✅ Deleted Worker ${status.workerName}`);
+        } else {
+          const errorText = await response.text();
+          console.error(
+            `❌ Failed to delete Worker ${status.workerName}: ${response.status} ${errorText}`,
+          );
+        }
+      } catch (error) {
+        console.error(
+          `❌ Failed to delete Worker ${status.workerName}:`,
+          error,
+        );
+      }
+    }
+
+    console.log(
+      `🧹 Finished cleaning up Cloudflare resources for ReleaseDeploy ${releaseDeployName}`,
+    );
   }
 
   private async reconcileReleaseDeploys(env: any) {
