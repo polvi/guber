@@ -19,7 +19,7 @@ class CloudflareController implements Controller {
 
     // Queue for provisioning if it's a Cloudflare resource type
     if (
-      (kind === "D1" || kind === "Queue" || kind === "Worker") &&
+      (kind === "D1" || kind === "Queue" || kind === "Worker" || kind === "WorkerScriptVersion") &&
       env.GUBER_BUS
     ) {
       await env.GUBER_BUS.send({
@@ -43,7 +43,7 @@ class CloudflareController implements Controller {
 
     // Queue for deletion if it's a Cloudflare resource type
     if (
-      (kind === "D1" || kind === "Queue" || kind === "Worker") &&
+      (kind === "D1" || kind === "Queue" || kind === "Worker" || kind === "WorkerScriptVersion") &&
       env.GUBER_BUS
     ) {
       await env.GUBER_BUS.send({
@@ -108,6 +108,16 @@ class CloudflareController implements Controller {
               namespace,
               spec,
             );
+          } else if (resourceType === "workerscriptversion") {
+            provisioningSuccessful = await this.provisionWorkerScriptVersion(
+              env,
+              resourceName,
+              group,
+              kind,
+              plural,
+              namespace,
+              spec,
+            );
           }
 
           // After successful provisioning, check for dependent resources
@@ -153,6 +163,17 @@ class CloudflareController implements Controller {
               spec,
               status,
             );
+          } else if (resourceType === "workerscriptversion") {
+            await this.deleteWorkerScriptVersion(
+              env,
+              resourceName,
+              group,
+              kind,
+              plural,
+              namespace,
+              spec,
+              status,
+            );
           }
         }
 
@@ -171,6 +192,7 @@ class CloudflareController implements Controller {
     await this.reconcileD1Databases(env);
     await this.reconcileQueues(env);
     await this.reconcileWorkers(env);
+    await this.reconcileWorkerScriptVersions(env);
   }
 
   private async checkAndProvisionDependentResources(
@@ -188,7 +210,7 @@ class CloudflareController implements Controller {
       `
       SELECT * FROM resources 
       WHERE group_name='cf.guber.proc.io' 
-      AND kind='Worker' 
+      AND (kind='Worker' OR kind='WorkerScriptVersion')
       AND json_extract(status, '$.state') = 'Pending'
     `,
     ).all();
@@ -238,14 +260,14 @@ class CloudflareController implements Controller {
 
             if (allDependenciesReady) {
               console.log(
-                `✅ All dependencies resolved for worker ${resource.name}, re-queuing for provisioning`,
+                `✅ All dependencies resolved for ${resource.kind.toLowerCase()} ${resource.name}, re-queuing for provisioning`,
               );
 
               // Queue for provisioning
               if (env.GUBER_BUS) {
                 await env.GUBER_BUS.send({
                   action: "create",
-                  resourceType: "worker",
+                  resourceType: resource.kind.toLowerCase(),
                   resourceName: resource.name,
                   group: resource.group_name,
                   kind: resource.kind,
@@ -256,7 +278,7 @@ class CloudflareController implements Controller {
               }
             } else {
               console.log(
-                `⏳ Worker ${resource.name} still has unresolved dependencies:`,
+                `⏳ ${resource.kind} ${resource.name} still has unresolved dependencies:`,
                 unresolvedDependencies.map((d) => `${d.kind}/${d.name}`),
               );
 
@@ -2524,6 +2546,530 @@ class CloudflareController implements Controller {
       console.log("D1 database reconciliation completed");
     } catch (error) {
       console.error("Error during D1 database reconciliation:", error);
+    }
+  }
+
+  private async provisionWorkerScriptVersion(
+    env: any,
+    resourceName: string,
+    group: string,
+    kind: string,
+    plural: string,
+    namespace: string | null,
+    spec: any,
+  ): Promise<boolean> {
+    try {
+      // Check dependencies first
+      if (spec.dependencies && spec.dependencies.length > 0) {
+        console.log(
+          `Checking ${spec.dependencies.length} dependencies for worker script version ${resourceName}`,
+        );
+
+        for (const dependency of spec.dependencies) {
+          const depGroup = dependency.group || "cf.guber.proc.io";
+          const depKind = dependency.kind;
+          const depName = dependency.name;
+
+          const depResource = await env.DB.prepare(
+            "SELECT * FROM resources WHERE name=? AND kind=? AND group_name=? AND namespace IS NULL",
+          )
+            .bind(depName, depKind, depGroup)
+            .first();
+
+          if (!depResource) {
+            console.log(
+              `Dependency ${depKind}/${depName} not found, deferring provisioning`,
+            );
+            await env.DB.prepare(
+              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+            )
+              .bind(
+                JSON.stringify({
+                  state: "Pending",
+                  message: `Waiting for dependency: ${depKind}/${depName}`,
+                  pendingDependencies: [dependency],
+                }),
+                resourceName,
+              )
+              .run();
+            return false;
+          }
+
+          if (!depResource.status) {
+            console.log(
+              `Dependency ${depKind}/${depName} has no status, deferring provisioning`,
+            );
+            await env.DB.prepare(
+              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+            )
+              .bind(
+                JSON.stringify({
+                  state: "Pending",
+                  message: `Waiting for dependency to be provisioned: ${depKind}/${depName}`,
+                  pendingDependencies: [dependency],
+                }),
+                resourceName,
+              )
+              .run();
+            return false;
+          }
+
+          const depStatus = JSON.parse(depResource.status);
+          if (depStatus.state !== "Ready") {
+            console.log(
+              `Dependency ${depKind}/${depName} not ready (${depStatus.state}), deferring provisioning`,
+            );
+            await env.DB.prepare(
+              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+            )
+              .bind(
+                JSON.stringify({
+                  state: "Pending",
+                  message: `Waiting for dependency to be ready: ${depKind}/${depName} (current state: ${depStatus.state})`,
+                  pendingDependencies: [dependency],
+                }),
+                resourceName,
+              )
+              .run();
+            return false;
+          }
+        }
+
+        console.log(`All dependencies satisfied for worker script version ${resourceName}`);
+      }
+
+      // Get the worker script content
+      let script: string;
+
+      if (spec.scriptUrl) {
+        const scriptResponse = await fetch(spec.scriptUrl, {
+          redirect: "follow",
+          headers: {
+            "User-Agent": "Guber-Worker-Provisioner/1.0",
+          },
+        });
+        if (!scriptResponse.ok) {
+          throw new Error(
+            `Failed to fetch script from ${spec.scriptUrl}: ${scriptResponse.status} ${scriptResponse.statusText}`,
+          );
+        }
+        script = await scriptResponse.text();
+      } else if (spec.script) {
+        script = spec.script;
+      } else {
+        throw new Error(
+          "WorkerScriptVersion must have either 'script' or 'scriptUrl' specified",
+        );
+      }
+
+      // Create multipart form data for the worker version upload
+      const formData = new FormData();
+
+      // Check for source map if scriptUrl is provided
+      let sourceMap: string | null = null;
+      if (spec.scriptUrl) {
+        try {
+          const sourceMapUrl = spec.scriptUrl + ".map";
+          const sourceMapResponse = await fetch(sourceMapUrl, {
+            redirect: "follow",
+            headers: {
+              "User-Agent": "Guber-Worker-Provisioner/1.0",
+            },
+          });
+          if (sourceMapResponse.ok) {
+            sourceMap = await sourceMapResponse.text();
+            console.log(`Found source map at ${sourceMapUrl}`);
+          }
+        } catch (error) {
+          // Source map is optional, continue without it
+          console.log(`No source map found for ${spec.scriptUrl}`);
+        }
+      }
+
+      // Always use module format with main_module
+      const metadata: any = {
+        main_module: "index.js",
+        compatibility_date: spec.compatibility_date || "2023-05-18",
+      };
+
+      // Add compatibility settings if specified
+      if (spec.compatibility_date) {
+        metadata.compatibility_date = spec.compatibility_date;
+      }
+      if (spec.compatibility_flags) {
+        metadata.compatibility_flags = spec.compatibility_flags;
+      }
+
+      // Add annotations if specified
+      if (spec.annotations) {
+        metadata.annotations = {};
+        if (spec.annotations.alias) {
+          metadata.annotations["workers/alias"] = spec.annotations.alias;
+        }
+        if (spec.annotations.message) {
+          metadata.annotations["workers/message"] = spec.annotations.message;
+        }
+        if (spec.annotations.tag) {
+          metadata.annotations["workers/tag"] = spec.annotations.tag;
+        }
+      }
+
+      // Add bindings if specified
+      const bindings: any[] = [];
+
+      if (spec.bindings) {
+        // Handle D1 database bindings
+        if (spec.bindings.d1_databases) {
+          for (const d1Binding of spec.bindings.d1_databases) {
+            // Look up the D1 resource to get its database_id
+            const d1Resource = await env.DB.prepare(
+              "SELECT * FROM resources WHERE name=? AND kind='D1' AND group_name='cf.guber.proc.io' AND namespace IS NULL",
+            )
+              .bind(d1Binding.database_name)
+              .first();
+
+            if (d1Resource && d1Resource.status) {
+              const status = JSON.parse(d1Resource.status);
+              if (status.database_id) {
+                const binding = {
+                  type: "d1",
+                  name: d1Binding.binding,
+                  id: status.database_id,
+                };
+                bindings.push(binding);
+                console.log(
+                  `Added D1 binding: ${d1Binding.database_name} -> ${d1Binding.binding}`,
+                );
+              } else {
+                console.log(
+                  `D1 resource ${d1Binding.database_name} has no database_id`,
+                );
+              }
+            } else {
+              console.log(`D1 resource ${d1Binding.database_name} not found`);
+            }
+          }
+        }
+
+        // Handle Queue bindings
+        if (spec.bindings.queues) {
+          for (const queueBinding of spec.bindings.queues) {
+            // Look up the Queue resource to get its queue name
+            const queueResource = await env.DB.prepare(
+              "SELECT * FROM resources WHERE name=? AND kind='Queue' AND group_name='cf.guber.proc.io' AND namespace IS NULL",
+            )
+              .bind(queueBinding.queue_name)
+              .first();
+
+            if (queueResource && queueResource.status) {
+              const status = JSON.parse(queueResource.status);
+              if (status.queue_id) {
+                // Build the full queue name that was created in Cloudflare
+                const fullQueueName = this.buildFullDatabaseName(
+                  queueResource.name,
+                  queueResource.group_name,
+                  queueResource.plural,
+                  queueResource.namespace,
+                  env.GUBER_NAME,
+                );
+                const binding = {
+                  type: "queue",
+                  name: queueBinding.binding,
+                  queue_name: fullQueueName,
+                };
+                bindings.push(binding);
+                console.log(
+                  `Added Queue binding: ${queueBinding.queue_name} -> ${queueBinding.binding}`,
+                );
+              } else {
+                console.log(
+                  `Queue resource ${queueBinding.queue_name} has no queue_id`,
+                );
+              }
+            } else {
+              console.log(
+                `Queue resource ${queueBinding.queue_name} not found`,
+              );
+            }
+          }
+        }
+      }
+
+      if (bindings.length > 0) {
+        metadata.bindings = bindings;
+      }
+
+      formData.append("metadata", JSON.stringify(metadata));
+      formData.append(
+        "index.js",
+        new Blob([script], { type: "application/javascript+module" }),
+        "index.js",
+      );
+
+      // Add source map if available
+      if (sourceMap) {
+        formData.append(
+          "index.js.map",
+          new Blob([sourceMap], { type: "text/plain" }),
+          "index.js.map",
+        );
+      }
+
+      console.log(
+        `Creating worker script version for ${spec.scriptName} with ${bindings.length} bindings`,
+      );
+
+      const uploadResponse = await fetch(
+        `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${spec.scriptName}/versions`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
+          },
+          body: formData,
+        },
+      );
+
+      if (!uploadResponse.ok) {
+        const errorResponse = await uploadResponse.json();
+        throw new Error(
+          `Failed to upload worker script version: ${JSON.stringify(errorResponse)}`,
+        );
+      }
+
+      const result = await uploadResponse.json();
+      const versionId = result.result.id;
+      const versionNumber = result.result.number;
+
+      console.log(`Worker script version ${versionNumber} created successfully with ID: ${versionId}`);
+
+      // Update the resource status in the database
+      await env.DB.prepare(
+        "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+      )
+        .bind(
+          JSON.stringify({
+            state: "Ready",
+            version_id: versionId,
+            version_number: versionNumber,
+            createdAt: new Date().toISOString(),
+            endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${spec.scriptName}/versions/${versionId}`,
+            metadata: result.result.metadata || {},
+          }),
+          resourceName,
+        )
+        .run();
+
+      console.log(
+        `Worker script version ${resourceName} provisioned successfully`,
+      );
+      return true;
+    } catch (error) {
+      console.error(`Failed to provision WorkerScriptVersion ${resourceName}:`, error);
+
+      // Update status to failed
+      await env.DB.prepare(
+        "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+      )
+        .bind(
+          JSON.stringify({
+            state: "Failed",
+            error: error.message || String(error),
+          }),
+          resourceName,
+        )
+        .run();
+
+      return false;
+    }
+  }
+
+  private async deleteWorkerScriptVersion(
+    env: any,
+    resourceName: string,
+    group: string,
+    kind: string,
+    plural: string,
+    namespace: string | null,
+    spec: any,
+    status?: any,
+  ) {
+    try {
+      // Get version ID from the passed status
+      const versionId = status?.version_id;
+
+      if (versionId && spec.scriptName) {
+        console.log(`Deleting worker script version ${resourceName} (ID: ${versionId}) from script ${spec.scriptName}`);
+
+        // Note: Cloudflare API doesn't provide a direct delete endpoint for versions
+        // Versions are typically managed through the script lifecycle
+        // We'll just log this for now as versions are usually kept for history
+        console.log(
+          `Worker script version ${resourceName} marked for deletion (versions are typically retained by Cloudflare)`,
+        );
+      } else {
+        console.log(
+          `No version ID or script name found for ${resourceName}, skipping Cloudflare deletion`,
+        );
+      }
+    } catch (error) {
+      console.error(`Error deleting WorkerScriptVersion ${resourceName}:`, error);
+    }
+  }
+
+  private async reconcileWorkerScriptVersions(env: any) {
+    try {
+      console.log("Starting WorkerScriptVersion reconciliation...");
+
+      // Get all WorkerScriptVersion resources from our API
+      const { results: apiResources } = await env.DB.prepare(
+        "SELECT * FROM resources WHERE group_name='cf.guber.proc.io' AND kind='WorkerScriptVersion'",
+      ).all();
+
+      console.log(`Found ${apiResources?.length || 0} WorkerScriptVersion resources in API`);
+
+      // Check each version resource for dependency resolution and health
+      for (const resource of apiResources || []) {
+        try {
+          const spec = JSON.parse(resource.spec);
+          let status = {};
+          try {
+            status = resource.status ? JSON.parse(resource.status) : {};
+          } catch (statusParseError) {
+            console.error(
+              `Failed to parse status for worker script version ${resource.name}:`,
+              statusParseError,
+            );
+            status = {};
+          }
+
+          // Check if this is a pending version waiting for dependencies
+          if (status.state === "Pending" && spec.dependencies) {
+            let allDependenciesReady = true;
+            const unresolvedDependencies = [];
+
+            for (const dependency of spec.dependencies) {
+              const depGroup = dependency.group || "cf.guber.proc.io";
+              const depResource = await env.DB.prepare(
+                "SELECT * FROM resources WHERE name=? AND kind=? AND group_name=? AND namespace IS NULL",
+              )
+                .bind(dependency.name, dependency.kind, depGroup)
+                .first();
+
+              if (!depResource || !depResource.status) {
+                allDependenciesReady = false;
+                unresolvedDependencies.push(dependency);
+                continue;
+              }
+
+              const depStatus = JSON.parse(depResource.status);
+              if (depStatus.state !== "Ready") {
+                allDependenciesReady = false;
+                unresolvedDependencies.push(dependency);
+              }
+            }
+
+            if (allDependenciesReady) {
+              console.log(
+                `[Reconcile] All dependencies resolved for worker script version ${resource.name}, re-queuing for provisioning`,
+              );
+
+              // Queue for provisioning
+              if (env.GUBER_BUS) {
+                await env.GUBER_BUS.send({
+                  action: "create",
+                  resourceType: "workerscriptversion",
+                  resourceName: resource.name,
+                  group: resource.group_name,
+                  kind: resource.kind,
+                  plural: resource.plural,
+                  namespace: resource.namespace,
+                  spec: spec,
+                });
+              }
+            } else {
+              console.log(
+                `[Reconcile] Worker script version ${resource.name} still has unresolved dependencies:`,
+                unresolvedDependencies.map((d) => `${d.kind}/${d.name}`),
+              );
+
+              // Update the dependency check timestamp
+              const updatedStatus = {
+                ...status,
+                lastDependencyCheck: new Date().toISOString(),
+                pendingDependencies: unresolvedDependencies,
+              };
+
+              await env.DB.prepare(
+                "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+              )
+                .bind(JSON.stringify(updatedStatus), resource.name)
+                .run();
+            }
+          }
+
+          // For ready versions, verify they still exist in Cloudflare
+          if (status.state === "Ready" && status.version_id && spec.scriptName) {
+            try {
+              const versionResponse = await fetch(
+                `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${spec.scriptName}/versions/${status.version_id}`,
+                {
+                  method: "GET",
+                  headers: {
+                    Authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
+                  },
+                },
+              );
+
+              if (!versionResponse.ok) {
+                console.log(
+                  `Worker script version ${resource.name} (ID: ${status.version_id}) no longer exists in Cloudflare`,
+                );
+
+                // Update status to indicate the version is missing
+                const updatedStatus = {
+                  ...status,
+                  state: "Failed",
+                  error: "Version no longer exists in Cloudflare",
+                  lastHealthCheck: new Date().toISOString(),
+                };
+
+                await env.DB.prepare(
+                  "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+                )
+                  .bind(JSON.stringify(updatedStatus), resource.name)
+                  .run();
+              } else {
+                // Update last health check timestamp
+                const updatedStatus = {
+                  ...status,
+                  lastHealthCheck: new Date().toISOString(),
+                };
+
+                await env.DB.prepare(
+                  "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+                )
+                  .bind(JSON.stringify(updatedStatus), resource.name)
+                  .run();
+              }
+            } catch (error) {
+              console.error(
+                `Error checking worker script version ${resource.name}:`,
+                error,
+              );
+            }
+          }
+        } catch (error) {
+          console.error(
+            `Error processing worker script version ${resource.name}:`,
+            error,
+          );
+        }
+      }
+
+      console.log("WorkerScriptVersion reconciliation completed");
+    } catch (error) {
+      console.error("Error during WorkerScriptVersion reconciliation:", error);
     }
   }
 }
