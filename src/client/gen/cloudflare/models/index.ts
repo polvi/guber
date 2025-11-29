@@ -6,13 +6,31 @@
  * OpenAPI spec version: v1
  */
 
+export * from "./d1";
+export * from "./d1ApiVersion";
+export * from "./d1Kind";
+export * from "./d1Spec";
+export * from "./d1Status";
 export * from "./ioK8sApimachineryPkgApisMetaV1ObjectMeta";
 export * from "./ioK8sApimachineryPkgApisMetaV1ObjectMetaAnnotations";
 export * from "./ioK8sApimachineryPkgApisMetaV1ObjectMetaLabels";
+export * from "./patchApisCfGuberProcIoV1D1sNameFieldValidation";
+export * from "./patchApisCfGuberProcIoV1D1sNameParams";
+export * from "./patchApisCfGuberProcIoV1QsNameFieldValidation";
+export * from "./patchApisCfGuberProcIoV1QsNameParams";
 export * from "./patchApisCfGuberProcIoV1VersionsNameFieldValidation";
 export * from "./patchApisCfGuberProcIoV1VersionsNameParams";
 export * from "./patchApisCfGuberProcIoV1WorkersNameFieldValidation";
 export * from "./patchApisCfGuberProcIoV1WorkersNameParams";
+export * from "./patchApisCfGuberProcIoV1WorkerscriptdeploymentsNameFieldValidation";
+export * from "./patchApisCfGuberProcIoV1WorkerscriptdeploymentsNameParams";
+export * from "./patchApisCfGuberProcIoV1WorkerscriptversionsNameFieldValidation";
+export * from "./patchApisCfGuberProcIoV1WorkerscriptversionsNameParams";
+export * from "./queue";
+export * from "./queueApiVersion";
+export * from "./queueKind";
+export * from "./queueSpec";
+export * from "./queueStatus";
 export * from "./version";
 export * from "./versionApiVersion";
 export * from "./versionKind";
@@ -21,5 +39,15 @@ export * from "./versionStatus";
 export * from "./worker";
 export * from "./workerApiVersion";
 export * from "./workerKind";
+export * from "./workerScriptDeployment";
+export * from "./workerScriptDeploymentApiVersion";
+export * from "./workerScriptDeploymentKind";
+export * from "./workerScriptDeploymentSpec";
+export * from "./workerScriptDeploymentStatus";
+export * from "./workerScriptVersion";
+export * from "./workerScriptVersionApiVersion";
+export * from "./workerScriptVersionKind";
+export * from "./workerScriptVersionSpec";
+export * from "./workerScriptVersionStatus";
 export * from "./workerSpec";
 export * from "./workerStatus";

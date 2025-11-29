@@ -10,13 +10,100 @@ import { faker } from "@faker-js/faker";
 import { HttpResponse, delay, http } from "msw";
 import type { RequestHandlerOptions } from "msw";
 
-import type { Version, Worker } from ".././models";
+import type {
+  D1,
+  Queue,
+  Version,
+  Worker,
+  WorkerScriptDeployment,
+  WorkerScriptVersion,
+} from ".././models";
 
 export const getPatchApisCfGuberProcIoV1VersionsNameResponseMock = (
   overrideResponse: Partial<Version> = {},
 ): Version => ({
   apiVersion: faker.helpers.arrayElement(["cf.guber.proc.io/v1"] as const),
   kind: faker.helpers.arrayElement(["Version"] as const),
+  metadata: {
+    name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    namespace: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    creationTimestamp: faker.helpers.arrayElement([
+      `${faker.date.past().toISOString().split(".")[0]}Z`,
+      undefined,
+    ]),
+    labels: faker.helpers.arrayElement([
+      {
+        [faker.string.alphanumeric(5)]: faker.string.alpha({
+          length: { min: 10, max: 20 },
+        }),
+      },
+      undefined,
+    ]),
+    annotations: faker.helpers.arrayElement([
+      {
+        [faker.string.alphanumeric(5)]: faker.string.alpha({
+          length: { min: 10, max: 20 },
+        }),
+      },
+      undefined,
+    ]),
+  },
+  spec: faker.helpers.arrayElement([{}, undefined]),
+  status: faker.helpers.arrayElement([{}, undefined]),
+  ...overrideResponse,
+});
+
+export const getPatchApisCfGuberProcIoV1D1sNameResponseMock = (
+  overrideResponse: Partial<D1> = {},
+): D1 => ({
+  apiVersion: faker.helpers.arrayElement(["cf.guber.proc.io/v1"] as const),
+  kind: faker.helpers.arrayElement(["D1"] as const),
+  metadata: {
+    name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    namespace: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    creationTimestamp: faker.helpers.arrayElement([
+      `${faker.date.past().toISOString().split(".")[0]}Z`,
+      undefined,
+    ]),
+    labels: faker.helpers.arrayElement([
+      {
+        [faker.string.alphanumeric(5)]: faker.string.alpha({
+          length: { min: 10, max: 20 },
+        }),
+      },
+      undefined,
+    ]),
+    annotations: faker.helpers.arrayElement([
+      {
+        [faker.string.alphanumeric(5)]: faker.string.alpha({
+          length: { min: 10, max: 20 },
+        }),
+      },
+      undefined,
+    ]),
+  },
+  spec: faker.helpers.arrayElement([{}, undefined]),
+  status: faker.helpers.arrayElement([{}, undefined]),
+  ...overrideResponse,
+});
+
+export const getPatchApisCfGuberProcIoV1QsNameResponseMock = (
+  overrideResponse: Partial<Queue> = {},
+): Queue => ({
+  apiVersion: faker.helpers.arrayElement(["cf.guber.proc.io/v1"] as const),
+  kind: faker.helpers.arrayElement(["Queue"] as const),
   metadata: {
     name: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -92,6 +179,87 @@ export const getPatchApisCfGuberProcIoV1WorkersNameResponseMock = (
   ...overrideResponse,
 });
 
+export const getPatchApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponseMock =
+  (
+    overrideResponse: Partial<WorkerScriptDeployment> = {},
+  ): WorkerScriptDeployment => ({
+    apiVersion: faker.helpers.arrayElement(["cf.guber.proc.io/v1"] as const),
+    kind: faker.helpers.arrayElement(["WorkerScriptDeployment"] as const),
+    metadata: {
+      name: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      namespace: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      creationTimestamp: faker.helpers.arrayElement([
+        `${faker.date.past().toISOString().split(".")[0]}Z`,
+        undefined,
+      ]),
+      labels: faker.helpers.arrayElement([
+        {
+          [faker.string.alphanumeric(5)]: faker.string.alpha({
+            length: { min: 10, max: 20 },
+          }),
+        },
+        undefined,
+      ]),
+      annotations: faker.helpers.arrayElement([
+        {
+          [faker.string.alphanumeric(5)]: faker.string.alpha({
+            length: { min: 10, max: 20 },
+          }),
+        },
+        undefined,
+      ]),
+    },
+    spec: faker.helpers.arrayElement([{}, undefined]),
+    status: faker.helpers.arrayElement([{}, undefined]),
+    ...overrideResponse,
+  });
+
+export const getPatchApisCfGuberProcIoV1WorkerscriptversionsNameResponseMock = (
+  overrideResponse: Partial<WorkerScriptVersion> = {},
+): WorkerScriptVersion => ({
+  apiVersion: faker.helpers.arrayElement(["cf.guber.proc.io/v1"] as const),
+  kind: faker.helpers.arrayElement(["WorkerScriptVersion"] as const),
+  metadata: {
+    name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    namespace: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    creationTimestamp: faker.helpers.arrayElement([
+      `${faker.date.past().toISOString().split(".")[0]}Z`,
+      undefined,
+    ]),
+    labels: faker.helpers.arrayElement([
+      {
+        [faker.string.alphanumeric(5)]: faker.string.alpha({
+          length: { min: 10, max: 20 },
+        }),
+      },
+      undefined,
+    ]),
+    annotations: faker.helpers.arrayElement([
+      {
+        [faker.string.alphanumeric(5)]: faker.string.alpha({
+          length: { min: 10, max: 20 },
+        }),
+      },
+      undefined,
+    ]),
+  },
+  spec: faker.helpers.arrayElement([{}, undefined]),
+  status: faker.helpers.arrayElement([{}, undefined]),
+  ...overrideResponse,
+});
+
 export const getPatchApisCfGuberProcIoV1VersionsNameMockHandler = (
   overrideResponse?:
     | Version
@@ -112,6 +280,62 @@ export const getPatchApisCfGuberProcIoV1VersionsNameMockHandler = (
               ? await overrideResponse(info)
               : overrideResponse
             : getPatchApisCfGuberProcIoV1VersionsNameResponseMock(),
+        ),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    },
+    options,
+  );
+};
+
+export const getPatchApisCfGuberProcIoV1D1sNameMockHandler = (
+  overrideResponse?:
+    | D1
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<D1> | D1),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/apis/cf.guber.proc.io/v1/d1s/:name",
+    async (info) => {
+      await delay(1000);
+
+      return new HttpResponse(
+        JSON.stringify(
+          overrideResponse !== undefined
+            ? typeof overrideResponse === "function"
+              ? await overrideResponse(info)
+              : overrideResponse
+            : getPatchApisCfGuberProcIoV1D1sNameResponseMock(),
+        ),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    },
+    options,
+  );
+};
+
+export const getPatchApisCfGuberProcIoV1QsNameMockHandler = (
+  overrideResponse?:
+    | Queue
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<Queue> | Queue),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/apis/cf.guber.proc.io/v1/qs/:name",
+    async (info) => {
+      await delay(1000);
+
+      return new HttpResponse(
+        JSON.stringify(
+          overrideResponse !== undefined
+            ? typeof overrideResponse === "function"
+              ? await overrideResponse(info)
+              : overrideResponse
+            : getPatchApisCfGuberProcIoV1QsNameResponseMock(),
         ),
         { status: 200, headers: { "Content-Type": "application/json" } },
       );
@@ -147,7 +371,68 @@ export const getPatchApisCfGuberProcIoV1WorkersNameMockHandler = (
     options,
   );
 };
+
+export const getPatchApisCfGuberProcIoV1WorkerscriptdeploymentsNameMockHandler =
+  (
+    overrideResponse?:
+      | WorkerScriptDeployment
+      | ((
+          info: Parameters<Parameters<typeof http.patch>[1]>[0],
+        ) => Promise<WorkerScriptDeployment> | WorkerScriptDeployment),
+    options?: RequestHandlerOptions,
+  ) => {
+    return http.patch(
+      "*/apis/cf.guber.proc.io/v1/workerscriptdeployments/:name",
+      async (info) => {
+        await delay(1000);
+
+        return new HttpResponse(
+          JSON.stringify(
+            overrideResponse !== undefined
+              ? typeof overrideResponse === "function"
+                ? await overrideResponse(info)
+                : overrideResponse
+              : getPatchApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponseMock(),
+          ),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      },
+      options,
+    );
+  };
+
+export const getPatchApisCfGuberProcIoV1WorkerscriptversionsNameMockHandler = (
+  overrideResponse?:
+    | WorkerScriptVersion
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<WorkerScriptVersion> | WorkerScriptVersion),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/apis/cf.guber.proc.io/v1/workerscriptversions/:name",
+    async (info) => {
+      await delay(1000);
+
+      return new HttpResponse(
+        JSON.stringify(
+          overrideResponse !== undefined
+            ? typeof overrideResponse === "function"
+              ? await overrideResponse(info)
+              : overrideResponse
+            : getPatchApisCfGuberProcIoV1WorkerscriptversionsNameResponseMock(),
+        ),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    },
+    options,
+  );
+};
 export const getDefaultMock = () => [
   getPatchApisCfGuberProcIoV1VersionsNameMockHandler(),
+  getPatchApisCfGuberProcIoV1D1sNameMockHandler(),
+  getPatchApisCfGuberProcIoV1QsNameMockHandler(),
   getPatchApisCfGuberProcIoV1WorkersNameMockHandler(),
+  getPatchApisCfGuberProcIoV1WorkerscriptdeploymentsNameMockHandler(),
+  getPatchApisCfGuberProcIoV1WorkerscriptversionsNameMockHandler(),
 ];
