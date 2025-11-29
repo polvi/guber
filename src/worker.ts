@@ -17,6 +17,7 @@ const app = new Hono<Env>();
 // Add controllers as middleware
 for (const controller of config.controllers) {
   if (controller && typeof controller.use === 'function') {
+    console.log("Registering controller: ", controller);
     app.use('*', controller.use());
   }
 }
