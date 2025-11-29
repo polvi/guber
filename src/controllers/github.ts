@@ -8,7 +8,7 @@ export default function github(): Controller {
   return new GitHubController();
 }
 
-class GitHubController implements Controller {
+export class GitHubController implements Controller {
 
   async onResourceCreated(context: ResourceContext): Promise<void> {
     const { group, kind, name, spec, env } = context;

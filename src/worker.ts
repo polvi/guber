@@ -1581,19 +1581,59 @@ app.delete(
 export default {
   fetch: app.fetch,
   async queue(batch: MessageBatch<any>, env: Env): Promise<void> {
-    // Find the cloudflare controller specifically for queue handling
-    const cloudflareController = config.controllers.find(
-      (controller) => controller.constructor?.name === "CloudflareController",
-    );
-
-    if (cloudflareController && "handleQueue" in cloudflareController) {
-      await (cloudflareController as any).handleQueue(batch, env);
-      return;
-    }
-
-    // Default behavior if no cloudflare controller handles queues
+    // Process each message and route to appropriate controller
     for (const message of batch.messages) {
-      message.ack();
+      try {
+        const messageBody = message.body;
+        let handled = false;
+
+        // Route GitHub messages to GitHub controller
+        if (messageBody?.group === "gh.guber.proc.io") {
+          const githubController = config.controllers.find(
+            (controller) => controller.constructor?.name === "GitHubController",
+          );
+          
+          if (githubController && "handleQueue" in githubController) {
+            const singleMessageBatch = { messages: [message] };
+            await (githubController as any).handleQueue(singleMessageBatch, env);
+            handled = true;
+          }
+        }
+        
+        // Route Cloudflare messages to Cloudflare controller
+        else if (messageBody?.group === "cf.guber.proc.io") {
+          const cloudflareController = config.controllers.find(
+            (controller) => controller.constructor?.name === "CloudflareController",
+          );
+          
+          if (cloudflareController && "handleQueue" in cloudflareController) {
+            const singleMessageBatch = { messages: [message] };
+            await (cloudflareController as any).handleQueue(singleMessageBatch, env);
+            handled = true;
+          }
+        }
+
+        // If no specific handler found, try all controllers
+        if (!handled) {
+          for (const controller of config.controllers) {
+            if ("handleQueue" in controller) {
+              const singleMessageBatch = { messages: [message] };
+              await (controller as any).handleQueue(singleMessageBatch, env);
+              handled = true;
+              break;
+            }
+          }
+        }
+
+        // Default behavior if no controller handles the message
+        if (!handled) {
+          console.warn(`No handler found for message:`, messageBody);
+          message.ack();
+        }
+      } catch (error) {
+        console.error(`Error processing queue message:`, error);
+        message.retry();
+      }
     }
   },
   async scheduled(event: ScheduledEvent, env: Env): Promise<void> {
