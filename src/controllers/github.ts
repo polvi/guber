@@ -1,8 +1,12 @@
 import { Hono } from "hono";
 import { v4 as uuid } from "uuid";
 import type { Controller, ResourceContext } from "../config";
-import type { WorkerScriptVersion } from "../client/gen/cloudflare/models";
-import { patchApisCfGuberProcIoV1WorkerscriptversionsName } from "../client/gen/cloudflare/default/default";
+import type { WorkerScriptVersion, Worker, WorkerScriptDeployment } from "../client/gen/cloudflare/models";
+import { 
+  patchApisCfGuberProcIoV1WorkerscriptversionsName,
+  patchApisCfGuberProcIoV1WorkersName,
+  patchApisCfGuberProcIoV1WorkerscriptdeploymentsName
+} from "../client/gen/cloudflare/default/default";
 import { patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName } from "../client/gen/github/default/default";
 import type { ReleaseDeploy } from "../client/gen/github/models";
 import { setEnv } from "../client/custom-fetch";
@@ -576,23 +580,41 @@ export class GitHubController implements Controller {
         }
       }
 
-      // Create WorkerScriptVersion if requested
+      // Create Cloudflare resources if requested
+      let workerName = null;
       let workerScriptVersionName = null;
-      if (spec.createWorkerScriptVersion && spec.workerScriptVersionSpec) {
+      let workerScriptDeploymentName = null;
+
+      if (spec.createCloudflareResources) {
         try {
+          // Create Worker first
+          workerName = await this.createWorker(env, spec, resourceName, releaseTag);
+          
+          // Create WorkerScriptVersion
           workerScriptVersionName = await this.createWorkerScriptVersion(
             env,
             spec,
             releaseData,
             releaseTag,
             resourceName,
+            workerName,
+          );
+          
+          // Create WorkerScriptDeployment
+          workerScriptDeploymentName = await this.createWorkerScriptDeployment(
+            env,
+            spec,
+            resourceName,
+            releaseTag,
+            workerName,
+            workerScriptVersionName,
           );
         } catch (error) {
           console.error(
-            `Failed to create WorkerScriptVersion for ${resourceName}:`,
+            `Failed to create Cloudflare resources for ${resourceName}:`,
             error,
           );
-          // Don't fail the entire deployment if WorkerScriptVersion creation fails
+          // Don't fail the entire deployment if Cloudflare resource creation fails
         }
       }
 
@@ -658,8 +680,16 @@ export class GitHubController implements Controller {
         statusUpdate.status_id = statusId;
       }
 
+      if (workerName) {
+        statusUpdate.workerName = workerName;
+      }
+
       if (workerScriptVersionName) {
         statusUpdate.workerScriptVersionName = workerScriptVersionName;
+      }
+
+      if (workerScriptDeploymentName) {
+        statusUpdate.workerScriptDeploymentName = workerScriptDeploymentName;
       }
 
       if (!env.GITHUB_TOKEN) {
@@ -899,26 +929,74 @@ export class GitHubController implements Controller {
     }
   }
 
+  private async createWorker(
+    env: any,
+    spec: any,
+    releaseDeployName: string,
+    releaseTag: string,
+  ): Promise<string> {
+    const workerName = spec.workerName || `${releaseDeployName}-worker`;
+
+    // Create the Worker resource
+    const workerResource: Worker = {
+      apiVersion: "cf.guber.proc.io/v1",
+      kind: "Worker",
+      metadata: {
+        name: workerName,
+        namespace: undefined,
+        labels: {
+          "guber.proc.io/created-by": "ReleaseDeploy",
+          "guber.proc.io/source-repository": spec.repository.replace("/", "-"),
+          "guber.proc.io/source-tag": releaseTag,
+        },
+        annotations: {
+          "guber.proc.io/source-repository": spec.repository,
+          "guber.proc.io/source-tag": releaseTag,
+          "guber.proc.io/created-by": `ReleaseDeploy/${releaseDeployName}`,
+        },
+      },
+      spec: {
+        name: workerName,
+        ...spec.workerSpec,
+      },
+    };
+
+    // Create the resource in the database
+    await env.DB.prepare(
+      "INSERT INTO resources (id, group_name, version, kind, plural, name, spec, namespace) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    )
+      .bind(
+        uuid(),
+        "cf.guber.proc.io",
+        "v1",
+        "Worker",
+        "workers",
+        workerName,
+        JSON.stringify(workerResource.spec),
+        null,
+      )
+      .run();
+
+    console.log(
+      `✅ Created Worker ${workerName} from ReleaseDeploy ${releaseDeployName}`,
+    );
+
+    return workerName;
+  }
+
   private async createWorkerScriptVersion(
     env: any,
     spec: any,
     releaseData: any,
     releaseTag: string,
     releaseDeployName: string,
+    workerName: string,
   ): Promise<string> {
-    const workerScriptVersionSpec = spec.workerScriptVersionSpec;
-
-    if (!workerScriptVersionSpec.workerName) {
-      throw new Error(
-        "workerScriptVersionSpec.workerName is required when createWorkerScriptVersion is true",
-      );
-    }
-
     // Generate a unique name for the WorkerScriptVersion
-    const workerScriptVersionName = `${workerScriptVersionSpec.workerName}-${releaseTag.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()}`;
+    const workerScriptVersionName = `${workerName}-${releaseTag.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()}`;
 
     // Get script content from release if not provided
-    let scriptContent = workerScriptVersionSpec.script;
+    let scriptContent = spec.workerScriptVersionSpec?.script;
 
     if (!scriptContent && releaseData) {
       // Look for common script files in release assets
@@ -1025,10 +1103,10 @@ export class GitHubController implements Controller {
         },
       },
       spec: {
-        workerName: workerScriptVersionSpec.workerName,
+        workerName: workerName,
         script: scriptContent,
         metadata: {
-          ...workerScriptVersionSpec.metadata,
+          ...spec.workerScriptVersionSpec?.metadata,
           sourceRepository: spec.repository,
           sourceTag: releaseTag,
           createdBy: `ReleaseDeploy/${releaseDeployName}`,
@@ -1059,7 +1137,7 @@ export class GitHubController implements Controller {
         `✅ Created WorkerScriptVersion ${workerScriptVersionName} from ReleaseDeploy ${releaseDeployName}`,
       );
       console.log(
-        `📝 WorkerScriptVersion details: worker=${workerScriptVersionSpec.workerName}, source=${spec.repository}@${releaseTag}`,
+        `📝 WorkerScriptVersion details: worker=${workerName}, source=${spec.repository}@${releaseTag}`,
       );
     } catch (error) {
       console.error(`Failed to create WorkerScriptVersion:`, error);
@@ -1067,6 +1145,72 @@ export class GitHubController implements Controller {
     }
 
     return workerScriptVersionName;
+  }
+
+  private async createWorkerScriptDeployment(
+    env: any,
+    spec: any,
+    releaseDeployName: string,
+    releaseTag: string,
+    workerName: string,
+    workerScriptVersionName: string,
+  ): Promise<string> {
+    // Generate a unique name for the WorkerScriptDeployment
+    const workerScriptDeploymentName = `${workerName}-deployment-${releaseTag.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()}`;
+
+    // Create the WorkerScriptDeployment resource
+    const workerScriptDeploymentResource: WorkerScriptDeployment = {
+      apiVersion: "cf.guber.proc.io/v1",
+      kind: "WorkerScriptDeployment",
+      metadata: {
+        name: workerScriptDeploymentName,
+        namespace: undefined,
+        labels: {
+          "guber.proc.io/created-by": "ReleaseDeploy",
+          "guber.proc.io/source-repository": spec.repository.replace("/", "-"),
+          "guber.proc.io/source-tag": releaseTag,
+          "guber.proc.io/worker": workerName,
+        },
+        annotations: {
+          "guber.proc.io/source-repository": spec.repository,
+          "guber.proc.io/source-tag": releaseTag,
+          "guber.proc.io/created-by": `ReleaseDeploy/${releaseDeployName}`,
+          "guber.proc.io/worker": workerName,
+          "guber.proc.io/worker-script-version": workerScriptVersionName,
+        },
+      },
+      spec: {
+        workerName: workerName,
+        workerScriptVersionName: workerScriptVersionName,
+        environment: spec.environment || "production",
+        ...spec.workerScriptDeploymentSpec,
+      },
+    };
+
+    // Create the resource in the database
+    await env.DB.prepare(
+      "INSERT INTO resources (id, group_name, version, kind, plural, name, spec, namespace) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    )
+      .bind(
+        uuid(),
+        "cf.guber.proc.io",
+        "v1",
+        "WorkerScriptDeployment",
+        "workerscriptdeployments",
+        workerScriptDeploymentName,
+        JSON.stringify(workerScriptDeploymentResource.spec),
+        null,
+      )
+      .run();
+
+    console.log(
+      `✅ Created WorkerScriptDeployment ${workerScriptDeploymentName} from ReleaseDeploy ${releaseDeployName}`,
+    );
+    console.log(
+      `📝 WorkerScriptDeployment details: worker=${workerName}, version=${workerScriptVersionName}, environment=${spec.environment || "production"}`,
+    );
+
+    return workerScriptDeploymentName;
   }
 
   private async reconcilePendingReleaseDeploys(env: any) {

@@ -4,3 +4,13 @@ metadata:
   name: my-worker-deploy
 spec:
   repository: "polvi/first-worker"
+  createCloudflareResources: true
+  workerName: "first-worker"
+  environment: "production"
+  workerSpec:
+    # Additional worker configuration can go here
+  workerScriptVersionSpec:
+    metadata:
+      description: "Worker script from GitHub release"
+  workerScriptDeploymentSpec:
+    # Additional deployment configuration can go here
