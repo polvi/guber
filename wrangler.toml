@@ -14,6 +14,10 @@ binding = "GUBER_BUS"
 [[queues.consumers]]
 queue = "guber-bus"
 
+[[services]]
+binding = "GUBER_API"
+service = "guber-v0"
+
 [vars]
 # Add your Cloudflare API token as a secret: wrangler secret put CLOUDFLARE_API_TOKEN
 # Add your domain as a secret: wrangler secret put GUBER_DOMAIN
