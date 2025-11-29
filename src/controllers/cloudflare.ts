@@ -3487,19 +3487,75 @@ class CloudflareController implements Controller {
         );
       }
 
-      // Validate that all version IDs exist (optional - could be done by checking against WorkerScriptVersion resources)
+      // Resolve version names to version IDs and validate versions
+      const resolvedVersions = [];
       for (const version of spec.versions) {
-        if (!version.version_id || !version.percentage) {
+        if (!version.percentage) {
+          throw new Error(`Each version must have percentage specified`);
+        }
+
+        if (version.version_id && version.version_name) {
           throw new Error(
-            `Each version must have version_id and percentage specified`,
+            `Version cannot specify both version_id and version_name`,
           );
+        }
+
+        if (!version.version_id && !version.version_name) {
+          throw new Error(
+            `Version must specify either version_id or version_name`,
+          );
+        }
+
+        if (version.version_name) {
+          // Look up the WorkerScriptVersion resource to get its version_id
+          const versionResource = await env.DB.prepare(
+            "SELECT * FROM resources WHERE name=? AND kind='WorkerScriptVersion' AND group_name='cf.guber.proc.io' AND namespace IS NULL",
+          )
+            .bind(version.version_name)
+            .first();
+
+          if (!versionResource) {
+            throw new Error(
+              `WorkerScriptVersion resource '${version.version_name}' not found`,
+            );
+          }
+
+          if (!versionResource.status) {
+            throw new Error(
+              `WorkerScriptVersion resource '${version.version_name}' has no status`,
+            );
+          }
+
+          const versionStatus = JSON.parse(versionResource.status);
+          if (versionStatus.state !== "Ready") {
+            throw new Error(
+              `WorkerScriptVersion resource '${version.version_name}' is not ready (state: ${versionStatus.state})`,
+            );
+          }
+
+          if (!versionStatus.version_id) {
+            throw new Error(
+              `WorkerScriptVersion resource '${version.version_name}' has no version_id`,
+            );
+          }
+
+          resolvedVersions.push({
+            version_id: versionStatus.version_id,
+            percentage: version.percentage,
+          });
+        } else {
+          // Use the provided version_id directly
+          resolvedVersions.push({
+            version_id: version.version_id,
+            percentage: version.percentage,
+          });
         }
       }
 
       // Build deployment request body
       const deploymentBody: any = {
         strategy: spec.strategy,
-        versions: spec.versions,
+        versions: resolvedVersions,
       };
 
       // Add annotations if specified
@@ -3516,7 +3572,7 @@ class CloudflareController implements Controller {
       }
 
       console.log(
-        `Creating worker script deployment for ${actualScriptName} (from ${spec.scriptName}) with ${spec.versions.length} versions`,
+        `Creating worker script deployment for ${actualScriptName} (from ${spec.scriptName}) with ${resolvedVersions.length} versions`,
       );
 
       // Build deployment URL with optional force parameter
