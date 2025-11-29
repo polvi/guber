@@ -5,8 +5,8 @@
  * OpenAPI specification for apiextensions.k8s.io/v1
  * OpenAPI spec version: v1
  */
-import type { PatchApisApiextensionsK8sIoV1CustomresourcedefinitionsNameFieldValidation } from "./patchApisApiextensionsK8sIoV1CustomresourcedefinitionsNameFieldValidation";
+import type { PatchApisApiextensionsK8sIoV1CustomresourcedefinitionsNameFieldValidation } from './patchApisApiextensionsK8sIoV1CustomresourcedefinitionsNameFieldValidation';
 
 export type PatchApisApiextensionsK8sIoV1CustomresourcedefinitionsNameParams = {
-  fieldValidation?: PatchApisApiextensionsK8sIoV1CustomresourcedefinitionsNameFieldValidation;
+fieldValidation?: PatchApisApiextensionsK8sIoV1CustomresourcedefinitionsNameFieldValidation;
 };

@@ -5,11 +5,11 @@
  * Kubernetes API server OpenAPI specification
  * OpenAPI spec version: v1
  */
-import type { IoK8sApiCoreV1NamespaceApiVersion } from "./ioK8sApiCoreV1NamespaceApiVersion";
-import type { IoK8sApiCoreV1NamespaceKind } from "./ioK8sApiCoreV1NamespaceKind";
-import type { IoK8sApimachineryPkgApisMetaV1ObjectMeta } from "./ioK8sApimachineryPkgApisMetaV1ObjectMeta";
-import type { IoK8sApiCoreV1NamespaceSpec } from "./ioK8sApiCoreV1NamespaceSpec";
-import type { IoK8sApiCoreV1NamespaceStatus } from "./ioK8sApiCoreV1NamespaceStatus";
+import type { IoK8sApiCoreV1NamespaceApiVersion } from './ioK8sApiCoreV1NamespaceApiVersion';
+import type { IoK8sApiCoreV1NamespaceKind } from './ioK8sApiCoreV1NamespaceKind';
+import type { IoK8sApimachineryPkgApisMetaV1ObjectMeta } from './ioK8sApimachineryPkgApisMetaV1ObjectMeta';
+import type { IoK8sApiCoreV1NamespaceSpec } from './ioK8sApiCoreV1NamespaceSpec';
+import type { IoK8sApiCoreV1NamespaceStatus } from './ioK8sApiCoreV1NamespaceStatus';
 
 export interface IoK8sApiCoreV1Namespace {
   apiVersion: IoK8sApiCoreV1NamespaceApiVersion;

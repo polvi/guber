@@ -6,10 +6,10 @@
  * OpenAPI spec version: v1
  */
 
-export type IoK8sApiCoreV1NamespaceApiVersion =
-  (typeof IoK8sApiCoreV1NamespaceApiVersion)[keyof typeof IoK8sApiCoreV1NamespaceApiVersion];
+export type IoK8sApiCoreV1NamespaceApiVersion = typeof IoK8sApiCoreV1NamespaceApiVersion[keyof typeof IoK8sApiCoreV1NamespaceApiVersion];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const IoK8sApiCoreV1NamespaceApiVersion = {
-  v1: "v1",
+  v1: 'v1',
 } as const;

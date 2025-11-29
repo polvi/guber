@@ -6,9 +6,10 @@
  * OpenAPI spec version: v1
  */
 
-export type QueueKind = (typeof QueueKind)[keyof typeof QueueKind];
+export type QueueKind = typeof QueueKind[keyof typeof QueueKind];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const QueueKind = {
-  Queue: "Queue",
+  Queue: 'Queue',
 } as const;

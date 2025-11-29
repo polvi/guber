@@ -6,12 +6,12 @@
  * OpenAPI spec version: v1
  */
 
-export type PatchApisCfGuberProcIoV1WorkerscriptversionsNameFieldValidation =
-  (typeof PatchApisCfGuberProcIoV1WorkerscriptversionsNameFieldValidation)[keyof typeof PatchApisCfGuberProcIoV1WorkerscriptversionsNameFieldValidation];
+export type PatchApisCfGuberProcIoV1WorkerscriptversionsNameFieldValidation = typeof PatchApisCfGuberProcIoV1WorkerscriptversionsNameFieldValidation[keyof typeof PatchApisCfGuberProcIoV1WorkerscriptversionsNameFieldValidation];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const PatchApisCfGuberProcIoV1WorkerscriptversionsNameFieldValidation = {
-  Ignore: "Ignore",
-  Warn: "Warn",
-  Strict: "Strict",
+  Ignore: 'Ignore',
+  Warn: 'Warn',
+  Strict: 'Strict',
 } as const;

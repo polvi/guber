@@ -5,8 +5,8 @@
  * Kubernetes API server OpenAPI specification
  * OpenAPI spec version: v1
  */
-import type { PatchApiV1NamespacesNameFieldValidation } from "./patchApiV1NamespacesNameFieldValidation";
+import type { PatchApiV1NamespacesNameFieldValidation } from './patchApiV1NamespacesNameFieldValidation';
 
 export type PatchApiV1NamespacesNameParams = {
-  fieldValidation?: PatchApiV1NamespacesNameFieldValidation;
+fieldValidation?: PatchApiV1NamespacesNameFieldValidation;
 };

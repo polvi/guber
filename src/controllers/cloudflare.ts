@@ -7,7 +7,6 @@ export default function cloudflare(): Controller {
 }
 
 class CloudflareController implements Controller {
-
   async onResourceCreated(context: ResourceContext): Promise<void> {
     const { group, kind, name, spec, env } = context;
 

@@ -6,13 +6,12 @@
  * OpenAPI spec version: v1
  */
 
-export type PutApisApiextensionsK8sIoV1CustomresourcedefinitionsNameFieldValidation =
-  (typeof PutApisApiextensionsK8sIoV1CustomresourcedefinitionsNameFieldValidation)[keyof typeof PutApisApiextensionsK8sIoV1CustomresourcedefinitionsNameFieldValidation];
+export type PutApisApiextensionsK8sIoV1CustomresourcedefinitionsNameFieldValidation = typeof PutApisApiextensionsK8sIoV1CustomresourcedefinitionsNameFieldValidation[keyof typeof PutApisApiextensionsK8sIoV1CustomresourcedefinitionsNameFieldValidation];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const PutApisApiextensionsK8sIoV1CustomresourcedefinitionsNameFieldValidation =
-  {
-    Ignore: "Ignore",
-    Warn: "Warn",
-    Strict: "Strict",
-  } as const;
+export const PutApisApiextensionsK8sIoV1CustomresourcedefinitionsNameFieldValidation = {
+  Ignore: 'Ignore',
+  Warn: 'Warn',
+  Strict: 'Strict',
+} as const;

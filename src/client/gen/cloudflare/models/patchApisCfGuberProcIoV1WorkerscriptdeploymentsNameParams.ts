@@ -5,8 +5,8 @@
  * OpenAPI specification for cf.guber.proc.io/v1
  * OpenAPI spec version: v1
  */
-import type { PatchApisCfGuberProcIoV1WorkerscriptdeploymentsNameFieldValidation } from "./patchApisCfGuberProcIoV1WorkerscriptdeploymentsNameFieldValidation";
+import type { PatchApisCfGuberProcIoV1WorkerscriptdeploymentsNameFieldValidation } from './patchApisCfGuberProcIoV1WorkerscriptdeploymentsNameFieldValidation';
 
 export type PatchApisCfGuberProcIoV1WorkerscriptdeploymentsNameParams = {
-  fieldValidation?: PatchApisCfGuberProcIoV1WorkerscriptdeploymentsNameFieldValidation;
+fieldValidation?: PatchApisCfGuberProcIoV1WorkerscriptdeploymentsNameFieldValidation;
 };

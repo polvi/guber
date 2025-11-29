@@ -6,10 +6,10 @@
  * OpenAPI spec version: v1
  */
 
-export type QueueApiVersion =
-  (typeof QueueApiVersion)[keyof typeof QueueApiVersion];
+export type QueueApiVersion = typeof QueueApiVersion[keyof typeof QueueApiVersion];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const QueueApiVersion = {
-  "cfguberprocio/v1": "cf.guber.proc.io/v1",
+  'cfguberprocio/v1': 'cf.guber.proc.io/v1',
 } as const;

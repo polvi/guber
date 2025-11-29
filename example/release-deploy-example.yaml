@@ -2,33 +2,5 @@ apiVersion: gh.guber.proc.io/v1
 kind: ReleaseDeploy
 metadata:
   name: my-worker-deploy
-  labels:
-    app: my-worker
-    environment: production
-    team: platform
 spec:
-  repository: "myorg/my-worker"
-  environment: "production"
-  description: "Deploy latest release to production with worker script creation"
-  autoMerge: false
-  requiredContexts:
-    - "continuous-integration"
-    - "security-scan"
-  initialStatus:
-    state: "pending"
-    description: "Deployment initiated by Guber"
-    targetUrl: "https://my-worker.myorg.workers.dev"
-  createWorkerScriptVersion: true
-  workerScriptVersionSpec:
-    workerName: "my-worker"
-    metadata:
-      environment: "production"
-      deployedBy: "guber"
-      source: "github-release"
-  payload:
-    notify_channels:
-      - "#deployments"
-      - "#platform-team"
-    deployment_config:
-      timeout: 300
-      rollback_on_failure: true
+  repository: "polvi/first-worker"

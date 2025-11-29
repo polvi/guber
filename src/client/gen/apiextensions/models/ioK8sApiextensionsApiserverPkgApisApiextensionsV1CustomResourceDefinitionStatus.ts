@@ -5,11 +5,10 @@
  * OpenAPI specification for apiextensions.k8s.io/v1
  * OpenAPI spec version: v1
  */
-import type { IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionStatusAcceptedNames } from "./ioK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionStatusAcceptedNames";
-import type { IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionStatusConditionsItem } from "./ioK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionStatusConditionsItem";
+import type { IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionStatusAcceptedNames } from './ioK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionStatusAcceptedNames';
+import type { IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionStatusConditionsItem } from './ioK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionStatusConditionsItem';
 
-export type IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionStatus =
-  {
-    acceptedNames?: IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionStatusAcceptedNames;
-    conditions?: IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionStatusConditionsItem[];
-  };
+export type IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionStatus = {
+  acceptedNames?: IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionStatusAcceptedNames;
+  conditions?: IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionStatusConditionsItem[];
+};

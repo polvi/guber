@@ -5,8 +5,8 @@
  * OpenAPI specification for apiextensions.k8s.io/v1
  * OpenAPI spec version: v1
  */
-import type { IoK8sApimachineryPkgApisMetaV1ObjectMetaLabels } from "./ioK8sApimachineryPkgApisMetaV1ObjectMetaLabels";
-import type { IoK8sApimachineryPkgApisMetaV1ObjectMetaAnnotations } from "./ioK8sApimachineryPkgApisMetaV1ObjectMetaAnnotations";
+import type { IoK8sApimachineryPkgApisMetaV1ObjectMetaLabels } from './ioK8sApimachineryPkgApisMetaV1ObjectMetaLabels';
+import type { IoK8sApimachineryPkgApisMetaV1ObjectMetaAnnotations } from './ioK8sApimachineryPkgApisMetaV1ObjectMetaAnnotations';
 
 export interface IoK8sApimachineryPkgApisMetaV1ObjectMeta {
   name?: string;

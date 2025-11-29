@@ -8,7 +8,6 @@ export default function github(): Controller {
 }
 
 export class GitHubController implements Controller {
-
   async onResourceCreated(context: ResourceContext): Promise<void> {
     const { group, kind, name, spec, env } = context;
 
@@ -16,10 +15,7 @@ export class GitHubController implements Controller {
     if (group !== "gh.guber.proc.io") return;
 
     // Queue for provisioning if it's a GitHub resource type
-    if (
-      kind === "ReleaseDeploy" &&
-      env.GUBER_BUS
-    ) {
+    if (kind === "ReleaseDeploy" && env.GUBER_BUS) {
       await env.GUBER_BUS.send({
         action: "create",
         resourceType: kind.toLowerCase(),
@@ -40,10 +36,7 @@ export class GitHubController implements Controller {
     if (group !== "gh.guber.proc.io") return;
 
     // Queue for deletion if it's a GitHub resource type
-    if (
-      kind === "ReleaseDeploy" &&
-      env.GUBER_BUS
-    ) {
+    if (kind === "ReleaseDeploy" && env.GUBER_BUS) {
       await env.GUBER_BUS.send({
         action: "delete",
         resourceType: kind.toLowerCase(),
@@ -225,34 +218,9 @@ export class GitHubController implements Controller {
 
               try {
                 const response = await env.GUBER_API.fetch(
-                  new Request(`http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resource.name}`, {
-                    method: "PATCH",
-                    headers: {
-                      "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                      apiVersion: "gh.guber.proc.io/v1",
-                      kind: "ReleaseDeploy",
-                      metadata: {
-                        name: resource.name,
-                        namespace: resource.namespace || undefined,
-                      },
-                      status: updatedStatus,
-                    }),
-                  })
-                );
-
-                if (!response.ok) {
-                  await env.DB.prepare(
-                    "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-                  )
-                    .bind(JSON.stringify(updatedStatus), resource.name)
-                    .run();
-                }
-              } catch (apiError) {
-                try {
-                  const response = await env.GUBER_API.fetch(
-                    new Request(`http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resource.name}`, {
+                  new Request(
+                    `http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resource.name}`,
+                    {
                       method: "PATCH",
                       headers: {
                         "Content-Type": "application/json",
@@ -266,7 +234,38 @@ export class GitHubController implements Controller {
                         },
                         status: updatedStatus,
                       }),
-                    })
+                    },
+                  ),
+                );
+
+                if (!response.ok) {
+                  await env.DB.prepare(
+                    "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+                  )
+                    .bind(JSON.stringify(updatedStatus), resource.name)
+                    .run();
+                }
+              } catch (apiError) {
+                try {
+                  const response = await env.GUBER_API.fetch(
+                    new Request(
+                      `http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resource.name}`,
+                      {
+                        method: "PATCH",
+                        headers: {
+                          "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                          apiVersion: "gh.guber.proc.io/v1",
+                          kind: "ReleaseDeploy",
+                          metadata: {
+                            name: resource.name,
+                            namespace: resource.namespace || undefined,
+                          },
+                          status: updatedStatus,
+                        }),
+                      },
+                    ),
                   );
 
                   if (!response.ok) {
@@ -335,21 +334,24 @@ export class GitHubController implements Controller {
 
             try {
               const response = await env.GUBER_API.fetch(
-                new Request(`http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resourceName}`, {
-                  method: "PATCH",
-                  headers: {
-                    "Content-Type": "application/json",
-                  },
-                  body: JSON.stringify({
-                    apiVersion: "gh.guber.proc.io/v1",
-                    kind: "ReleaseDeploy",
-                    metadata: {
-                      name: resourceName,
-                      namespace: namespace || undefined,
+                new Request(
+                  `http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resourceName}`,
+                  {
+                    method: "PATCH",
+                    headers: {
+                      "Content-Type": "application/json",
                     },
-                    status: pendingStatus,
-                  }),
-                })
+                    body: JSON.stringify({
+                      apiVersion: "gh.guber.proc.io/v1",
+                      kind: "ReleaseDeploy",
+                      metadata: {
+                        name: resourceName,
+                        namespace: namespace || undefined,
+                      },
+                      status: pendingStatus,
+                    }),
+                  },
+                ),
               );
 
               if (!response.ok) {
@@ -383,21 +385,24 @@ export class GitHubController implements Controller {
 
             try {
               const response = await env.GUBER_API.fetch(
-                new Request(`http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resourceName}`, {
-                  method: "PATCH",
-                  headers: {
-                    "Content-Type": "application/json",
-                  },
-                  body: JSON.stringify({
-                    apiVersion: "gh.guber.proc.io/v1",
-                    kind: "ReleaseDeploy",
-                    metadata: {
-                      name: resourceName,
-                      namespace: namespace || undefined,
+                new Request(
+                  `http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resourceName}`,
+                  {
+                    method: "PATCH",
+                    headers: {
+                      "Content-Type": "application/json",
                     },
-                    status: pendingStatus,
-                  }),
-                })
+                    body: JSON.stringify({
+                      apiVersion: "gh.guber.proc.io/v1",
+                      kind: "ReleaseDeploy",
+                      metadata: {
+                        name: resourceName,
+                        namespace: namespace || undefined,
+                      },
+                      status: pendingStatus,
+                    }),
+                  },
+                ),
               );
 
               if (!response.ok) {
@@ -430,21 +435,24 @@ export class GitHubController implements Controller {
 
             try {
               const response = await env.GUBER_API.fetch(
-                new Request(`http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resourceName}`, {
-                  method: "PATCH",
-                  headers: {
-                    "Content-Type": "application/json",
-                  },
-                  body: JSON.stringify({
-                    apiVersion: "gh.guber.proc.io/v1",
-                    kind: "ReleaseDeploy",
-                    metadata: {
-                      name: resourceName,
-                      namespace: namespace || undefined,
+                new Request(
+                  `http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resourceName}`,
+                  {
+                    method: "PATCH",
+                    headers: {
+                      "Content-Type": "application/json",
                     },
-                    status: pendingStatus,
-                  }),
-                })
+                    body: JSON.stringify({
+                      apiVersion: "gh.guber.proc.io/v1",
+                      kind: "ReleaseDeploy",
+                      metadata: {
+                        name: resourceName,
+                        namespace: namespace || undefined,
+                      },
+                      status: pendingStatus,
+                    }),
+                  },
+                ),
               );
 
               if (!response.ok) {
@@ -465,7 +473,9 @@ export class GitHubController implements Controller {
           }
         }
 
-        console.log(`All dependencies satisfied for release deploy ${resourceName}`);
+        console.log(
+          `All dependencies satisfied for release deploy ${resourceName}`,
+        );
       }
 
       // Validate required fields
@@ -478,10 +488,12 @@ export class GitHubController implements Controller {
       let releaseData = null;
 
       if (!releaseTag) {
-        console.log(`🔍 Fetching latest release for repository: ${spec.repository}`);
-        
+        console.log(
+          `🔍 Fetching latest release for repository: ${spec.repository}`,
+        );
+
         const headers: Record<string, string> = {
-          "Accept": "application/vnd.github.v3+json",
+          Accept: "application/vnd.github.v3+json",
           "User-Agent": "Guber-GitHub-Controller/1.0",
         };
 
@@ -499,13 +511,18 @@ export class GitHubController implements Controller {
 
         if (!latestReleaseResponse.ok) {
           const errorResponse = await latestReleaseResponse.json();
-          
+
           // If unauthorized and no token provided, throw specific error
           if (latestReleaseResponse.status === 401 && !env.GITHUB_TOKEN) {
-            throw new Error("GITHUB_TOKEN environment variable is required for private repositories or when rate limited");
+            throw new Error(
+              "GITHUB_TOKEN environment variable is required for private repositories or when rate limited",
+            );
           }
-          
-          console.error(`❌ Failed to fetch latest release for ${spec.repository}:`, errorResponse);
+
+          console.error(
+            `❌ Failed to fetch latest release for ${spec.repository}:`,
+            errorResponse,
+          );
           throw new Error(
             `Failed to fetch latest release: ${JSON.stringify(errorResponse)}`,
           );
@@ -513,20 +530,26 @@ export class GitHubController implements Controller {
 
         releaseData = await latestReleaseResponse.json();
         releaseTag = releaseData.tag_name;
-        console.log(`✅ Found latest release for ${spec.repository}: ${releaseTag} (published: ${releaseData.published_at})`);
-        
+        console.log(
+          `✅ Found latest release for ${spec.repository}: ${releaseTag} (published: ${releaseData.published_at})`,
+        );
+
         if (releaseData.prerelease) {
-          console.log(`⚠️  Note: Release ${releaseTag} is marked as prerelease`);
+          console.log(
+            `⚠️  Note: Release ${releaseTag} is marked as prerelease`,
+          );
         }
         if (releaseData.draft) {
           console.log(`⚠️  Note: Release ${releaseTag} is marked as draft`);
         }
       } else {
         // Fetch specific release data
-        console.log(`🔍 Fetching release data for specific tag: ${releaseTag} from ${spec.repository}`);
-        
+        console.log(
+          `🔍 Fetching release data for specific tag: ${releaseTag} from ${spec.repository}`,
+        );
+
         const headers: Record<string, string> = {
-          "Accept": "application/vnd.github.v3+json",
+          Accept: "application/vnd.github.v3+json",
           "User-Agent": "Guber-GitHub-Controller/1.0",
         };
 
@@ -544,10 +567,14 @@ export class GitHubController implements Controller {
 
         if (releaseResponse.ok) {
           releaseData = await releaseResponse.json();
-          console.log(`✅ Found release data for ${releaseTag}: ${releaseData.name || releaseTag} (published: ${releaseData.published_at})`);
-          
+          console.log(
+            `✅ Found release data for ${releaseTag}: ${releaseData.name || releaseTag} (published: ${releaseData.published_at})`,
+          );
+
           if (releaseData.prerelease) {
-            console.log(`⚠️  Note: Release ${releaseTag} is marked as prerelease`);
+            console.log(
+              `⚠️  Note: Release ${releaseTag} is marked as prerelease`,
+            );
           }
           if (releaseData.draft) {
             console.log(`⚠️  Note: Release ${releaseTag} is marked as draft`);
@@ -555,10 +582,14 @@ export class GitHubController implements Controller {
         } else {
           // If unauthorized and no token provided, throw specific error
           if (releaseResponse.status === 401 && !env.GITHUB_TOKEN) {
-            throw new Error("GITHUB_TOKEN environment variable is required for private repositories or when rate limited");
+            throw new Error(
+              "GITHUB_TOKEN environment variable is required for private repositories or when rate limited",
+            );
           }
-          
-          console.warn(`⚠️  Could not fetch release data for tag ${releaseTag} from ${spec.repository}`);
+
+          console.warn(
+            `⚠️  Could not fetch release data for tag ${releaseTag} from ${spec.repository}`,
+          );
         }
       }
 
@@ -570,7 +601,9 @@ export class GitHubController implements Controller {
         const deploymentPayload: any = {
           ref: releaseTag,
           environment: spec.environment || "production",
-          description: spec.description || `Deploy ${releaseTag} to ${spec.environment || "production"}`,
+          description:
+            spec.description ||
+            `Deploy ${releaseTag} to ${spec.environment || "production"}`,
           auto_merge: spec.autoMerge || false,
           required_contexts: spec.requiredContexts || [],
         };
@@ -583,17 +616,21 @@ export class GitHubController implements Controller {
         console.log(
           `🚀 Creating GitHub deployment for ${spec.repository} tag ${releaseTag} to environment: ${spec.environment || "production"}`,
         );
-        
+
         if (releaseData) {
-          console.log(`📦 Release details: ${releaseData.name || releaseTag} - ${releaseData.body ? releaseData.body.substring(0, 100) + '...' : 'No description'}`);
+          console.log(
+            `📦 Release details: ${releaseData.name || releaseTag} - ${releaseData.body ? releaseData.body.substring(0, 100) + "..." : "No description"}`,
+          );
           if (releaseData.assets && releaseData.assets.length > 0) {
-            console.log(`📎 Release has ${releaseData.assets.length} assets: ${releaseData.assets.map(a => a.name).join(', ')}`);
+            console.log(
+              `📎 Release has ${releaseData.assets.length} assets: ${releaseData.assets.map((a) => a.name).join(", ")}`,
+            );
           }
         }
 
         const headers: Record<string, string> = {
           "Content-Type": "application/json",
-          "Accept": "application/vnd.github.v3+json",
+          Accept: "application/vnd.github.v3+json",
           "User-Agent": "Guber-GitHub-Controller/1.0",
           Authorization: `Bearer ${env.GITHUB_TOKEN}`,
         };
@@ -626,9 +663,13 @@ export class GitHubController implements Controller {
         console.log(
           `⚠️  Skipping GitHub deployment creation for ${spec.repository}@${releaseTag} - GITHUB_TOKEN not provided`,
         );
-        console.log(`📦 Release details: ${releaseData?.name || releaseTag} - ${releaseData?.body ? releaseData.body.substring(0, 100) + '...' : 'No description'}`);
+        console.log(
+          `📦 Release details: ${releaseData?.name || releaseTag} - ${releaseData?.body ? releaseData.body.substring(0, 100) + "..." : "No description"}`,
+        );
         if (releaseData?.assets && releaseData.assets.length > 0) {
-          console.log(`📎 Release has ${releaseData.assets.length} assets: ${releaseData.assets.map(a => a.name).join(', ')}`);
+          console.log(
+            `📎 Release has ${releaseData.assets.length} assets: ${releaseData.assets.map((a) => a.name).join(", ")}`,
+          );
         }
       }
 
@@ -666,7 +707,7 @@ export class GitHubController implements Controller {
 
         const headers: Record<string, string> = {
           "Content-Type": "application/json",
-          "Accept": "application/vnd.github.v3+json",
+          Accept: "application/vnd.github.v3+json",
           "User-Agent": "Guber-GitHub-Controller/1.0",
           Authorization: `Bearer ${env.GITHUB_TOKEN}`,
         };
@@ -719,32 +760,38 @@ export class GitHubController implements Controller {
       }
 
       if (!env.GITHUB_TOKEN) {
-        statusUpdate.note = "GitHub deployment not created - GITHUB_TOKEN not provided";
+        statusUpdate.note =
+          "GitHub deployment not created - GITHUB_TOKEN not provided";
       }
 
       // Update status via HTTP API using service binding
       try {
         const response = await env.GUBER_API.fetch(
-          new Request(`http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resourceName}`, {
-            method: "PATCH",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              apiVersion: "gh.guber.proc.io/v1",
-              kind: "ReleaseDeploy",
-              metadata: {
-                name: resourceName,
-                namespace: namespace || undefined,
+          new Request(
+            `http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resourceName}`,
+            {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
               },
-              status: statusUpdate,
-            }),
-          })
+              body: JSON.stringify({
+                apiVersion: "gh.guber.proc.io/v1",
+                kind: "ReleaseDeploy",
+                metadata: {
+                  name: resourceName,
+                  namespace: namespace || undefined,
+                },
+                status: statusUpdate,
+              }),
+            },
+          ),
         );
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error(`Failed to update ReleaseDeploy status via API: ${response.status} ${errorText}`);
+          console.error(
+            `Failed to update ReleaseDeploy status via API: ${response.status} ${errorText}`,
+          );
           // Fall back to direct database update if API fails
           await env.DB.prepare(
             "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
@@ -762,12 +809,13 @@ export class GitHubController implements Controller {
           .run();
       }
 
-      console.log(
-        `ReleaseDeploy ${resourceName} provisioned successfully`,
-      );
+      console.log(`ReleaseDeploy ${resourceName} provisioned successfully`);
       return true;
     } catch (error) {
-      console.error(`Failed to provision ReleaseDeploy ${resourceName}:`, error);
+      console.error(
+        `Failed to provision ReleaseDeploy ${resourceName}:`,
+        error,
+      );
 
       // Update status to failed via HTTP API
       const failedStatus = {
@@ -777,26 +825,31 @@ export class GitHubController implements Controller {
 
       try {
         const response = await env.GUBER_API.fetch(
-          new Request(`http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resourceName}`, {
-            method: "PATCH",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              apiVersion: "gh.guber.proc.io/v1",
-              kind: "ReleaseDeploy",
-              metadata: {
-                name: resourceName,
-                namespace: namespace || undefined,
+          new Request(
+            `http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resourceName}`,
+            {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
               },
-              status: failedStatus,
-            }),
-          })
+              body: JSON.stringify({
+                apiVersion: "gh.guber.proc.io/v1",
+                kind: "ReleaseDeploy",
+                metadata: {
+                  name: resourceName,
+                  namespace: namespace || undefined,
+                },
+                status: failedStatus,
+              }),
+            },
+          ),
         );
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error(`Failed to update ReleaseDeploy failed status via API: ${response.status} ${errorText}`);
+          console.error(
+            `Failed to update ReleaseDeploy failed status via API: ${response.status} ${errorText}`,
+          );
           // Fall back to direct database update if API fails
           await env.DB.prepare(
             "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
@@ -805,7 +858,10 @@ export class GitHubController implements Controller {
             .run();
         }
       } catch (apiError) {
-        console.error(`Error updating ReleaseDeploy failed status via API:`, apiError);
+        console.error(
+          `Error updating ReleaseDeploy failed status via API:`,
+          apiError,
+        );
         // Fall back to direct database update if API fails
         await env.DB.prepare(
           "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
@@ -845,7 +901,7 @@ export class GitHubController implements Controller {
 
         const headers: Record<string, string> = {
           "Content-Type": "application/json",
-          "Accept": "application/vnd.github.v3+json",
+          Accept: "application/vnd.github.v3+json",
           "User-Agent": "Guber-GitHub-Controller/1.0",
         };
 
@@ -922,7 +978,7 @@ export class GitHubController implements Controller {
           ) {
             try {
               const headers: Record<string, string> = {
-                "Accept": "application/vnd.github.v3+json",
+                Accept: "application/vnd.github.v3+json",
                 "User-Agent": "Guber-GitHub-Controller/1.0",
               };
 
@@ -950,21 +1006,24 @@ export class GitHubController implements Controller {
 
                 try {
                   const response = await env.GUBER_API.fetch(
-                    new Request(`http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resource.name}`, {
-                      method: "PATCH",
-                      headers: {
-                        "Content-Type": "application/json",
-                      },
-                      body: JSON.stringify({
-                        apiVersion: "gh.guber.proc.io/v1",
-                        kind: "ReleaseDeploy",
-                        metadata: {
-                          name: resource.name,
-                          namespace: resource.namespace || undefined,
+                    new Request(
+                      `http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resource.name}`,
+                      {
+                        method: "PATCH",
+                        headers: {
+                          "Content-Type": "application/json",
                         },
-                        status: updatedStatus,
-                      }),
-                    })
+                        body: JSON.stringify({
+                          apiVersion: "gh.guber.proc.io/v1",
+                          kind: "ReleaseDeploy",
+                          metadata: {
+                            name: resource.name,
+                            namespace: resource.namespace || undefined,
+                          },
+                          status: updatedStatus,
+                        }),
+                      },
+                    ),
                   );
 
                   if (!response.ok) {
@@ -980,7 +1039,7 @@ export class GitHubController implements Controller {
                   )
                     .bind(JSON.stringify(updatedStatus), resource.name)
                     .run();
-                  }
+                }
               } else {
                 // Update last health check timestamp
                 const updatedStatus = {
@@ -1023,30 +1082,35 @@ export class GitHubController implements Controller {
     releaseDeployName: string,
   ): Promise<string> {
     const workerScriptVersionSpec = spec.workerScriptVersionSpec;
-    
+
     if (!workerScriptVersionSpec.workerName) {
-      throw new Error("workerScriptVersionSpec.workerName is required when createWorkerScriptVersion is true");
+      throw new Error(
+        "workerScriptVersionSpec.workerName is required when createWorkerScriptVersion is true",
+      );
     }
 
     // Generate a unique name for the WorkerScriptVersion
-    const workerScriptVersionName = `${workerScriptVersionSpec.workerName}-${releaseTag.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`;
+    const workerScriptVersionName = `${workerScriptVersionSpec.workerName}-${releaseTag.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()}`;
 
     // Get script content from release if not provided
     let scriptContent = workerScriptVersionSpec.script;
-    
+
     if (!scriptContent && releaseData) {
       // Look for common script files in release assets
-      const scriptAssets = releaseData.assets?.filter((asset: any) => 
-        asset.name.endsWith('.js') || 
-        asset.name.endsWith('.mjs') || 
-        asset.name === 'worker.js' ||
-        asset.name === 'index.js'
+      const scriptAssets = releaseData.assets?.filter(
+        (asset: any) =>
+          asset.name.endsWith(".js") ||
+          asset.name.endsWith(".mjs") ||
+          asset.name === "worker.js" ||
+          asset.name === "index.js",
       );
 
       if (scriptAssets && scriptAssets.length > 0) {
         // Use the first matching asset
         const scriptAsset = scriptAssets[0];
-        console.log(`📥 Downloading script from release asset: ${scriptAsset.name} (${scriptAsset.size} bytes)`);
+        console.log(
+          `📥 Downloading script from release asset: ${scriptAsset.name} (${scriptAsset.size} bytes)`,
+        );
 
         const headers: Record<string, string> = {
           "User-Agent": "Guber-GitHub-Controller/1.0",
@@ -1062,17 +1126,23 @@ export class GitHubController implements Controller {
 
         if (scriptResponse.ok) {
           scriptContent = await scriptResponse.text();
-          console.log(`✅ Successfully downloaded script content (${scriptContent.length} characters)`);
+          console.log(
+            `✅ Successfully downloaded script content (${scriptContent.length} characters)`,
+          );
         } else {
-          console.warn(`❌ Failed to download script asset ${scriptAsset.name}, will use empty script`);
+          console.warn(
+            `❌ Failed to download script asset ${scriptAsset.name}, will use empty script`,
+          );
           scriptContent = "// Script content could not be fetched from release";
         }
       } else {
         // Try to get the main branch content as fallback
-        console.log(`⚠️  No script assets found in release ${releaseTag}, trying to fetch from repository main branch`);
-        
+        console.log(
+          `⚠️  No script assets found in release ${releaseTag}, trying to fetch from repository main branch`,
+        );
+
         const headers: Record<string, string> = {
-          "Accept": "application/vnd.github.v3+json",
+          Accept: "application/vnd.github.v3+json",
           "User-Agent": "Guber-GitHub-Controller/1.0",
         };
 
@@ -1091,14 +1161,20 @@ export class GitHubController implements Controller {
           const contentData = await repoContentResponse.json();
           if (contentData.content) {
             scriptContent = atob(contentData.content);
-            console.log(`✅ Successfully fetched worker.js from repository main branch (${scriptContent.length} characters)`);
+            console.log(
+              `✅ Successfully fetched worker.js from repository main branch (${scriptContent.length} characters)`,
+            );
           }
         } else {
-          console.warn(`❌ Could not fetch worker.js from repository main branch`);
+          console.warn(
+            `❌ Could not fetch worker.js from repository main branch`,
+          );
         }
 
         if (!scriptContent) {
-          console.warn(`⚠️  No script content available for WorkerScriptVersion, using placeholder`);
+          console.warn(
+            `⚠️  No script content available for WorkerScriptVersion, using placeholder`,
+          );
           scriptContent = "// Script content could not be fetched";
         }
       }
@@ -1139,26 +1215,36 @@ export class GitHubController implements Controller {
     // Create the resource via the HTTP API using service binding
     try {
       const response = await env.GUBER_API.fetch(
-        new Request(`http://fake/apis/cf.guber.proc.io/v1/workerscriptversions`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
+        new Request(
+          `http://fake/apis/cf.guber.proc.io/v1/workerscriptversions`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(workerScriptVersionResource),
           },
-          body: JSON.stringify(workerScriptVersionResource),
-        })
+        ),
       );
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Failed to create WorkerScriptVersion via API: ${response.status} ${errorText}`);
+        throw new Error(
+          `Failed to create WorkerScriptVersion via API: ${response.status} ${errorText}`,
+        );
       }
 
       console.log(
         `✅ Created WorkerScriptVersion ${workerScriptVersionName} from ReleaseDeploy ${releaseDeployName} via HTTP API`,
       );
-      console.log(`📝 WorkerScriptVersion details: worker=${workerScriptVersionSpec.workerName}, source=${spec.repository}@${releaseTag}`);
+      console.log(
+        `📝 WorkerScriptVersion details: worker=${workerScriptVersionSpec.workerName}, source=${spec.repository}@${releaseTag}`,
+      );
     } catch (error) {
-      console.error(`Failed to create WorkerScriptVersion via HTTP API:`, error);
+      console.error(
+        `Failed to create WorkerScriptVersion via HTTP API:`,
+        error,
+      );
       throw error;
     }
 
@@ -1166,7 +1252,9 @@ export class GitHubController implements Controller {
   }
 
   private async reconcilePendingReleaseDeploys(env: any) {
-    console.log("Checking pending release deploys for dependency resolution...");
+    console.log(
+      "Checking pending release deploys for dependency resolution...",
+    );
 
     const { results: pendingDeploys } = await env.DB.prepare(
       `
@@ -1240,21 +1328,24 @@ export class GitHubController implements Controller {
 
             try {
               const response = await env.GUBER_API.fetch(
-                new Request(`http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${deploy.name}`, {
-                  method: "PATCH",
-                  headers: {
-                    "Content-Type": "application/json",
-                  },
-                  body: JSON.stringify({
-                    apiVersion: "gh.guber.proc.io/v1",
-                    kind: "ReleaseDeploy",
-                    metadata: {
-                      name: deploy.name,
-                      namespace: deploy.namespace || undefined,
+                new Request(
+                  `http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${deploy.name}`,
+                  {
+                    method: "PATCH",
+                    headers: {
+                      "Content-Type": "application/json",
                     },
-                    status: updatedStatus,
-                  }),
-                })
+                    body: JSON.stringify({
+                      apiVersion: "gh.guber.proc.io/v1",
+                      kind: "ReleaseDeploy",
+                      metadata: {
+                        name: deploy.name,
+                        namespace: deploy.namespace || undefined,
+                      },
+                      status: updatedStatus,
+                    }),
+                  },
+                ),
               );
 
               if (!response.ok) {

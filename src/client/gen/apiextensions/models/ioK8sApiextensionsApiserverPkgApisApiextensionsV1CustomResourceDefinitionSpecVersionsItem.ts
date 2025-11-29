@@ -6,12 +6,11 @@
  * OpenAPI spec version: v1
  */
 
-export type IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionSpecVersionsItem =
-  {
-    /** name is the version name */
-    name: string;
-    /** served is a flag enabling/disabling this version from being served via REST APIs */
-    served: boolean;
-    /** storage indicates this version should be used when persisting custom resources to storage */
-    storage: boolean;
-  };
+export type IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionSpecVersionsItem = {
+  /** name is the version name */
+  name: string;
+  /** served is a flag enabling/disabling this version from being served via REST APIs */
+  served: boolean;
+  /** storage indicates this version should be used when persisting custom resources to storage */
+  storage: boolean;
+};

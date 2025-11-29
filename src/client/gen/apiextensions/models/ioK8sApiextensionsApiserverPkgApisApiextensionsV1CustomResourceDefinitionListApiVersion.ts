@@ -6,11 +6,10 @@
  * OpenAPI spec version: v1
  */
 
-export type IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionListApiVersion =
-  (typeof IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionListApiVersion)[keyof typeof IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionListApiVersion];
+export type IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionListApiVersion = typeof IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionListApiVersion[keyof typeof IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionListApiVersion];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionListApiVersion =
-  {
-    "apiextensionsk8sio/v1": "apiextensions.k8s.io/v1",
-  } as const;
+export const IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionListApiVersion = {
+  'apiextensionsk8sio/v1': 'apiextensions.k8s.io/v1',
+} as const;

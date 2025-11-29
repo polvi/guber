@@ -14,7 +14,6 @@ try {
 
 const app = new Hono<Env>();
 
-
 // Helper function to notify controllers of resource events
 async function notifyControllers(
   event: "created" | "deleted",
@@ -1587,7 +1586,10 @@ export default {
         try {
           await (controller as any).handleQueue(batch, env);
         } catch (error) {
-          console.error(`Controller ${controller.constructor?.name || "unknown"} failed to handle queue:`, error);
+          console.error(
+            `Controller ${controller.constructor?.name || "unknown"} failed to handle queue:`,
+            error,
+          );
         }
       }
     }

@@ -6,11 +6,10 @@
  * OpenAPI spec version: v1
  */
 
-export type IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionKind =
-  (typeof IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionKind)[keyof typeof IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionKind];
+export type IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionKind = typeof IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionKind[keyof typeof IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionKind];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionKind =
-  {
-    CustomResourceDefinition: "CustomResourceDefinition",
-  } as const;
+export const IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionKind = {
+  CustomResourceDefinition: 'CustomResourceDefinition',
+} as const;

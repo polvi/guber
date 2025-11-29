@@ -5,11 +5,11 @@
  * OpenAPI specification for cf.guber.proc.io/v1
  * OpenAPI spec version: v1
  */
-import type { VersionApiVersion } from "./versionApiVersion";
-import type { VersionKind } from "./versionKind";
-import type { IoK8sApimachineryPkgApisMetaV1ObjectMeta } from "./ioK8sApimachineryPkgApisMetaV1ObjectMeta";
-import type { VersionSpec } from "./versionSpec";
-import type { VersionStatus } from "./versionStatus";
+import type { VersionApiVersion } from './versionApiVersion';
+import type { VersionKind } from './versionKind';
+import type { IoK8sApimachineryPkgApisMetaV1ObjectMeta } from './ioK8sApimachineryPkgApisMetaV1ObjectMeta';
+import type { VersionSpec } from './versionSpec';
+import type { VersionStatus } from './versionStatus';
 
 export interface Version {
   apiVersion: VersionApiVersion;

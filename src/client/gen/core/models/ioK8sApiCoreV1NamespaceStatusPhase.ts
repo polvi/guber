@@ -6,11 +6,11 @@
  * OpenAPI spec version: v1
  */
 
-export type IoK8sApiCoreV1NamespaceStatusPhase =
-  (typeof IoK8sApiCoreV1NamespaceStatusPhase)[keyof typeof IoK8sApiCoreV1NamespaceStatusPhase];
+export type IoK8sApiCoreV1NamespaceStatusPhase = typeof IoK8sApiCoreV1NamespaceStatusPhase[keyof typeof IoK8sApiCoreV1NamespaceStatusPhase];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const IoK8sApiCoreV1NamespaceStatusPhase = {
-  Active: "Active",
-  Terminating: "Terminating",
+  Active: 'Active',
+  Terminating: 'Terminating',
 } as const;

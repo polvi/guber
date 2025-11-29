@@ -6,10 +6,10 @@
  * OpenAPI spec version: v1
  */
 
-export type WorkerScriptDeploymentKind =
-  (typeof WorkerScriptDeploymentKind)[keyof typeof WorkerScriptDeploymentKind];
+export type WorkerScriptDeploymentKind = typeof WorkerScriptDeploymentKind[keyof typeof WorkerScriptDeploymentKind];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const WorkerScriptDeploymentKind = {
-  WorkerScriptDeployment: "WorkerScriptDeployment",
+  WorkerScriptDeployment: 'WorkerScriptDeployment',
 } as const;

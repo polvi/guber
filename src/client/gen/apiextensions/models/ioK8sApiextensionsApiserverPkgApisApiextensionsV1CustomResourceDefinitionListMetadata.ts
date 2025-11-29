@@ -6,8 +6,7 @@
  * OpenAPI spec version: v1
  */
 
-export type IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionListMetadata =
-  {
-    continue?: string;
-    resourceVersion?: string;
-  };
+export type IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionListMetadata = {
+  continue?: string;
+  resourceVersion?: string;
+};

@@ -8,14 +8,12 @@ export default defineConfig({
       schemas: "src/client/gen/core/models",
       client: "fetch",
       baseUrl: "http://fake/",
-      /*
       override: {
         mutator: {
           path: "./src/client/custom-fetch.ts",
-          name: "customFetch"
-        }
-      }
-     */
+          name: "customFetch",
+        },
+      },
     },
     input: {
       target: "http://localhost:8787/openapi/v3/api/v1",
@@ -33,6 +31,12 @@ export default defineConfig({
       schemas: "src/client/gen/apiextensions/models",
       client: "fetch",
       baseUrl: "http://fake/",
+      override: {
+        mutator: {
+          path: "./src/client/custom-fetch.ts",
+          name: "customFetch",
+        },
+      },
     },
     input: {
       target: "http://localhost:8787/openapi/v3/apis/apiextensions.k8s.io/v1",
@@ -45,6 +49,12 @@ export default defineConfig({
       schemas: "src/client/gen/cloudflare/models",
       client: "fetch",
       baseUrl: "http://fake/",
+      override: {
+        mutator: {
+          path: "./src/client/custom-fetch.ts",
+          name: "customFetch",
+        },
+      },
     },
     input: {
       target: "http://localhost:8787/openapi/v3/apis/cf.guber.proc.io/v1",
