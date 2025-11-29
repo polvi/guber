@@ -7,9 +7,6 @@ export default function cloudflare(): Controller {
 }
 
 class CloudflareController implements Controller {
-  register(app: Hono<any>): void {
-    // No middleware registration needed - we use post-processing hooks
-  }
 
   async onResourceCreated(context: ResourceContext): Promise<void> {
     const { group, kind, name, spec, env } = context;

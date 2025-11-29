@@ -1,5 +1,4 @@
 export interface Controller {
-  register(app: Hono<any>): void;
   onResourceCreated?(context: ResourceContext): Promise<void>;
   onResourceDeleted?(context: ResourceContext): Promise<void>;
 }

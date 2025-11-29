@@ -14,11 +14,9 @@ try {
 
 const app = new Hono<Env>();
 
-// Register all controllers
-for (const controller of config.controllers) {
-  console.log("Registering controller", controller);
-  controller.register(app);
-}
+// Import and register controllers
+import { registerControllers } from "./controllers";
+registerControllers(app);
 
 // Helper function to notify controllers of resource events
 async function notifyControllers(
