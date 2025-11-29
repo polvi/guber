@@ -6,11 +6,176 @@
  * OpenAPI spec version: v1
  */
 import type {
+  GetApisGhGuberProcIoV1NamespacesNamespaceReleasedeploys200,
   PatchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameParams,
+  PutApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameParams,
   ReleaseDeploy,
 } from ".././models";
 
 import { customFetch } from "../../../custom-fetch";
+
+export type getApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysResponse200 =
+  {
+    data: GetApisGhGuberProcIoV1NamespacesNamespaceReleasedeploys200;
+    status: 200;
+  };
+
+export type getApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysResponseSuccess =
+  getApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysResponse200 & {
+    headers: Headers;
+  };
+export type getApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysResponse =
+  getApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysResponseSuccess;
+
+export const getGetApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysUrl = (
+  namespace: string,
+) => {
+  return `http://fake/apis/gh.guber.proc.io/v1/namespaces/${namespace}/releasedeploys`;
+};
+
+export const getApisGhGuberProcIoV1NamespacesNamespaceReleasedeploys = async (
+  namespace: string,
+  options?: RequestInit,
+): Promise<getApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysResponse> => {
+  return customFetch<getApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysResponse>(
+    getGetApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysUrl(namespace),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export type postApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysResponse201 =
+  {
+    data: ReleaseDeploy;
+    status: 201;
+  };
+
+export type postApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysResponseSuccess =
+  postApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysResponse201 & {
+    headers: Headers;
+  };
+export type postApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysResponse =
+  postApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysResponseSuccess;
+
+export const getPostApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysUrl = (
+  namespace: string,
+) => {
+  return `http://fake/apis/gh.guber.proc.io/v1/namespaces/${namespace}/releasedeploys`;
+};
+
+export const postApisGhGuberProcIoV1NamespacesNamespaceReleasedeploys = async (
+  namespace: string,
+  releaseDeploy: ReleaseDeploy,
+  options?: RequestInit,
+): Promise<postApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysResponse> => {
+  return customFetch<postApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysResponse>(
+    getPostApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysUrl(namespace),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(releaseDeploy),
+    },
+  );
+};
+
+export type getApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameResponse200 =
+  {
+    data: ReleaseDeploy;
+    status: 200;
+  };
+
+export type getApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameResponseSuccess =
+  getApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameResponse200 & {
+    headers: Headers;
+  };
+export type getApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameResponse =
+  getApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameResponseSuccess;
+
+export const getGetApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameUrl =
+  (namespace: string, name: string) => {
+    return `http://fake/apis/gh.guber.proc.io/v1/namespaces/${namespace}/releasedeploys/${name}`;
+  };
+
+export const getApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName =
+  async (
+    namespace: string,
+    name: string,
+    options?: RequestInit,
+  ): Promise<getApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameResponse> => {
+    return customFetch<getApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameResponse>(
+      getGetApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameUrl(
+        namespace,
+        name,
+      ),
+      {
+        ...options,
+        method: "GET",
+      },
+    );
+  };
+
+export type putApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameResponse200 =
+  {
+    data: ReleaseDeploy;
+    status: 200;
+  };
+
+export type putApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameResponseSuccess =
+  putApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameResponse200 & {
+    headers: Headers;
+  };
+export type putApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameResponse =
+  putApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameResponseSuccess;
+
+export const getPutApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameUrl =
+  (
+    namespace: string,
+    name: string,
+    params?: PutApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameParams,
+  ) => {
+    const normalizedParams = new URLSearchParams();
+
+    Object.entries(params || {}).forEach(([key, value]) => {
+      if (value !== undefined) {
+        normalizedParams.append(
+          key,
+          value === null ? "null" : value.toString(),
+        );
+      }
+    });
+
+    const stringifiedParams = normalizedParams.toString();
+
+    return stringifiedParams.length > 0
+      ? `http://fake/apis/gh.guber.proc.io/v1/namespaces/${namespace}/releasedeploys/${name}?${stringifiedParams}`
+      : `http://fake/apis/gh.guber.proc.io/v1/namespaces/${namespace}/releasedeploys/${name}`;
+  };
+
+export const putApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName =
+  async (
+    namespace: string,
+    name: string,
+    releaseDeploy: ReleaseDeploy,
+    params?: PutApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameParams,
+    options?: RequestInit,
+  ): Promise<putApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameResponse> => {
+    return customFetch<putApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameResponse>(
+      getPutApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameUrl(
+        namespace,
+        name,
+        params,
+      ),
+      {
+        ...options,
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...options?.headers },
+        body: JSON.stringify(releaseDeploy),
+      },
+    );
+  };
 
 export type patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameResponse200 =
   {
@@ -68,6 +233,42 @@ export const patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName =
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...options?.headers },
         body: JSON.stringify(releaseDeploy),
+      },
+    );
+  };
+
+export type deleteApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameResponse200 =
+  {
+    data: ReleaseDeploy;
+    status: 200;
+  };
+
+export type deleteApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameResponseSuccess =
+  deleteApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameResponse200 & {
+    headers: Headers;
+  };
+export type deleteApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameResponse =
+  deleteApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameResponseSuccess;
+
+export const getDeleteApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameUrl =
+  (namespace: string, name: string) => {
+    return `http://fake/apis/gh.guber.proc.io/v1/namespaces/${namespace}/releasedeploys/${name}`;
+  };
+
+export const deleteApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName =
+  async (
+    namespace: string,
+    name: string,
+    options?: RequestInit,
+  ): Promise<deleteApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameResponse> => {
+    return customFetch<deleteApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameResponse>(
+      getDeleteApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameUrl(
+        namespace,
+        name,
+      ),
+      {
+        ...options,
+        method: "DELETE",
       },
     );
   };

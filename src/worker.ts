@@ -808,34 +808,36 @@ app.get("/openapi/v3/apis/:group/:version", async (c) => {
     } else {
       // Add paths for namespaced resources
       // Collection endpoints
-      spec.paths[`/apis/${group}/${version}/namespaces/{namespace}/${plural}`] = {
-        get: {
-          parameters: [
-            {
-              name: "namespace",
-              in: "path",
-              required: true,
-              schema: { type: "string" },
+      spec.paths[`/apis/${group}/${version}/namespaces/{namespace}/${plural}`] =
+        {
+          get: {
+            parameters: [
+              {
+                name: "namespace",
+                in: "path",
+                required: true,
+                schema: { type: "string" },
+              },
+            ],
+            "x-kubernetes-group-version-kind": {
+              group,
+              version,
+              kind,
             },
-          ],
-          "x-kubernetes-group-version-kind": {
-            group,
-            version,
-            kind,
-          },
-          responses: {
-            "200": {
-              description: "OK",
-              content: {
-                "application/json": {
-                  schema: {
-                    type: "object",
-                    properties: {
-                      apiVersion: { type: "string" },
-                      kind: { type: "string" },
-                      items: {
-                        type: "array",
-                        items: { $ref: `#/components/schemas/${kind}` },
+            responses: {
+              "200": {
+                description: "OK",
+                content: {
+                  "application/json": {
+                    schema: {
+                      type: "object",
+                      properties: {
+                        apiVersion: { type: "string" },
+                        kind: { type: "string" },
+                        items: {
+                          type: "array",
+                          items: { $ref: `#/components/schemas/${kind}` },
+                        },
                       },
                     },
                   },
@@ -843,40 +845,39 @@ app.get("/openapi/v3/apis/:group/:version", async (c) => {
               },
             },
           },
-        },
-        post: {
-          parameters: [
-            {
-              name: "namespace",
-              in: "path",
-              required: true,
-              schema: { type: "string" },
-            },
-          ],
-          "x-kubernetes-group-version-kind": {
-            group,
-            version,
-            kind,
-          },
-          requestBody: {
-            content: {
-              "application/json": {
-                schema: { $ref: `#/components/schemas/${kind}` },
+          post: {
+            parameters: [
+              {
+                name: "namespace",
+                in: "path",
+                required: true,
+                schema: { type: "string" },
               },
+            ],
+            "x-kubernetes-group-version-kind": {
+              group,
+              version,
+              kind,
             },
-          },
-          responses: {
-            "201": {
-              description: "Created",
+            requestBody: {
               content: {
                 "application/json": {
                   schema: { $ref: `#/components/schemas/${kind}` },
                 },
               },
             },
+            responses: {
+              "201": {
+                description: "Created",
+                content: {
+                  "application/json": {
+                    schema: { $ref: `#/components/schemas/${kind}` },
+                  },
+                },
+              },
+            },
           },
-        },
-      };
+        };
 
       // Individual resource endpoints
       spec.paths[

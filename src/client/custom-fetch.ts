@@ -19,9 +19,9 @@ export const customFetch = async <T>(
   options: RequestInit,
 ): Promise<T> => {
   if (!globalEnv) {
-    throw new Error('Environment not set. Call setEnv() first.');
+    throw new Error("Environment not set. Call setEnv() first.");
   }
-  
+
   const request = new Request(url, options);
   const response = await globalEnv.GUBER_API.fetch(request);
   const data = await getBody<T>(response);

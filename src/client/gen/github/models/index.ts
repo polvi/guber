@@ -16,3 +16,6 @@ export * from "./releaseDeployApiVersion";
 export * from "./releaseDeployKind";
 export * from "./releaseDeploySpec";
 export * from "./releaseDeployStatus";
+export * from "./getApisGhGuberProcIoV1NamespacesNamespaceReleasedeploys200";
+export * from "./putApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameFieldValidation";
+export * from "./putApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameParams";

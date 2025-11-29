@@ -1,11 +1,15 @@
 import { Hono } from "hono";
 import { v4 as uuid } from "uuid";
 import type { Controller, ResourceContext } from "../config";
-import type { WorkerScriptVersion, Worker, WorkerScriptDeployment } from "../client/gen/cloudflare/models";
-import { 
+import type {
+  WorkerScriptVersion,
+  Worker,
+  WorkerScriptDeployment,
+} from "../client/gen/cloudflare/models";
+import {
   patchApisCfGuberProcIoV1WorkerscriptversionsName,
   patchApisCfGuberProcIoV1WorkersName,
-  patchApisCfGuberProcIoV1WorkerscriptdeploymentsName
+  patchApisCfGuberProcIoV1WorkerscriptdeploymentsName,
 } from "../client/gen/cloudflare/default/default";
 import { patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName } from "../client/gen/github/default/default";
 import type { ReleaseDeploy } from "../client/gen/github/models";
@@ -68,7 +72,7 @@ export class GitHubController implements Controller {
   async handleQueue(batch: any, env: any): Promise<void> {
     // Set the environment for the generated client
     setEnv(env);
-    
+
     for (const message of batch.messages) {
       try {
         const {
@@ -133,7 +137,7 @@ export class GitHubController implements Controller {
   async handleScheduled(event: any, env: any): Promise<void> {
     // Set the environment for the generated client
     setEnv(env);
-    
+
     console.log(
       `Running GitHub resource reconciliation at ${new Date(event.scheduledTime).toISOString()}`,
     );
@@ -588,8 +592,13 @@ export class GitHubController implements Controller {
       if (spec.createCloudflareResources) {
         try {
           // Create Worker first
-          workerName = await this.createWorker(env, spec, resourceName, releaseTag);
-          
+          workerName = await this.createWorker(
+            env,
+            spec,
+            resourceName,
+            releaseTag,
+          );
+
           // Create WorkerScriptVersion
           workerScriptVersionName = await this.createWorkerScriptVersion(
             env,
@@ -599,7 +608,7 @@ export class GitHubController implements Controller {
             resourceName,
             workerName,
           );
-          
+
           // Create WorkerScriptDeployment
           workerScriptDeploymentName = await this.createWorkerScriptDeployment(
             env,

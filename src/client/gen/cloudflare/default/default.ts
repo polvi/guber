@@ -7,12 +7,24 @@
  */
 import type {
   D1,
+  GetApisCfGuberProcIoV1D1s200,
+  GetApisCfGuberProcIoV1Qs200,
+  GetApisCfGuberProcIoV1Versions200,
+  GetApisCfGuberProcIoV1Workers200,
+  GetApisCfGuberProcIoV1Workerscriptdeployments200,
+  GetApisCfGuberProcIoV1Workerscriptversions200,
   PatchApisCfGuberProcIoV1D1sNameParams,
   PatchApisCfGuberProcIoV1QsNameParams,
   PatchApisCfGuberProcIoV1VersionsNameParams,
   PatchApisCfGuberProcIoV1WorkersNameParams,
   PatchApisCfGuberProcIoV1WorkerscriptdeploymentsNameParams,
   PatchApisCfGuberProcIoV1WorkerscriptversionsNameParams,
+  PutApisCfGuberProcIoV1D1sNameParams,
+  PutApisCfGuberProcIoV1QsNameParams,
+  PutApisCfGuberProcIoV1VersionsNameParams,
+  PutApisCfGuberProcIoV1WorkersNameParams,
+  PutApisCfGuberProcIoV1WorkerscriptdeploymentsNameParams,
+  PutApisCfGuberProcIoV1WorkerscriptversionsNameParams,
   Queue,
   Version,
   Worker,
@@ -21,6 +33,142 @@ import type {
 } from ".././models";
 
 import { customFetch } from "../../../custom-fetch";
+
+export type getApisCfGuberProcIoV1VersionsResponse200 = {
+  data: GetApisCfGuberProcIoV1Versions200;
+  status: 200;
+};
+
+export type getApisCfGuberProcIoV1VersionsResponseSuccess =
+  getApisCfGuberProcIoV1VersionsResponse200 & {
+    headers: Headers;
+  };
+export type getApisCfGuberProcIoV1VersionsResponse =
+  getApisCfGuberProcIoV1VersionsResponseSuccess;
+
+export const getGetApisCfGuberProcIoV1VersionsUrl = () => {
+  return `http://fake/apis/cf.guber.proc.io/v1/versions`;
+};
+
+export const getApisCfGuberProcIoV1Versions = async (
+  options?: RequestInit,
+): Promise<getApisCfGuberProcIoV1VersionsResponse> => {
+  return customFetch<getApisCfGuberProcIoV1VersionsResponse>(
+    getGetApisCfGuberProcIoV1VersionsUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export type postApisCfGuberProcIoV1VersionsResponse201 = {
+  data: Version;
+  status: 201;
+};
+
+export type postApisCfGuberProcIoV1VersionsResponseSuccess =
+  postApisCfGuberProcIoV1VersionsResponse201 & {
+    headers: Headers;
+  };
+export type postApisCfGuberProcIoV1VersionsResponse =
+  postApisCfGuberProcIoV1VersionsResponseSuccess;
+
+export const getPostApisCfGuberProcIoV1VersionsUrl = () => {
+  return `http://fake/apis/cf.guber.proc.io/v1/versions`;
+};
+
+export const postApisCfGuberProcIoV1Versions = async (
+  version: Version,
+  options?: RequestInit,
+): Promise<postApisCfGuberProcIoV1VersionsResponse> => {
+  return customFetch<postApisCfGuberProcIoV1VersionsResponse>(
+    getPostApisCfGuberProcIoV1VersionsUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(version),
+    },
+  );
+};
+
+export type getApisCfGuberProcIoV1VersionsNameResponse200 = {
+  data: Version;
+  status: 200;
+};
+
+export type getApisCfGuberProcIoV1VersionsNameResponseSuccess =
+  getApisCfGuberProcIoV1VersionsNameResponse200 & {
+    headers: Headers;
+  };
+export type getApisCfGuberProcIoV1VersionsNameResponse =
+  getApisCfGuberProcIoV1VersionsNameResponseSuccess;
+
+export const getGetApisCfGuberProcIoV1VersionsNameUrl = (name: string) => {
+  return `http://fake/apis/cf.guber.proc.io/v1/versions/${name}`;
+};
+
+export const getApisCfGuberProcIoV1VersionsName = async (
+  name: string,
+  options?: RequestInit,
+): Promise<getApisCfGuberProcIoV1VersionsNameResponse> => {
+  return customFetch<getApisCfGuberProcIoV1VersionsNameResponse>(
+    getGetApisCfGuberProcIoV1VersionsNameUrl(name),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export type putApisCfGuberProcIoV1VersionsNameResponse200 = {
+  data: Version;
+  status: 200;
+};
+
+export type putApisCfGuberProcIoV1VersionsNameResponseSuccess =
+  putApisCfGuberProcIoV1VersionsNameResponse200 & {
+    headers: Headers;
+  };
+export type putApisCfGuberProcIoV1VersionsNameResponse =
+  putApisCfGuberProcIoV1VersionsNameResponseSuccess;
+
+export const getPutApisCfGuberProcIoV1VersionsNameUrl = (
+  name: string,
+  params?: PutApisCfGuberProcIoV1VersionsNameParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `http://fake/apis/cf.guber.proc.io/v1/versions/${name}?${stringifiedParams}`
+    : `http://fake/apis/cf.guber.proc.io/v1/versions/${name}`;
+};
+
+export const putApisCfGuberProcIoV1VersionsName = async (
+  name: string,
+  version: Version,
+  params?: PutApisCfGuberProcIoV1VersionsNameParams,
+  options?: RequestInit,
+): Promise<putApisCfGuberProcIoV1VersionsNameResponse> => {
+  return customFetch<putApisCfGuberProcIoV1VersionsNameResponse>(
+    getPutApisCfGuberProcIoV1VersionsNameUrl(name, params),
+    {
+      ...options,
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(version),
+    },
+  );
+};
 
 export type patchApisCfGuberProcIoV1VersionsNameResponse200 = {
   data: Version;
@@ -66,6 +214,171 @@ export const patchApisCfGuberProcIoV1VersionsName = async (
       method: "PATCH",
       headers: { "Content-Type": "application/json", ...options?.headers },
       body: JSON.stringify(version),
+    },
+  );
+};
+
+export type deleteApisCfGuberProcIoV1VersionsNameResponse200 = {
+  data: Version;
+  status: 200;
+};
+
+export type deleteApisCfGuberProcIoV1VersionsNameResponseSuccess =
+  deleteApisCfGuberProcIoV1VersionsNameResponse200 & {
+    headers: Headers;
+  };
+export type deleteApisCfGuberProcIoV1VersionsNameResponse =
+  deleteApisCfGuberProcIoV1VersionsNameResponseSuccess;
+
+export const getDeleteApisCfGuberProcIoV1VersionsNameUrl = (name: string) => {
+  return `http://fake/apis/cf.guber.proc.io/v1/versions/${name}`;
+};
+
+export const deleteApisCfGuberProcIoV1VersionsName = async (
+  name: string,
+  options?: RequestInit,
+): Promise<deleteApisCfGuberProcIoV1VersionsNameResponse> => {
+  return customFetch<deleteApisCfGuberProcIoV1VersionsNameResponse>(
+    getDeleteApisCfGuberProcIoV1VersionsNameUrl(name),
+    {
+      ...options,
+      method: "DELETE",
+    },
+  );
+};
+
+export type getApisCfGuberProcIoV1D1sResponse200 = {
+  data: GetApisCfGuberProcIoV1D1s200;
+  status: 200;
+};
+
+export type getApisCfGuberProcIoV1D1sResponseSuccess =
+  getApisCfGuberProcIoV1D1sResponse200 & {
+    headers: Headers;
+  };
+export type getApisCfGuberProcIoV1D1sResponse =
+  getApisCfGuberProcIoV1D1sResponseSuccess;
+
+export const getGetApisCfGuberProcIoV1D1sUrl = () => {
+  return `http://fake/apis/cf.guber.proc.io/v1/d1s`;
+};
+
+export const getApisCfGuberProcIoV1D1s = async (
+  options?: RequestInit,
+): Promise<getApisCfGuberProcIoV1D1sResponse> => {
+  return customFetch<getApisCfGuberProcIoV1D1sResponse>(
+    getGetApisCfGuberProcIoV1D1sUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export type postApisCfGuberProcIoV1D1sResponse201 = {
+  data: D1;
+  status: 201;
+};
+
+export type postApisCfGuberProcIoV1D1sResponseSuccess =
+  postApisCfGuberProcIoV1D1sResponse201 & {
+    headers: Headers;
+  };
+export type postApisCfGuberProcIoV1D1sResponse =
+  postApisCfGuberProcIoV1D1sResponseSuccess;
+
+export const getPostApisCfGuberProcIoV1D1sUrl = () => {
+  return `http://fake/apis/cf.guber.proc.io/v1/d1s`;
+};
+
+export const postApisCfGuberProcIoV1D1s = async (
+  d1: D1,
+  options?: RequestInit,
+): Promise<postApisCfGuberProcIoV1D1sResponse> => {
+  return customFetch<postApisCfGuberProcIoV1D1sResponse>(
+    getPostApisCfGuberProcIoV1D1sUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(d1),
+    },
+  );
+};
+
+export type getApisCfGuberProcIoV1D1sNameResponse200 = {
+  data: D1;
+  status: 200;
+};
+
+export type getApisCfGuberProcIoV1D1sNameResponseSuccess =
+  getApisCfGuberProcIoV1D1sNameResponse200 & {
+    headers: Headers;
+  };
+export type getApisCfGuberProcIoV1D1sNameResponse =
+  getApisCfGuberProcIoV1D1sNameResponseSuccess;
+
+export const getGetApisCfGuberProcIoV1D1sNameUrl = (name: string) => {
+  return `http://fake/apis/cf.guber.proc.io/v1/d1s/${name}`;
+};
+
+export const getApisCfGuberProcIoV1D1sName = async (
+  name: string,
+  options?: RequestInit,
+): Promise<getApisCfGuberProcIoV1D1sNameResponse> => {
+  return customFetch<getApisCfGuberProcIoV1D1sNameResponse>(
+    getGetApisCfGuberProcIoV1D1sNameUrl(name),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export type putApisCfGuberProcIoV1D1sNameResponse200 = {
+  data: D1;
+  status: 200;
+};
+
+export type putApisCfGuberProcIoV1D1sNameResponseSuccess =
+  putApisCfGuberProcIoV1D1sNameResponse200 & {
+    headers: Headers;
+  };
+export type putApisCfGuberProcIoV1D1sNameResponse =
+  putApisCfGuberProcIoV1D1sNameResponseSuccess;
+
+export const getPutApisCfGuberProcIoV1D1sNameUrl = (
+  name: string,
+  params?: PutApisCfGuberProcIoV1D1sNameParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `http://fake/apis/cf.guber.proc.io/v1/d1s/${name}?${stringifiedParams}`
+    : `http://fake/apis/cf.guber.proc.io/v1/d1s/${name}`;
+};
+
+export const putApisCfGuberProcIoV1D1sName = async (
+  name: string,
+  d1: D1,
+  params?: PutApisCfGuberProcIoV1D1sNameParams,
+  options?: RequestInit,
+): Promise<putApisCfGuberProcIoV1D1sNameResponse> => {
+  return customFetch<putApisCfGuberProcIoV1D1sNameResponse>(
+    getPutApisCfGuberProcIoV1D1sNameUrl(name, params),
+    {
+      ...options,
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(d1),
     },
   );
 };
@@ -118,6 +431,171 @@ export const patchApisCfGuberProcIoV1D1sName = async (
   );
 };
 
+export type deleteApisCfGuberProcIoV1D1sNameResponse200 = {
+  data: D1;
+  status: 200;
+};
+
+export type deleteApisCfGuberProcIoV1D1sNameResponseSuccess =
+  deleteApisCfGuberProcIoV1D1sNameResponse200 & {
+    headers: Headers;
+  };
+export type deleteApisCfGuberProcIoV1D1sNameResponse =
+  deleteApisCfGuberProcIoV1D1sNameResponseSuccess;
+
+export const getDeleteApisCfGuberProcIoV1D1sNameUrl = (name: string) => {
+  return `http://fake/apis/cf.guber.proc.io/v1/d1s/${name}`;
+};
+
+export const deleteApisCfGuberProcIoV1D1sName = async (
+  name: string,
+  options?: RequestInit,
+): Promise<deleteApisCfGuberProcIoV1D1sNameResponse> => {
+  return customFetch<deleteApisCfGuberProcIoV1D1sNameResponse>(
+    getDeleteApisCfGuberProcIoV1D1sNameUrl(name),
+    {
+      ...options,
+      method: "DELETE",
+    },
+  );
+};
+
+export type getApisCfGuberProcIoV1QsResponse200 = {
+  data: GetApisCfGuberProcIoV1Qs200;
+  status: 200;
+};
+
+export type getApisCfGuberProcIoV1QsResponseSuccess =
+  getApisCfGuberProcIoV1QsResponse200 & {
+    headers: Headers;
+  };
+export type getApisCfGuberProcIoV1QsResponse =
+  getApisCfGuberProcIoV1QsResponseSuccess;
+
+export const getGetApisCfGuberProcIoV1QsUrl = () => {
+  return `http://fake/apis/cf.guber.proc.io/v1/qs`;
+};
+
+export const getApisCfGuberProcIoV1Qs = async (
+  options?: RequestInit,
+): Promise<getApisCfGuberProcIoV1QsResponse> => {
+  return customFetch<getApisCfGuberProcIoV1QsResponse>(
+    getGetApisCfGuberProcIoV1QsUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export type postApisCfGuberProcIoV1QsResponse201 = {
+  data: Queue;
+  status: 201;
+};
+
+export type postApisCfGuberProcIoV1QsResponseSuccess =
+  postApisCfGuberProcIoV1QsResponse201 & {
+    headers: Headers;
+  };
+export type postApisCfGuberProcIoV1QsResponse =
+  postApisCfGuberProcIoV1QsResponseSuccess;
+
+export const getPostApisCfGuberProcIoV1QsUrl = () => {
+  return `http://fake/apis/cf.guber.proc.io/v1/qs`;
+};
+
+export const postApisCfGuberProcIoV1Qs = async (
+  queue: Queue,
+  options?: RequestInit,
+): Promise<postApisCfGuberProcIoV1QsResponse> => {
+  return customFetch<postApisCfGuberProcIoV1QsResponse>(
+    getPostApisCfGuberProcIoV1QsUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(queue),
+    },
+  );
+};
+
+export type getApisCfGuberProcIoV1QsNameResponse200 = {
+  data: Queue;
+  status: 200;
+};
+
+export type getApisCfGuberProcIoV1QsNameResponseSuccess =
+  getApisCfGuberProcIoV1QsNameResponse200 & {
+    headers: Headers;
+  };
+export type getApisCfGuberProcIoV1QsNameResponse =
+  getApisCfGuberProcIoV1QsNameResponseSuccess;
+
+export const getGetApisCfGuberProcIoV1QsNameUrl = (name: string) => {
+  return `http://fake/apis/cf.guber.proc.io/v1/qs/${name}`;
+};
+
+export const getApisCfGuberProcIoV1QsName = async (
+  name: string,
+  options?: RequestInit,
+): Promise<getApisCfGuberProcIoV1QsNameResponse> => {
+  return customFetch<getApisCfGuberProcIoV1QsNameResponse>(
+    getGetApisCfGuberProcIoV1QsNameUrl(name),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export type putApisCfGuberProcIoV1QsNameResponse200 = {
+  data: Queue;
+  status: 200;
+};
+
+export type putApisCfGuberProcIoV1QsNameResponseSuccess =
+  putApisCfGuberProcIoV1QsNameResponse200 & {
+    headers: Headers;
+  };
+export type putApisCfGuberProcIoV1QsNameResponse =
+  putApisCfGuberProcIoV1QsNameResponseSuccess;
+
+export const getPutApisCfGuberProcIoV1QsNameUrl = (
+  name: string,
+  params?: PutApisCfGuberProcIoV1QsNameParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `http://fake/apis/cf.guber.proc.io/v1/qs/${name}?${stringifiedParams}`
+    : `http://fake/apis/cf.guber.proc.io/v1/qs/${name}`;
+};
+
+export const putApisCfGuberProcIoV1QsName = async (
+  name: string,
+  queue: Queue,
+  params?: PutApisCfGuberProcIoV1QsNameParams,
+  options?: RequestInit,
+): Promise<putApisCfGuberProcIoV1QsNameResponse> => {
+  return customFetch<putApisCfGuberProcIoV1QsNameResponse>(
+    getPutApisCfGuberProcIoV1QsNameUrl(name, params),
+    {
+      ...options,
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(queue),
+    },
+  );
+};
+
 export type patchApisCfGuberProcIoV1QsNameResponse200 = {
   data: Queue;
   status: 200;
@@ -162,6 +640,171 @@ export const patchApisCfGuberProcIoV1QsName = async (
       method: "PATCH",
       headers: { "Content-Type": "application/json", ...options?.headers },
       body: JSON.stringify(queue),
+    },
+  );
+};
+
+export type deleteApisCfGuberProcIoV1QsNameResponse200 = {
+  data: Queue;
+  status: 200;
+};
+
+export type deleteApisCfGuberProcIoV1QsNameResponseSuccess =
+  deleteApisCfGuberProcIoV1QsNameResponse200 & {
+    headers: Headers;
+  };
+export type deleteApisCfGuberProcIoV1QsNameResponse =
+  deleteApisCfGuberProcIoV1QsNameResponseSuccess;
+
+export const getDeleteApisCfGuberProcIoV1QsNameUrl = (name: string) => {
+  return `http://fake/apis/cf.guber.proc.io/v1/qs/${name}`;
+};
+
+export const deleteApisCfGuberProcIoV1QsName = async (
+  name: string,
+  options?: RequestInit,
+): Promise<deleteApisCfGuberProcIoV1QsNameResponse> => {
+  return customFetch<deleteApisCfGuberProcIoV1QsNameResponse>(
+    getDeleteApisCfGuberProcIoV1QsNameUrl(name),
+    {
+      ...options,
+      method: "DELETE",
+    },
+  );
+};
+
+export type getApisCfGuberProcIoV1WorkersResponse200 = {
+  data: GetApisCfGuberProcIoV1Workers200;
+  status: 200;
+};
+
+export type getApisCfGuberProcIoV1WorkersResponseSuccess =
+  getApisCfGuberProcIoV1WorkersResponse200 & {
+    headers: Headers;
+  };
+export type getApisCfGuberProcIoV1WorkersResponse =
+  getApisCfGuberProcIoV1WorkersResponseSuccess;
+
+export const getGetApisCfGuberProcIoV1WorkersUrl = () => {
+  return `http://fake/apis/cf.guber.proc.io/v1/workers`;
+};
+
+export const getApisCfGuberProcIoV1Workers = async (
+  options?: RequestInit,
+): Promise<getApisCfGuberProcIoV1WorkersResponse> => {
+  return customFetch<getApisCfGuberProcIoV1WorkersResponse>(
+    getGetApisCfGuberProcIoV1WorkersUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export type postApisCfGuberProcIoV1WorkersResponse201 = {
+  data: Worker;
+  status: 201;
+};
+
+export type postApisCfGuberProcIoV1WorkersResponseSuccess =
+  postApisCfGuberProcIoV1WorkersResponse201 & {
+    headers: Headers;
+  };
+export type postApisCfGuberProcIoV1WorkersResponse =
+  postApisCfGuberProcIoV1WorkersResponseSuccess;
+
+export const getPostApisCfGuberProcIoV1WorkersUrl = () => {
+  return `http://fake/apis/cf.guber.proc.io/v1/workers`;
+};
+
+export const postApisCfGuberProcIoV1Workers = async (
+  worker: Worker,
+  options?: RequestInit,
+): Promise<postApisCfGuberProcIoV1WorkersResponse> => {
+  return customFetch<postApisCfGuberProcIoV1WorkersResponse>(
+    getPostApisCfGuberProcIoV1WorkersUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(worker),
+    },
+  );
+};
+
+export type getApisCfGuberProcIoV1WorkersNameResponse200 = {
+  data: Worker;
+  status: 200;
+};
+
+export type getApisCfGuberProcIoV1WorkersNameResponseSuccess =
+  getApisCfGuberProcIoV1WorkersNameResponse200 & {
+    headers: Headers;
+  };
+export type getApisCfGuberProcIoV1WorkersNameResponse =
+  getApisCfGuberProcIoV1WorkersNameResponseSuccess;
+
+export const getGetApisCfGuberProcIoV1WorkersNameUrl = (name: string) => {
+  return `http://fake/apis/cf.guber.proc.io/v1/workers/${name}`;
+};
+
+export const getApisCfGuberProcIoV1WorkersName = async (
+  name: string,
+  options?: RequestInit,
+): Promise<getApisCfGuberProcIoV1WorkersNameResponse> => {
+  return customFetch<getApisCfGuberProcIoV1WorkersNameResponse>(
+    getGetApisCfGuberProcIoV1WorkersNameUrl(name),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export type putApisCfGuberProcIoV1WorkersNameResponse200 = {
+  data: Worker;
+  status: 200;
+};
+
+export type putApisCfGuberProcIoV1WorkersNameResponseSuccess =
+  putApisCfGuberProcIoV1WorkersNameResponse200 & {
+    headers: Headers;
+  };
+export type putApisCfGuberProcIoV1WorkersNameResponse =
+  putApisCfGuberProcIoV1WorkersNameResponseSuccess;
+
+export const getPutApisCfGuberProcIoV1WorkersNameUrl = (
+  name: string,
+  params?: PutApisCfGuberProcIoV1WorkersNameParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `http://fake/apis/cf.guber.proc.io/v1/workers/${name}?${stringifiedParams}`
+    : `http://fake/apis/cf.guber.proc.io/v1/workers/${name}`;
+};
+
+export const putApisCfGuberProcIoV1WorkersName = async (
+  name: string,
+  worker: Worker,
+  params?: PutApisCfGuberProcIoV1WorkersNameParams,
+  options?: RequestInit,
+): Promise<putApisCfGuberProcIoV1WorkersNameResponse> => {
+  return customFetch<putApisCfGuberProcIoV1WorkersNameResponse>(
+    getPutApisCfGuberProcIoV1WorkersNameUrl(name, params),
+    {
+      ...options,
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(worker),
     },
   );
 };
@@ -214,6 +857,173 @@ export const patchApisCfGuberProcIoV1WorkersName = async (
   );
 };
 
+export type deleteApisCfGuberProcIoV1WorkersNameResponse200 = {
+  data: Worker;
+  status: 200;
+};
+
+export type deleteApisCfGuberProcIoV1WorkersNameResponseSuccess =
+  deleteApisCfGuberProcIoV1WorkersNameResponse200 & {
+    headers: Headers;
+  };
+export type deleteApisCfGuberProcIoV1WorkersNameResponse =
+  deleteApisCfGuberProcIoV1WorkersNameResponseSuccess;
+
+export const getDeleteApisCfGuberProcIoV1WorkersNameUrl = (name: string) => {
+  return `http://fake/apis/cf.guber.proc.io/v1/workers/${name}`;
+};
+
+export const deleteApisCfGuberProcIoV1WorkersName = async (
+  name: string,
+  options?: RequestInit,
+): Promise<deleteApisCfGuberProcIoV1WorkersNameResponse> => {
+  return customFetch<deleteApisCfGuberProcIoV1WorkersNameResponse>(
+    getDeleteApisCfGuberProcIoV1WorkersNameUrl(name),
+    {
+      ...options,
+      method: "DELETE",
+    },
+  );
+};
+
+export type getApisCfGuberProcIoV1WorkerscriptdeploymentsResponse200 = {
+  data: GetApisCfGuberProcIoV1Workerscriptdeployments200;
+  status: 200;
+};
+
+export type getApisCfGuberProcIoV1WorkerscriptdeploymentsResponseSuccess =
+  getApisCfGuberProcIoV1WorkerscriptdeploymentsResponse200 & {
+    headers: Headers;
+  };
+export type getApisCfGuberProcIoV1WorkerscriptdeploymentsResponse =
+  getApisCfGuberProcIoV1WorkerscriptdeploymentsResponseSuccess;
+
+export const getGetApisCfGuberProcIoV1WorkerscriptdeploymentsUrl = () => {
+  return `http://fake/apis/cf.guber.proc.io/v1/workerscriptdeployments`;
+};
+
+export const getApisCfGuberProcIoV1Workerscriptdeployments = async (
+  options?: RequestInit,
+): Promise<getApisCfGuberProcIoV1WorkerscriptdeploymentsResponse> => {
+  return customFetch<getApisCfGuberProcIoV1WorkerscriptdeploymentsResponse>(
+    getGetApisCfGuberProcIoV1WorkerscriptdeploymentsUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export type postApisCfGuberProcIoV1WorkerscriptdeploymentsResponse201 = {
+  data: WorkerScriptDeployment;
+  status: 201;
+};
+
+export type postApisCfGuberProcIoV1WorkerscriptdeploymentsResponseSuccess =
+  postApisCfGuberProcIoV1WorkerscriptdeploymentsResponse201 & {
+    headers: Headers;
+  };
+export type postApisCfGuberProcIoV1WorkerscriptdeploymentsResponse =
+  postApisCfGuberProcIoV1WorkerscriptdeploymentsResponseSuccess;
+
+export const getPostApisCfGuberProcIoV1WorkerscriptdeploymentsUrl = () => {
+  return `http://fake/apis/cf.guber.proc.io/v1/workerscriptdeployments`;
+};
+
+export const postApisCfGuberProcIoV1Workerscriptdeployments = async (
+  workerScriptDeployment: WorkerScriptDeployment,
+  options?: RequestInit,
+): Promise<postApisCfGuberProcIoV1WorkerscriptdeploymentsResponse> => {
+  return customFetch<postApisCfGuberProcIoV1WorkerscriptdeploymentsResponse>(
+    getPostApisCfGuberProcIoV1WorkerscriptdeploymentsUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(workerScriptDeployment),
+    },
+  );
+};
+
+export type getApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse200 = {
+  data: WorkerScriptDeployment;
+  status: 200;
+};
+
+export type getApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponseSuccess =
+  getApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse200 & {
+    headers: Headers;
+  };
+export type getApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse =
+  getApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponseSuccess;
+
+export const getGetApisCfGuberProcIoV1WorkerscriptdeploymentsNameUrl = (
+  name: string,
+) => {
+  return `http://fake/apis/cf.guber.proc.io/v1/workerscriptdeployments/${name}`;
+};
+
+export const getApisCfGuberProcIoV1WorkerscriptdeploymentsName = async (
+  name: string,
+  options?: RequestInit,
+): Promise<getApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse> => {
+  return customFetch<getApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse>(
+    getGetApisCfGuberProcIoV1WorkerscriptdeploymentsNameUrl(name),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export type putApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse200 = {
+  data: WorkerScriptDeployment;
+  status: 200;
+};
+
+export type putApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponseSuccess =
+  putApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse200 & {
+    headers: Headers;
+  };
+export type putApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse =
+  putApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponseSuccess;
+
+export const getPutApisCfGuberProcIoV1WorkerscriptdeploymentsNameUrl = (
+  name: string,
+  params?: PutApisCfGuberProcIoV1WorkerscriptdeploymentsNameParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `http://fake/apis/cf.guber.proc.io/v1/workerscriptdeployments/${name}?${stringifiedParams}`
+    : `http://fake/apis/cf.guber.proc.io/v1/workerscriptdeployments/${name}`;
+};
+
+export const putApisCfGuberProcIoV1WorkerscriptdeploymentsName = async (
+  name: string,
+  workerScriptDeployment: WorkerScriptDeployment,
+  params?: PutApisCfGuberProcIoV1WorkerscriptdeploymentsNameParams,
+  options?: RequestInit,
+): Promise<putApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse> => {
+  return customFetch<putApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse>(
+    getPutApisCfGuberProcIoV1WorkerscriptdeploymentsNameUrl(name, params),
+    {
+      ...options,
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(workerScriptDeployment),
+    },
+  );
+};
+
 export type patchApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse200 = {
   data: WorkerScriptDeployment;
   status: 200;
@@ -262,6 +1072,175 @@ export const patchApisCfGuberProcIoV1WorkerscriptdeploymentsName = async (
   );
 };
 
+export type deleteApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse200 = {
+  data: WorkerScriptDeployment;
+  status: 200;
+};
+
+export type deleteApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponseSuccess =
+  deleteApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse200 & {
+    headers: Headers;
+  };
+export type deleteApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse =
+  deleteApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponseSuccess;
+
+export const getDeleteApisCfGuberProcIoV1WorkerscriptdeploymentsNameUrl = (
+  name: string,
+) => {
+  return `http://fake/apis/cf.guber.proc.io/v1/workerscriptdeployments/${name}`;
+};
+
+export const deleteApisCfGuberProcIoV1WorkerscriptdeploymentsName = async (
+  name: string,
+  options?: RequestInit,
+): Promise<deleteApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse> => {
+  return customFetch<deleteApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse>(
+    getDeleteApisCfGuberProcIoV1WorkerscriptdeploymentsNameUrl(name),
+    {
+      ...options,
+      method: "DELETE",
+    },
+  );
+};
+
+export type getApisCfGuberProcIoV1WorkerscriptversionsResponse200 = {
+  data: GetApisCfGuberProcIoV1Workerscriptversions200;
+  status: 200;
+};
+
+export type getApisCfGuberProcIoV1WorkerscriptversionsResponseSuccess =
+  getApisCfGuberProcIoV1WorkerscriptversionsResponse200 & {
+    headers: Headers;
+  };
+export type getApisCfGuberProcIoV1WorkerscriptversionsResponse =
+  getApisCfGuberProcIoV1WorkerscriptversionsResponseSuccess;
+
+export const getGetApisCfGuberProcIoV1WorkerscriptversionsUrl = () => {
+  return `http://fake/apis/cf.guber.proc.io/v1/workerscriptversions`;
+};
+
+export const getApisCfGuberProcIoV1Workerscriptversions = async (
+  options?: RequestInit,
+): Promise<getApisCfGuberProcIoV1WorkerscriptversionsResponse> => {
+  return customFetch<getApisCfGuberProcIoV1WorkerscriptversionsResponse>(
+    getGetApisCfGuberProcIoV1WorkerscriptversionsUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export type postApisCfGuberProcIoV1WorkerscriptversionsResponse201 = {
+  data: WorkerScriptVersion;
+  status: 201;
+};
+
+export type postApisCfGuberProcIoV1WorkerscriptversionsResponseSuccess =
+  postApisCfGuberProcIoV1WorkerscriptversionsResponse201 & {
+    headers: Headers;
+  };
+export type postApisCfGuberProcIoV1WorkerscriptversionsResponse =
+  postApisCfGuberProcIoV1WorkerscriptversionsResponseSuccess;
+
+export const getPostApisCfGuberProcIoV1WorkerscriptversionsUrl = () => {
+  return `http://fake/apis/cf.guber.proc.io/v1/workerscriptversions`;
+};
+
+export const postApisCfGuberProcIoV1Workerscriptversions = async (
+  workerScriptVersion: WorkerScriptVersion,
+  options?: RequestInit,
+): Promise<postApisCfGuberProcIoV1WorkerscriptversionsResponse> => {
+  return customFetch<postApisCfGuberProcIoV1WorkerscriptversionsResponse>(
+    getPostApisCfGuberProcIoV1WorkerscriptversionsUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(workerScriptVersion),
+    },
+  );
+};
+
+export type getApisCfGuberProcIoV1WorkerscriptversionsNameResponse200 = {
+  data: WorkerScriptVersion;
+  status: 200;
+};
+
+export type getApisCfGuberProcIoV1WorkerscriptversionsNameResponseSuccess =
+  getApisCfGuberProcIoV1WorkerscriptversionsNameResponse200 & {
+    headers: Headers;
+  };
+export type getApisCfGuberProcIoV1WorkerscriptversionsNameResponse =
+  getApisCfGuberProcIoV1WorkerscriptversionsNameResponseSuccess;
+
+export const getGetApisCfGuberProcIoV1WorkerscriptversionsNameUrl = (
+  name: string,
+) => {
+  return `http://fake/apis/cf.guber.proc.io/v1/workerscriptversions/${name}`;
+};
+
+export const getApisCfGuberProcIoV1WorkerscriptversionsName = async (
+  name: string,
+  options?: RequestInit,
+): Promise<getApisCfGuberProcIoV1WorkerscriptversionsNameResponse> => {
+  return customFetch<getApisCfGuberProcIoV1WorkerscriptversionsNameResponse>(
+    getGetApisCfGuberProcIoV1WorkerscriptversionsNameUrl(name),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export type putApisCfGuberProcIoV1WorkerscriptversionsNameResponse200 = {
+  data: WorkerScriptVersion;
+  status: 200;
+};
+
+export type putApisCfGuberProcIoV1WorkerscriptversionsNameResponseSuccess =
+  putApisCfGuberProcIoV1WorkerscriptversionsNameResponse200 & {
+    headers: Headers;
+  };
+export type putApisCfGuberProcIoV1WorkerscriptversionsNameResponse =
+  putApisCfGuberProcIoV1WorkerscriptversionsNameResponseSuccess;
+
+export const getPutApisCfGuberProcIoV1WorkerscriptversionsNameUrl = (
+  name: string,
+  params?: PutApisCfGuberProcIoV1WorkerscriptversionsNameParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `http://fake/apis/cf.guber.proc.io/v1/workerscriptversions/${name}?${stringifiedParams}`
+    : `http://fake/apis/cf.guber.proc.io/v1/workerscriptversions/${name}`;
+};
+
+export const putApisCfGuberProcIoV1WorkerscriptversionsName = async (
+  name: string,
+  workerScriptVersion: WorkerScriptVersion,
+  params?: PutApisCfGuberProcIoV1WorkerscriptversionsNameParams,
+  options?: RequestInit,
+): Promise<putApisCfGuberProcIoV1WorkerscriptversionsNameResponse> => {
+  return customFetch<putApisCfGuberProcIoV1WorkerscriptversionsNameResponse>(
+    getPutApisCfGuberProcIoV1WorkerscriptversionsNameUrl(name, params),
+    {
+      ...options,
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(workerScriptVersion),
+    },
+  );
+};
+
 export type patchApisCfGuberProcIoV1WorkerscriptversionsNameResponse200 = {
   data: WorkerScriptVersion;
   status: 200;
@@ -306,6 +1285,37 @@ export const patchApisCfGuberProcIoV1WorkerscriptversionsName = async (
       method: "PATCH",
       headers: { "Content-Type": "application/json", ...options?.headers },
       body: JSON.stringify(workerScriptVersion),
+    },
+  );
+};
+
+export type deleteApisCfGuberProcIoV1WorkerscriptversionsNameResponse200 = {
+  data: WorkerScriptVersion;
+  status: 200;
+};
+
+export type deleteApisCfGuberProcIoV1WorkerscriptversionsNameResponseSuccess =
+  deleteApisCfGuberProcIoV1WorkerscriptversionsNameResponse200 & {
+    headers: Headers;
+  };
+export type deleteApisCfGuberProcIoV1WorkerscriptversionsNameResponse =
+  deleteApisCfGuberProcIoV1WorkerscriptversionsNameResponseSuccess;
+
+export const getDeleteApisCfGuberProcIoV1WorkerscriptversionsNameUrl = (
+  name: string,
+) => {
+  return `http://fake/apis/cf.guber.proc.io/v1/workerscriptversions/${name}`;
+};
+
+export const deleteApisCfGuberProcIoV1WorkerscriptversionsName = async (
+  name: string,
+  options?: RequestInit,
+): Promise<deleteApisCfGuberProcIoV1WorkerscriptversionsNameResponse> => {
+  return customFetch<deleteApisCfGuberProcIoV1WorkerscriptversionsNameResponse>(
+    getDeleteApisCfGuberProcIoV1WorkerscriptversionsNameUrl(name),
+    {
+      ...options,
+      method: "DELETE",
     },
   );
 };
