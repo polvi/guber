@@ -25,5 +25,5 @@ export const customFetch = async <T>(
   const request = new Request(url, options);
   const response = await globalEnv.GUBER_API.fetch(request);
   const data = await getBody<T>(response);
-  return { status: response.status, data } as T;
+  return { status: response.status, data, headers: response.headers } as T;
 };
