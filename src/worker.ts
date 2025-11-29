@@ -617,7 +617,128 @@ app.get("/openapi/v3/apis/:group/:version", async (c) => {
 
     // Add paths for cluster-scoped resources
     if (scope === "Cluster") {
+      // Collection endpoints
+      spec.paths[`/apis/${group}/${version}/${plural}`] = {
+        get: {
+          "x-kubernetes-group-version-kind": {
+            group,
+            version,
+            kind,
+          },
+          responses: {
+            "200": {
+              description: "OK",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      apiVersion: { type: "string" },
+                      kind: { type: "string" },
+                      items: {
+                        type: "array",
+                        items: { $ref: `#/components/schemas/${kind}` },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        post: {
+          "x-kubernetes-group-version-kind": {
+            group,
+            version,
+            kind,
+          },
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: { $ref: `#/components/schemas/${kind}` },
+              },
+            },
+          },
+          responses: {
+            "201": {
+              description: "Created",
+              content: {
+                "application/json": {
+                  schema: { $ref: `#/components/schemas/${kind}` },
+                },
+              },
+            },
+          },
+        },
+      };
+
+      // Individual resource endpoints
       spec.paths[`/apis/${group}/${version}/${plural}/{name}`] = {
+        get: {
+          parameters: [
+            {
+              name: "name",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+          ],
+          "x-kubernetes-group-version-kind": {
+            group,
+            version,
+            kind,
+          },
+          responses: {
+            "200": {
+              description: "OK",
+              content: {
+                "application/json": {
+                  schema: { $ref: `#/components/schemas/${kind}` },
+                },
+              },
+            },
+          },
+        },
+        put: {
+          parameters: [
+            {
+              name: "name",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+            {
+              name: "fieldValidation",
+              in: "query",
+              schema: {
+                type: "string",
+                enum: ["Ignore", "Warn", "Strict"],
+              },
+            },
+          ],
+          "x-kubernetes-group-version-kind": {
+            group,
+            version,
+            kind,
+          },
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: { $ref: `#/components/schemas/${kind}` },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "OK",
+              content: {
+                "application/json": {
+                  schema: { $ref: `#/components/schemas/${kind}` },
+                },
+              },
+            },
+          },
+        },
         patch: {
           parameters: [
             {
@@ -658,12 +779,186 @@ app.get("/openapi/v3/apis/:group/:version", async (c) => {
             },
           },
         },
+        delete: {
+          parameters: [
+            {
+              name: "name",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+          ],
+          "x-kubernetes-group-version-kind": {
+            group,
+            version,
+            kind,
+          },
+          responses: {
+            "200": {
+              description: "OK",
+              content: {
+                "application/json": {
+                  schema: { $ref: `#/components/schemas/${kind}` },
+                },
+              },
+            },
+          },
+        },
       };
     } else {
       // Add paths for namespaced resources
+      // Collection endpoints
+      spec.paths[`/apis/${group}/${version}/namespaces/{namespace}/${plural}`] = {
+        get: {
+          parameters: [
+            {
+              name: "namespace",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+          ],
+          "x-kubernetes-group-version-kind": {
+            group,
+            version,
+            kind,
+          },
+          responses: {
+            "200": {
+              description: "OK",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      apiVersion: { type: "string" },
+                      kind: { type: "string" },
+                      items: {
+                        type: "array",
+                        items: { $ref: `#/components/schemas/${kind}` },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        post: {
+          parameters: [
+            {
+              name: "namespace",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+          ],
+          "x-kubernetes-group-version-kind": {
+            group,
+            version,
+            kind,
+          },
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: { $ref: `#/components/schemas/${kind}` },
+              },
+            },
+          },
+          responses: {
+            "201": {
+              description: "Created",
+              content: {
+                "application/json": {
+                  schema: { $ref: `#/components/schemas/${kind}` },
+                },
+              },
+            },
+          },
+        },
+      };
+
+      // Individual resource endpoints
       spec.paths[
         `/apis/${group}/${version}/namespaces/{namespace}/${plural}/{name}`
       ] = {
+        get: {
+          parameters: [
+            {
+              name: "namespace",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+            {
+              name: "name",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+          ],
+          "x-kubernetes-group-version-kind": {
+            group,
+            version,
+            kind,
+          },
+          responses: {
+            "200": {
+              description: "OK",
+              content: {
+                "application/json": {
+                  schema: { $ref: `#/components/schemas/${kind}` },
+                },
+              },
+            },
+          },
+        },
+        put: {
+          parameters: [
+            {
+              name: "namespace",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+            {
+              name: "name",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+            {
+              name: "fieldValidation",
+              in: "query",
+              schema: {
+                type: "string",
+                enum: ["Ignore", "Warn", "Strict"],
+              },
+            },
+          ],
+          "x-kubernetes-group-version-kind": {
+            group,
+            version,
+            kind,
+          },
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: { $ref: `#/components/schemas/${kind}` },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "OK",
+              content: {
+                "application/json": {
+                  schema: { $ref: `#/components/schemas/${kind}` },
+                },
+              },
+            },
+          },
+        },
         patch: {
           parameters: [
             {
@@ -698,6 +993,37 @@ app.get("/openapi/v3/apis/:group/:version", async (c) => {
                 schema: { $ref: `#/components/schemas/${kind}` },
               },
             },
+          },
+          responses: {
+            "200": {
+              description: "OK",
+              content: {
+                "application/json": {
+                  schema: { $ref: `#/components/schemas/${kind}` },
+                },
+              },
+            },
+          },
+        },
+        delete: {
+          parameters: [
+            {
+              name: "namespace",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+            {
+              name: "name",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+          ],
+          "x-kubernetes-group-version-kind": {
+            group,
+            version,
+            kind,
           },
           responses: {
             "200": {
