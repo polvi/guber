@@ -3534,9 +3534,22 @@ class CloudflareController implements Controller {
           }
 
           if (!versionStatus.version_id) {
-            throw new Error(
-              `WorkerScriptVersion resource '${version.version_name}' has no version_id`,
+            console.log(
+              `WorkerScriptVersion resource '${version.version_name}' has no version_id, deferring deployment`,
             );
+            await env.DB.prepare(
+              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+            )
+              .bind(
+                JSON.stringify({
+                  state: "Pending",
+                  message: `Waiting for WorkerScriptVersion '${version.version_name}' to have version_id`,
+                  pendingVersions: [version.version_name],
+                }),
+                resourceName,
+              )
+              .run();
+            return false;
           }
 
           resolvedVersions.push({
