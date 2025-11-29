@@ -2815,12 +2815,73 @@ class CloudflareController implements Controller {
         );
       }
 
+      // Resolve the actual worker script name in Cloudflare
+      let actualScriptName = spec.scriptName;
+      
+      // Check if scriptName refers to a Worker resource in our system
+      const workerResource = await env.DB.prepare(
+        "SELECT * FROM resources WHERE name=? AND kind='Worker' AND group_name='cf.guber.proc.io' AND namespace IS NULL",
+      )
+        .bind(spec.scriptName)
+        .first();
+
+      if (workerResource) {
+        // Build the full worker name that was created in Cloudflare
+        actualScriptName = this.buildFullDatabaseName(
+          workerResource.name,
+          workerResource.group_name,
+          workerResource.plural,
+          workerResource.namespace,
+          env.GUBER_NAME,
+        );
+        
+        // Check if the worker is ready
+        if (workerResource.status) {
+          const workerStatus = JSON.parse(workerResource.status);
+          if (workerStatus.state !== "Ready") {
+            console.log(
+              `Target worker ${spec.scriptName} is not ready (${workerStatus.state}), deferring version creation`,
+            );
+            await env.DB.prepare(
+              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+            )
+              .bind(
+                JSON.stringify({
+                  state: "Pending",
+                  message: `Waiting for target worker to be ready: ${spec.scriptName} (current state: ${workerStatus.state})`,
+                  pendingWorker: spec.scriptName,
+                }),
+                resourceName,
+              )
+              .run();
+            return false;
+          }
+        } else {
+          console.log(
+            `Target worker ${spec.scriptName} has no status, deferring version creation`,
+          );
+          await env.DB.prepare(
+            "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+          )
+            .bind(
+              JSON.stringify({
+                state: "Pending",
+                message: `Waiting for target worker to be provisioned: ${spec.scriptName}`,
+                pendingWorker: spec.scriptName,
+              }),
+              resourceName,
+            )
+            .run();
+          return false;
+        }
+      }
+
       console.log(
-        `Creating worker script version for ${spec.scriptName} with ${bindings.length} bindings`,
+        `Creating worker script version for ${actualScriptName} (from ${spec.scriptName}) with ${bindings.length} bindings`,
       );
 
       const uploadResponse = await fetch(
-        `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${spec.scriptName}/versions`,
+        `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${actualScriptName}/versions`,
         {
           method: "POST",
           headers: {
@@ -2852,8 +2913,10 @@ class CloudflareController implements Controller {
             state: "Ready",
             version_id: versionId,
             version_number: versionNumber,
+            script_name: actualScriptName,
+            target_worker: spec.scriptName,
             createdAt: new Date().toISOString(),
-            endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${spec.scriptName}/versions/${versionId}`,
+            endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${actualScriptName}/versions/${versionId}`,
             metadata: result.result.metadata || {},
           }),
           resourceName,
@@ -2943,8 +3006,79 @@ class CloudflareController implements Controller {
             status = {};
           }
 
-          // Check if this is a pending version waiting for dependencies
-          if (status.state === "Pending" && spec.dependencies) {
+          // Check if this is a pending version waiting for dependencies or target worker
+          if (status.state === "Pending" && (spec.dependencies || status.pendingWorker)) {
+            // First check if we're waiting for a target worker
+            if (status.pendingWorker) {
+              const targetWorkerResource = await env.DB.prepare(
+                "SELECT * FROM resources WHERE name=? AND kind='Worker' AND group_name='cf.guber.proc.io' AND namespace IS NULL",
+              )
+                .bind(status.pendingWorker)
+                .first();
+
+              if (targetWorkerResource && targetWorkerResource.status) {
+                const targetWorkerStatus = JSON.parse(targetWorkerResource.status);
+                if (targetWorkerStatus.state === "Ready") {
+                  console.log(
+                    `[Reconcile] Target worker ${status.pendingWorker} is now ready for version ${resource.name}, re-queuing for provisioning`,
+                  );
+
+                  // Queue for provisioning
+                  if (env.GUBER_BUS) {
+                    await env.GUBER_BUS.send({
+                      action: "create",
+                      resourceType: "workerscriptversion",
+                      resourceName: resource.name,
+                      group: resource.group_name,
+                      kind: resource.kind,
+                      plural: resource.plural,
+                      namespace: resource.namespace,
+                      spec: spec,
+                    });
+                  }
+                  continue; // Skip dependency check since we're re-queuing
+                } else {
+                  console.log(
+                    `[Reconcile] Target worker ${status.pendingWorker} still not ready (${targetWorkerStatus.state}) for version ${resource.name}`,
+                  );
+                  
+                  // Update the worker check timestamp
+                  const updatedStatus = {
+                    ...status,
+                    lastWorkerCheck: new Date().toISOString(),
+                    message: `Waiting for target worker to be ready: ${status.pendingWorker} (current state: ${targetWorkerStatus.state})`,
+                  };
+
+                  await env.DB.prepare(
+                    "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+                  )
+                    .bind(JSON.stringify(updatedStatus), resource.name)
+                    .run();
+                  continue;
+                }
+              } else {
+                console.log(
+                  `[Reconcile] Target worker ${status.pendingWorker} not found or has no status for version ${resource.name}`,
+                );
+                
+                // Update status to indicate worker still missing
+                const updatedStatus = {
+                  ...status,
+                  lastWorkerCheck: new Date().toISOString(),
+                  message: `Waiting for target worker to be provisioned: ${status.pendingWorker}`,
+                };
+
+                await env.DB.prepare(
+                  "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+                )
+                  .bind(JSON.stringify(updatedStatus), resource.name)
+                  .run();
+                continue;
+              }
+            }
+
+            // Then check dependencies if any
+            if (spec.dependencies) {
             let allDependenciesReady = true;
             const unresolvedDependencies = [];
 
@@ -3009,10 +3143,13 @@ class CloudflareController implements Controller {
           }
 
           // For ready versions, verify they still exist in Cloudflare
-          if (status.state === "Ready" && status.version_id && spec.scriptName) {
+          if (status.state === "Ready" && status.version_id) {
             try {
+              // Use the stored script name if available, otherwise fall back to spec.scriptName
+              const scriptNameToCheck = status.script_name || spec.scriptName;
+              
               const versionResponse = await fetch(
-                `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${spec.scriptName}/versions/${status.version_id}`,
+                `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${scriptNameToCheck}/versions/${status.version_id}`,
                 {
                   method: "GET",
                   headers: {
