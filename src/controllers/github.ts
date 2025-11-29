@@ -984,6 +984,7 @@ export class GitHubController implements Controller {
       },
       spec: {
         name: workerName,
+        scriptUrl: `https://github.com/${spec.repository}/releases/download/${releaseTag}/worker.js`,
         ...spec.workerSpec,
       },
     };
