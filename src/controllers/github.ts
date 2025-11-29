@@ -474,10 +474,6 @@ export class GitHubController implements Controller {
         throw new Error("ReleaseDeploy must have 'repository' specified");
       }
 
-      if (!env.GITHUB_TOKEN) {
-        throw new Error("GITHUB_TOKEN environment variable is required");
-      }
-
       // Get the release tag - either specified or latest
       let releaseTag = spec.tag;
       let releaseData = null;
@@ -485,20 +481,31 @@ export class GitHubController implements Controller {
       if (!releaseTag) {
         console.log(`🔍 Fetching latest release for repository: ${spec.repository}`);
         
+        const headers: Record<string, string> = {
+          "Accept": "application/vnd.github.v3+json",
+          "User-Agent": "Guber-GitHub-Controller/1.0",
+        };
+
+        if (env.GITHUB_TOKEN) {
+          headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
+        }
+
         const latestReleaseResponse = await fetch(
           `https://api.github.com/repos/${spec.repository}/releases/latest`,
           {
             method: "GET",
-            headers: {
-              Authorization: `Bearer ${env.GITHUB_TOKEN}`,
-              "Accept": "application/vnd.github.v3+json",
-              "User-Agent": "Guber-GitHub-Controller/1.0",
-            },
+            headers,
           },
         );
 
         if (!latestReleaseResponse.ok) {
           const errorResponse = await latestReleaseResponse.json();
+          
+          // If unauthorized and no token provided, throw specific error
+          if (latestReleaseResponse.status === 401 && !env.GITHUB_TOKEN) {
+            throw new Error("GITHUB_TOKEN environment variable is required for private repositories or when rate limited");
+          }
+          
           console.error(`❌ Failed to fetch latest release for ${spec.repository}:`, errorResponse);
           throw new Error(
             `Failed to fetch latest release: ${JSON.stringify(errorResponse)}`,
@@ -519,15 +526,20 @@ export class GitHubController implements Controller {
         // Fetch specific release data
         console.log(`🔍 Fetching release data for specific tag: ${releaseTag} from ${spec.repository}`);
         
+        const headers: Record<string, string> = {
+          "Accept": "application/vnd.github.v3+json",
+          "User-Agent": "Guber-GitHub-Controller/1.0",
+        };
+
+        if (env.GITHUB_TOKEN) {
+          headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
+        }
+
         const releaseResponse = await fetch(
           `https://api.github.com/repos/${spec.repository}/releases/tags/${releaseTag}`,
           {
             method: "GET",
-            headers: {
-              Authorization: `Bearer ${env.GITHUB_TOKEN}`,
-              "Accept": "application/vnd.github.v3+json",
-              "User-Agent": "Guber-GitHub-Controller/1.0",
-            },
+            headers,
           },
         );
 
@@ -542,6 +554,11 @@ export class GitHubController implements Controller {
             console.log(`⚠️  Note: Release ${releaseTag} is marked as draft`);
           }
         } else {
+          // If unauthorized and no token provided, throw specific error
+          if (releaseResponse.status === 401 && !env.GITHUB_TOKEN) {
+            throw new Error("GITHUB_TOKEN environment variable is required for private repositories or when rate limited");
+          }
+          
           console.warn(`⚠️  Could not fetch release data for tag ${releaseTag} from ${spec.repository}`);
         }
       }
@@ -571,22 +588,33 @@ export class GitHubController implements Controller {
         }
       }
 
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        "Accept": "application/vnd.github.v3+json",
+        "User-Agent": "Guber-GitHub-Controller/1.0",
+      };
+
+      if (env.GITHUB_TOKEN) {
+        headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
+      }
+
       const deploymentResponse = await fetch(
         `https://api.github.com/repos/${spec.repository}/deployments`,
         {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${env.GITHUB_TOKEN}`,
-            "Content-Type": "application/json",
-            "Accept": "application/vnd.github.v3+json",
-            "User-Agent": "Guber-GitHub-Controller/1.0",
-          },
+          headers,
           body: JSON.stringify(deploymentPayload),
         },
       );
 
       if (!deploymentResponse.ok) {
         const errorResponse = await deploymentResponse.json();
+        
+        // If unauthorized and no token provided, throw specific error
+        if (deploymentResponse.status === 401 && !env.GITHUB_TOKEN) {
+          throw new Error("GITHUB_TOKEN environment variable is required to create deployments");
+        }
+        
         throw new Error(
           `Failed to create GitHub deployment: ${JSON.stringify(errorResponse)}`,
         );
@@ -632,16 +660,21 @@ export class GitHubController implements Controller {
           environment_url: spec.initialStatus.environmentUrl,
         };
 
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+          "Accept": "application/vnd.github.v3+json",
+          "User-Agent": "Guber-GitHub-Controller/1.0",
+        };
+
+        if (env.GITHUB_TOKEN) {
+          headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
+        }
+
         const statusResponse = await fetch(
           `https://api.github.com/repos/${spec.repository}/deployments/${deploymentId}/statuses`,
           {
             method: "POST",
-            headers: {
-              Authorization: `Bearer ${env.GITHUB_TOKEN}`,
-              "Content-Type": "application/json",
-              "Accept": "application/vnd.github.v3+json",
-              "User-Agent": "Guber-GitHub-Controller/1.0",
-            },
+            headers,
             body: JSON.stringify(statusPayload),
           },
         );
@@ -798,16 +831,21 @@ export class GitHubController implements Controller {
           description: "Deployment marked as inactive by Guber",
         };
 
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+          "Accept": "application/vnd.github.v3+json",
+          "User-Agent": "Guber-GitHub-Controller/1.0",
+        };
+
+        if (env.GITHUB_TOKEN) {
+          headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
+        }
+
         const statusResponse = await fetch(
           `https://api.github.com/repos/${spec.repository}/deployments/${deploymentId}/statuses`,
           {
             method: "POST",
-            headers: {
-              Authorization: `Bearer ${env.GITHUB_TOKEN}`,
-              "Content-Type": "application/json",
-              "Accept": "application/vnd.github.v3+json",
-              "User-Agent": "Guber-GitHub-Controller/1.0",
-            },
+            headers,
             body: JSON.stringify(statusPayload),
           },
         );
@@ -871,13 +909,18 @@ export class GitHubController implements Controller {
             status.endpoint
           ) {
             try {
+              const headers: Record<string, string> = {
+                "Accept": "application/vnd.github.v3+json",
+                "User-Agent": "Guber-GitHub-Controller/1.0",
+              };
+
+              if (env.GITHUB_TOKEN) {
+                headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
+              }
+
               const deploymentResponse = await fetch(status.endpoint, {
                 method: "GET",
-                headers: {
-                  Authorization: `Bearer ${env.GITHUB_TOKEN}`,
-                  "Accept": "application/vnd.github.v3+json",
-                  "User-Agent": "Guber-GitHub-Controller/1.0",
-                },
+                headers,
               });
 
               if (!deploymentResponse.ok) {
@@ -993,11 +1036,16 @@ export class GitHubController implements Controller {
         const scriptAsset = scriptAssets[0];
         console.log(`📥 Downloading script from release asset: ${scriptAsset.name} (${scriptAsset.size} bytes)`);
 
+        const headers: Record<string, string> = {
+          "User-Agent": "Guber-GitHub-Controller/1.0",
+        };
+
+        if (env.GITHUB_TOKEN) {
+          headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
+        }
+
         const scriptResponse = await fetch(scriptAsset.browser_download_url, {
-          headers: {
-            Authorization: `Bearer ${env.GITHUB_TOKEN}`,
-            "User-Agent": "Guber-GitHub-Controller/1.0",
-          },
+          headers,
         });
 
         if (scriptResponse.ok) {
@@ -1011,14 +1059,19 @@ export class GitHubController implements Controller {
         // Try to get the main branch content as fallback
         console.log(`⚠️  No script assets found in release ${releaseTag}, trying to fetch from repository main branch`);
         
+        const headers: Record<string, string> = {
+          "Accept": "application/vnd.github.v3+json",
+          "User-Agent": "Guber-GitHub-Controller/1.0",
+        };
+
+        if (env.GITHUB_TOKEN) {
+          headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
+        }
+
         const repoContentResponse = await fetch(
           `https://api.github.com/repos/${spec.repository}/contents/worker.js`,
           {
-            headers: {
-              Authorization: `Bearer ${env.GITHUB_TOKEN}`,
-              "Accept": "application/vnd.github.v3+json",
-              "User-Agent": "Guber-GitHub-Controller/1.0",
-            },
+            headers,
           },
         );
 
