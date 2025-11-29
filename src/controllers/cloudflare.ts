@@ -1,6 +1,12 @@
 import { Hono } from "hono";
 import { v4 as uuid } from "uuid";
 import type { Controller, ResourceContext } from "../config";
+import {
+  patchApisCfGuberProcIoV1WorkerscriptversionsName,
+  patchApisCfGuberProcIoV1WorkerscriptdeploymentsName,
+} from "../client/gen/cloudflare/default/default";
+import type { WorkerScriptVersion, WorkerScriptDeployment } from "../client/gen/cloudflare/models";
+import { setEnv } from "../client/custom-fetch";
 
 export default function cloudflare(): Controller {
   return new CloudflareController();
@@ -9,6 +15,9 @@ export default function cloudflare(): Controller {
 class CloudflareController implements Controller {
   async onResourceCreated(context: ResourceContext): Promise<void> {
     const { group, kind, name, spec, env } = context;
+
+    // Set the environment for the generated client
+    setEnv(env);
 
     // Only handle cf.guber.proc.io resources
     if (group !== "cf.guber.proc.io") return;
@@ -38,6 +47,9 @@ class CloudflareController implements Controller {
   async onResourceDeleted(context: ResourceContext): Promise<void> {
     const { group, kind, name, spec, status, env } = context;
 
+    // Set the environment for the generated client
+    setEnv(env);
+
     // Only handle cf.guber.proc.io resources
     if (group !== "cf.guber.proc.io") return;
 
@@ -65,6 +77,9 @@ class CloudflareController implements Controller {
   }
 
   async handleQueue(batch: any, env: any): Promise<void> {
+    // Set the environment for the generated client
+    setEnv(env);
+
     for (const message of batch.messages) {
       try {
         const {
@@ -211,6 +226,9 @@ class CloudflareController implements Controller {
   }
 
   async handleScheduled(event: any, env: any): Promise<void> {
+    // Set the environment for the generated client
+    setEnv(env);
+
     console.log(
       `Running Cloudflare resource reconciliation at ${new Date(event.scheduledTime).toISOString()}`,
     );
@@ -1052,18 +1070,24 @@ class CloudflareController implements Controller {
             console.log(
               `Dependency ${depKind}/${depName} not found, deferring provisioning`,
             );
-            await env.DB.prepare(
-              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-            )
-              .bind(
-                JSON.stringify({
-                  state: "Pending",
-                  message: `Waiting for dependency: ${depKind}/${depName}`,
-                  pendingDependencies: [dependency],
-                }),
-                resourceName,
-              )
-              .run();
+            const workerScriptVersionUpdate: WorkerScriptVersion = {
+              apiVersion: "cf.guber.proc.io/v1",
+              kind: "WorkerScriptVersion",
+              metadata: {
+                name: resourceName,
+                namespace: undefined,
+              },
+              status: {
+                state: "Pending",
+                message: `Waiting for dependency: ${depKind}/${depName}`,
+                pendingDependencies: [dependency],
+              },
+            };
+
+            await patchApisCfGuberProcIoV1WorkerscriptversionsName(
+              resourceName,
+              workerScriptVersionUpdate,
+            );
             return false;
           }
 
@@ -1071,18 +1095,24 @@ class CloudflareController implements Controller {
             console.log(
               `Dependency ${depKind}/${depName} has no status, deferring provisioning`,
             );
-            await env.DB.prepare(
-              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-            )
-              .bind(
-                JSON.stringify({
-                  state: "Pending",
-                  message: `Waiting for dependency to be provisioned: ${depKind}/${depName}`,
-                  pendingDependencies: [dependency],
-                }),
-                resourceName,
-              )
-              .run();
+            const workerScriptVersionUpdate: WorkerScriptVersion = {
+              apiVersion: "cf.guber.proc.io/v1",
+              kind: "WorkerScriptVersion",
+              metadata: {
+                name: resourceName,
+                namespace: undefined,
+              },
+              status: {
+                state: "Pending",
+                message: `Waiting for dependency to be provisioned: ${depKind}/${depName}`,
+                pendingDependencies: [dependency],
+              },
+            };
+
+            await patchApisCfGuberProcIoV1WorkerscriptversionsName(
+              resourceName,
+              workerScriptVersionUpdate,
+            );
             return false;
           }
 
@@ -1091,18 +1121,24 @@ class CloudflareController implements Controller {
             console.log(
               `Dependency ${depKind}/${depName} not ready (${depStatus.state}), deferring provisioning`,
             );
-            await env.DB.prepare(
-              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-            )
-              .bind(
-                JSON.stringify({
-                  state: "Pending",
-                  message: `Waiting for dependency to be ready: ${depKind}/${depName} (current state: ${depStatus.state})`,
-                  pendingDependencies: [dependency],
-                }),
-                resourceName,
-              )
-              .run();
+            const workerScriptVersionUpdate: WorkerScriptVersion = {
+              apiVersion: "cf.guber.proc.io/v1",
+              kind: "WorkerScriptVersion",
+              metadata: {
+                name: resourceName,
+                namespace: undefined,
+              },
+              status: {
+                state: "Pending",
+                message: `Waiting for dependency to be ready: ${depKind}/${depName} (current state: ${depStatus.state})`,
+                pendingDependencies: [dependency],
+              },
+            };
+
+            await patchApisCfGuberProcIoV1WorkerscriptversionsName(
+              resourceName,
+              workerScriptVersionUpdate,
+            );
             return false;
           }
         }
@@ -1375,18 +1411,24 @@ class CloudflareController implements Controller {
     } catch (error) {
       console.error(`Failed to provision Worker ${fullWorkerName}:`, error);
 
-      // Update status to failed
-      await env.DB.prepare(
-        "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-      )
-        .bind(
-          JSON.stringify({
-            state: "Failed",
-            error: error.message || String(error),
-          }),
-          resourceName,
-        )
-        .run();
+      // Update status to failed using the generated client
+      const workerScriptVersionUpdate: WorkerScriptVersion = {
+        apiVersion: "cf.guber.proc.io/v1",
+        kind: "WorkerScriptVersion",
+        metadata: {
+          name: resourceName,
+          namespace: undefined,
+        },
+        status: {
+          state: "Failed",
+          error: error.message || String(error),
+        },
+      };
+
+      await patchApisCfGuberProcIoV1WorkerscriptversionsName(
+        resourceName,
+        workerScriptVersionUpdate,
+      );
 
       return false;
     }
@@ -2606,18 +2648,24 @@ class CloudflareController implements Controller {
             console.log(
               `Dependency ${depKind}/${depName} not found, deferring provisioning`,
             );
-            await env.DB.prepare(
-              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-            )
-              .bind(
-                JSON.stringify({
-                  state: "Pending",
-                  message: `Waiting for dependency: ${depKind}/${depName}`,
-                  pendingDependencies: [dependency],
-                }),
-                resourceName,
-              )
-              .run();
+            const workerScriptDeploymentUpdate: WorkerScriptDeployment = {
+              apiVersion: "cf.guber.proc.io/v1",
+              kind: "WorkerScriptDeployment",
+              metadata: {
+                name: resourceName,
+                namespace: undefined,
+              },
+              status: {
+                state: "Pending",
+                message: `Waiting for dependency: ${depKind}/${depName}`,
+                pendingDependencies: [dependency],
+              },
+            };
+
+            await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
+              resourceName,
+              workerScriptDeploymentUpdate,
+            );
             return false;
           }
 
@@ -2625,18 +2673,24 @@ class CloudflareController implements Controller {
             console.log(
               `Dependency ${depKind}/${depName} has no status, deferring provisioning`,
             );
-            await env.DB.prepare(
-              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-            )
-              .bind(
-                JSON.stringify({
-                  state: "Pending",
-                  message: `Waiting for dependency to be provisioned: ${depKind}/${depName}`,
-                  pendingDependencies: [dependency],
-                }),
-                resourceName,
-              )
-              .run();
+            const workerScriptDeploymentUpdate: WorkerScriptDeployment = {
+              apiVersion: "cf.guber.proc.io/v1",
+              kind: "WorkerScriptDeployment",
+              metadata: {
+                name: resourceName,
+                namespace: undefined,
+              },
+              status: {
+                state: "Pending",
+                message: `Waiting for dependency to be provisioned: ${depKind}/${depName}`,
+                pendingDependencies: [dependency],
+              },
+            };
+
+            await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
+              resourceName,
+              workerScriptDeploymentUpdate,
+            );
             return false;
           }
 
@@ -2645,18 +2699,24 @@ class CloudflareController implements Controller {
             console.log(
               `Dependency ${depKind}/${depName} not ready (${depStatus.state}), deferring provisioning`,
             );
-            await env.DB.prepare(
-              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-            )
-              .bind(
-                JSON.stringify({
-                  state: "Pending",
-                  message: `Waiting for dependency to be ready: ${depKind}/${depName} (current state: ${depStatus.state})`,
-                  pendingDependencies: [dependency],
-                }),
-                resourceName,
-              )
-              .run();
+            const workerScriptDeploymentUpdate: WorkerScriptDeployment = {
+              apiVersion: "cf.guber.proc.io/v1",
+              kind: "WorkerScriptDeployment",
+              metadata: {
+                name: resourceName,
+                namespace: undefined,
+              },
+              status: {
+                state: "Pending",
+                message: `Waiting for dependency to be ready: ${depKind}/${depName} (current state: ${depStatus.state})`,
+                pendingDependencies: [dependency],
+              },
+            };
+
+            await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
+              resourceName,
+              workerScriptDeploymentUpdate,
+            );
             return false;
           }
         }
@@ -2854,18 +2914,24 @@ class CloudflareController implements Controller {
         console.log(
           `Target worker ${spec.scriptName} not found, deferring version creation`,
         );
-        await env.DB.prepare(
-          "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-        )
-          .bind(
-            JSON.stringify({
-              state: "Pending",
-              message: `Waiting for target worker to be created: ${spec.scriptName}`,
-              pendingWorker: spec.scriptName,
-            }),
-            resourceName,
-          )
-          .run();
+        const workerScriptVersionUpdate: WorkerScriptVersion = {
+          apiVersion: "cf.guber.proc.io/v1",
+          kind: "WorkerScriptVersion",
+          metadata: {
+            name: resourceName,
+            namespace: undefined,
+          },
+          status: {
+            state: "Pending",
+            message: `Waiting for target worker to be created: ${spec.scriptName}`,
+            pendingWorker: spec.scriptName,
+          },
+        };
+
+        await patchApisCfGuberProcIoV1WorkerscriptversionsName(
+          resourceName,
+          workerScriptVersionUpdate,
+        );
         return false;
       }
 
@@ -2874,18 +2940,24 @@ class CloudflareController implements Controller {
         console.log(
           `Target worker ${spec.scriptName} has no status, deferring version creation`,
         );
-        await env.DB.prepare(
-          "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-        )
-          .bind(
-            JSON.stringify({
-              state: "Pending",
-              message: `Waiting for target worker to be provisioned: ${spec.scriptName}`,
-              pendingWorker: spec.scriptName,
-            }),
-            resourceName,
-          )
-          .run();
+        const workerScriptVersionUpdate: WorkerScriptVersion = {
+          apiVersion: "cf.guber.proc.io/v1",
+          kind: "WorkerScriptVersion",
+          metadata: {
+            name: resourceName,
+            namespace: undefined,
+          },
+          status: {
+            state: "Pending",
+            message: `Waiting for target worker to be provisioned: ${spec.scriptName}`,
+            pendingWorker: spec.scriptName,
+          },
+        };
+
+        await patchApisCfGuberProcIoV1WorkerscriptversionsName(
+          resourceName,
+          workerScriptVersionUpdate,
+        );
         return false;
       }
 
@@ -2894,18 +2966,24 @@ class CloudflareController implements Controller {
         console.log(
           `Target worker ${spec.scriptName} is not ready (${workerStatus.state}), deferring version creation`,
         );
-        await env.DB.prepare(
-          "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-        )
-          .bind(
-            JSON.stringify({
-              state: "Pending",
-              message: `Waiting for target worker to be ready: ${spec.scriptName} (current state: ${workerStatus.state})`,
-              pendingWorker: spec.scriptName,
-            }),
-            resourceName,
-          )
-          .run();
+        const workerScriptVersionUpdate: WorkerScriptVersion = {
+          apiVersion: "cf.guber.proc.io/v1",
+          kind: "WorkerScriptVersion",
+          metadata: {
+            name: resourceName,
+            namespace: undefined,
+          },
+          status: {
+            state: "Pending",
+            message: `Waiting for target worker to be ready: ${spec.scriptName} (current state: ${workerStatus.state})`,
+            pendingWorker: spec.scriptName,
+          },
+        };
+
+        await patchApisCfGuberProcIoV1WorkerscriptversionsName(
+          resourceName,
+          workerScriptVersionUpdate,
+        );
         return false;
       }
 
@@ -2913,18 +2991,24 @@ class CloudflareController implements Controller {
         console.log(
           `Target worker ${spec.scriptName} has no endpoint, deferring version creation`,
         );
-        await env.DB.prepare(
-          "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-        )
-          .bind(
-            JSON.stringify({
-              state: "Pending",
-              message: `Waiting for target worker endpoint: ${spec.scriptName}`,
-              pendingWorker: spec.scriptName,
-            }),
-            resourceName,
-          )
-          .run();
+        const workerScriptVersionUpdate: WorkerScriptVersion = {
+          apiVersion: "cf.guber.proc.io/v1",
+          kind: "WorkerScriptVersion",
+          metadata: {
+            name: resourceName,
+            namespace: undefined,
+          },
+          status: {
+            state: "Pending",
+            message: `Waiting for target worker endpoint: ${spec.scriptName}`,
+            pendingWorker: spec.scriptName,
+          },
+        };
+
+        await patchApisCfGuberProcIoV1WorkerscriptversionsName(
+          resourceName,
+          workerScriptVersionUpdate,
+        );
         return false;
       }
 
@@ -2966,24 +3050,30 @@ class CloudflareController implements Controller {
         `Worker script version ${versionNumber} created successfully with ID: ${versionId}`,
       );
 
-      // Update the resource status in the database
-      await env.DB.prepare(
-        "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-      )
-        .bind(
-          JSON.stringify({
-            state: "Ready",
-            version_id: versionId,
-            version_number: versionNumber,
-            script_name: actualScriptName,
-            target_worker: spec.scriptName,
-            createdAt: new Date().toISOString(),
-            endpoint: `${workerStatus.endpoint}/versions/${versionId}`,
-            metadata: result.result.metadata || {},
-          }),
-          resourceName,
-        )
-        .run();
+      // Update the resource status using the generated client
+      const workerScriptVersionUpdate: WorkerScriptVersion = {
+        apiVersion: "cf.guber.proc.io/v1",
+        kind: "WorkerScriptVersion",
+        metadata: {
+          name: resourceName,
+          namespace: undefined,
+        },
+        status: {
+          state: "Ready",
+          version_id: versionId,
+          version_number: versionNumber,
+          script_name: actualScriptName,
+          target_worker: spec.scriptName,
+          createdAt: new Date().toISOString(),
+          endpoint: `${workerStatus.endpoint}/versions/${versionId}`,
+          metadata: result.result.metadata || {},
+        },
+      };
+
+      await patchApisCfGuberProcIoV1WorkerscriptversionsName(
+        resourceName,
+        workerScriptVersionUpdate,
+      );
 
       console.log(
         `Worker script version ${resourceName} provisioned successfully`,
@@ -2995,18 +3085,24 @@ class CloudflareController implements Controller {
         error,
       );
 
-      // Update status to failed
-      await env.DB.prepare(
-        "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-      )
-        .bind(
-          JSON.stringify({
-            state: "Failed",
-            error: error.message || String(error),
-          }),
-          resourceName,
-        )
-        .run();
+      // Update status to failed using the generated client
+      const workerScriptDeploymentUpdate: WorkerScriptDeployment = {
+        apiVersion: "cf.guber.proc.io/v1",
+        kind: "WorkerScriptDeployment",
+        metadata: {
+          name: resourceName,
+          namespace: undefined,
+        },
+        status: {
+          state: "Failed",
+          error: error.message || String(error),
+        },
+      };
+
+      await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
+        resourceName,
+        workerScriptDeploymentUpdate,
+      );
 
       return false;
     }
@@ -3388,18 +3484,24 @@ class CloudflareController implements Controller {
         console.log(
           `Target worker ${spec.scriptName} not found, deferring deployment creation`,
         );
-        await env.DB.prepare(
-          "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-        )
-          .bind(
-            JSON.stringify({
-              state: "Pending",
-              message: `Waiting for target worker to be created: ${spec.scriptName}`,
-              pendingWorker: spec.scriptName,
-            }),
-            resourceName,
-          )
-          .run();
+        const workerScriptDeploymentUpdate: WorkerScriptDeployment = {
+          apiVersion: "cf.guber.proc.io/v1",
+          kind: "WorkerScriptDeployment",
+          metadata: {
+            name: resourceName,
+            namespace: undefined,
+          },
+          status: {
+            state: "Pending",
+            message: `Waiting for target worker to be created: ${spec.scriptName}`,
+            pendingWorker: spec.scriptName,
+          },
+        };
+
+        await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
+          resourceName,
+          workerScriptDeploymentUpdate,
+        );
         return false;
       }
 
@@ -3408,18 +3510,24 @@ class CloudflareController implements Controller {
         console.log(
           `Target worker ${spec.scriptName} has no status, deferring deployment creation`,
         );
-        await env.DB.prepare(
-          "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-        )
-          .bind(
-            JSON.stringify({
-              state: "Pending",
-              message: `Waiting for target worker to be provisioned: ${spec.scriptName}`,
-              pendingWorker: spec.scriptName,
-            }),
-            resourceName,
-          )
-          .run();
+        const workerScriptDeploymentUpdate: WorkerScriptDeployment = {
+          apiVersion: "cf.guber.proc.io/v1",
+          kind: "WorkerScriptDeployment",
+          metadata: {
+            name: resourceName,
+            namespace: undefined,
+          },
+          status: {
+            state: "Pending",
+            message: `Waiting for target worker to be provisioned: ${spec.scriptName}`,
+            pendingWorker: spec.scriptName,
+          },
+        };
+
+        await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
+          resourceName,
+          workerScriptDeploymentUpdate,
+        );
         return false;
       }
 
@@ -3428,18 +3536,24 @@ class CloudflareController implements Controller {
         console.log(
           `Target worker ${spec.scriptName} is not ready (${workerStatus.state}), deferring deployment creation`,
         );
-        await env.DB.prepare(
-          "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-        )
-          .bind(
-            JSON.stringify({
-              state: "Pending",
-              message: `Waiting for target worker to be ready: ${spec.scriptName} (current state: ${workerStatus.state})`,
-              pendingWorker: spec.scriptName,
-            }),
-            resourceName,
-          )
-          .run();
+        const workerScriptDeploymentUpdate: WorkerScriptDeployment = {
+          apiVersion: "cf.guber.proc.io/v1",
+          kind: "WorkerScriptDeployment",
+          metadata: {
+            name: resourceName,
+            namespace: undefined,
+          },
+          status: {
+            state: "Pending",
+            message: `Waiting for target worker to be ready: ${spec.scriptName} (current state: ${workerStatus.state})`,
+            pendingWorker: spec.scriptName,
+          },
+        };
+
+        await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
+          resourceName,
+          workerScriptDeploymentUpdate,
+        );
         return false;
       }
 
@@ -3533,18 +3647,24 @@ class CloudflareController implements Controller {
             console.log(
               `WorkerScriptVersion resource '${version.version_name}' has no version_id, deferring deployment`,
             );
-            await env.DB.prepare(
-              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-            )
-              .bind(
-                JSON.stringify({
-                  state: "Pending",
-                  message: `Waiting for WorkerScriptVersion '${version.version_name}' to have version_id`,
-                  pendingVersions: [version.version_name],
-                }),
-                resourceName,
-              )
-              .run();
+            const workerScriptDeploymentUpdate: WorkerScriptDeployment = {
+              apiVersion: "cf.guber.proc.io/v1",
+              kind: "WorkerScriptDeployment",
+              metadata: {
+                name: resourceName,
+                namespace: undefined,
+              },
+              status: {
+                state: "Pending",
+                message: `Waiting for WorkerScriptVersion '${version.version_name}' to have version_id`,
+                pendingVersions: [version.version_name],
+              },
+            };
+
+            await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
+              resourceName,
+              workerScriptDeploymentUpdate,
+            );
             return false;
           }
 
@@ -3613,23 +3733,29 @@ class CloudflareController implements Controller {
         `Worker script deployment created successfully with ID: ${deploymentId}`,
       );
 
-      // Update the resource status in the database
-      await env.DB.prepare(
-        "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-      )
-        .bind(
-          JSON.stringify({
-            state: "Ready",
-            deployment_id: deploymentId,
-            script_name: actualScriptName,
-            target_worker: spec.scriptName,
-            createdAt: new Date().toISOString(),
-            endpoint: `${workerStatus.endpoint}/deployments/${deploymentId}`,
-            metadata: result.result || {},
-          }),
-          resourceName,
-        )
-        .run();
+      // Update the resource status using the generated client
+      const workerScriptDeploymentUpdate: WorkerScriptDeployment = {
+        apiVersion: "cf.guber.proc.io/v1",
+        kind: "WorkerScriptDeployment",
+        metadata: {
+          name: resourceName,
+          namespace: undefined,
+        },
+        status: {
+          state: "Ready",
+          deployment_id: deploymentId,
+          script_name: actualScriptName,
+          target_worker: spec.scriptName,
+          createdAt: new Date().toISOString(),
+          endpoint: `${workerStatus.endpoint}/deployments/${deploymentId}`,
+          metadata: result.result || {},
+        },
+      };
+
+      await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
+        resourceName,
+        workerScriptDeploymentUpdate,
+      );
 
       console.log(
         `Worker script deployment ${resourceName} provisioned successfully`,
