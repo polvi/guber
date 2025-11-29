@@ -1615,19 +1615,45 @@ app.patch("/apis/:group/:version/:plural/:name", async (c) => {
     .first();
   if (!current) return c.json({ message: "Not Found" }, 404);
 
-  const updatedSpec = { ...JSON.parse(current.spec), ...body.spec };
-  await c.env.DB.prepare(
-    "UPDATE resources SET spec=? WHERE name=? AND namespace IS NULL",
-  )
-    .bind(JSON.stringify(updatedSpec), name)
-    .run();
-
-  return c.json({
+  // Parse current resource
+  const currentResource = {
     apiVersion: `${group}/${version}`,
     kind: current.kind,
     metadata: { name, creationTimestamp: current.created_at },
-    spec: updatedSpec,
-  });
+    spec: JSON.parse(current.spec),
+    status: current.status ? JSON.parse(current.status) : {},
+  };
+
+  // Merge the patch with the current resource
+  const updatedResource = { ...currentResource };
+  
+  if (body.spec) {
+    updatedResource.spec = { ...currentResource.spec, ...body.spec };
+  }
+  
+  if (body.status) {
+    updatedResource.status = { ...currentResource.status, ...body.status };
+  }
+
+  if (body.metadata) {
+    updatedResource.metadata = { ...currentResource.metadata, ...body.metadata };
+    // Preserve system fields
+    updatedResource.metadata.name = name;
+    updatedResource.metadata.creationTimestamp = current.created_at;
+  }
+
+  // Update the database
+  await c.env.DB.prepare(
+    "UPDATE resources SET spec=?, status=? WHERE name=? AND namespace IS NULL",
+  )
+    .bind(
+      JSON.stringify(updatedResource.spec),
+      JSON.stringify(updatedResource.status),
+      name
+    )
+    .run();
+
+  return c.json(updatedResource);
 });
 
 // Delete cluster-scoped resource
@@ -1838,19 +1864,47 @@ app.patch(
       .first();
     if (!current) return c.json({ message: "Not Found" }, 404);
 
-    const updatedSpec = { ...JSON.parse(current.spec), ...body.spec };
-    await c.env.DB.prepare(
-      "UPDATE resources SET spec=? WHERE name=? AND namespace=?",
-    )
-      .bind(JSON.stringify(updatedSpec), name, namespace)
-      .run();
-
-    return c.json({
+    // Parse current resource
+    const currentResource = {
       apiVersion: `${group}/${version}`,
       kind: current.kind,
       metadata: { name, namespace, creationTimestamp: current.created_at },
-      spec: updatedSpec,
-    });
+      spec: JSON.parse(current.spec),
+      status: current.status ? JSON.parse(current.status) : {},
+    };
+
+    // Merge the patch with the current resource
+    const updatedResource = { ...currentResource };
+    
+    if (body.spec) {
+      updatedResource.spec = { ...currentResource.spec, ...body.spec };
+    }
+    
+    if (body.status) {
+      updatedResource.status = { ...currentResource.status, ...body.status };
+    }
+
+    if (body.metadata) {
+      updatedResource.metadata = { ...currentResource.metadata, ...body.metadata };
+      // Preserve system fields
+      updatedResource.metadata.name = name;
+      updatedResource.metadata.namespace = namespace;
+      updatedResource.metadata.creationTimestamp = current.created_at;
+    }
+
+    // Update the database
+    await c.env.DB.prepare(
+      "UPDATE resources SET spec=?, status=? WHERE name=? AND namespace=?",
+    )
+      .bind(
+        JSON.stringify(updatedResource.spec),
+        JSON.stringify(updatedResource.status),
+        name,
+        namespace
+      )
+      .run();
+
+    return c.json(updatedResource);
   },
 );
 
