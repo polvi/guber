@@ -1626,17 +1626,20 @@ app.patch("/apis/:group/:version/:plural/:name", async (c) => {
 
   // Merge the patch with the current resource
   const updatedResource = { ...currentResource };
-  
+
   if (body.spec) {
     updatedResource.spec = { ...currentResource.spec, ...body.spec };
   }
-  
+
   if (body.status) {
     updatedResource.status = { ...currentResource.status, ...body.status };
   }
 
   if (body.metadata) {
-    updatedResource.metadata = { ...currentResource.metadata, ...body.metadata };
+    updatedResource.metadata = {
+      ...currentResource.metadata,
+      ...body.metadata,
+    };
     // Preserve system fields
     updatedResource.metadata.name = name;
     updatedResource.metadata.creationTimestamp = current.created_at;
@@ -1649,7 +1652,7 @@ app.patch("/apis/:group/:version/:plural/:name", async (c) => {
     .bind(
       JSON.stringify(updatedResource.spec),
       JSON.stringify(updatedResource.status),
-      name
+      name,
     )
     .run();
 
@@ -1875,17 +1878,20 @@ app.patch(
 
     // Merge the patch with the current resource
     const updatedResource = { ...currentResource };
-    
+
     if (body.spec) {
       updatedResource.spec = { ...currentResource.spec, ...body.spec };
     }
-    
+
     if (body.status) {
       updatedResource.status = { ...currentResource.status, ...body.status };
     }
 
     if (body.metadata) {
-      updatedResource.metadata = { ...currentResource.metadata, ...body.metadata };
+      updatedResource.metadata = {
+        ...currentResource.metadata,
+        ...body.metadata,
+      };
       // Preserve system fields
       updatedResource.metadata.name = name;
       updatedResource.metadata.namespace = namespace;
@@ -1900,7 +1906,7 @@ app.patch(
         JSON.stringify(updatedResource.spec),
         JSON.stringify(updatedResource.status),
         name,
-        namespace
+        namespace,
       )
       .run();
 

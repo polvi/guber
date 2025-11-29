@@ -196,14 +196,23 @@ export class GitHubController implements Controller {
               const depGroup = dependency.group || "gh.guber.proc.io";
               let depResource = null;
               try {
-                if (dependency.kind === 'Worker') {
-                  depResource = await getApisCfGuberProcIoV1WorkersName(dependency.name);
-                } else if (dependency.kind === 'WorkerScriptVersion') {
-                  depResource = await getApisCfGuberProcIoV1WorkerscriptversionsName(dependency.name);
-                } else if (dependency.kind === 'D1') {
-                  depResource = await getApisCfGuberProcIoV1D1sName(dependency.name);
-                } else if (dependency.kind === 'Queue') {
-                  depResource = await getApisCfGuberProcIoV1QsName(dependency.name);
+                if (dependency.kind === "Worker") {
+                  depResource = await getApisCfGuberProcIoV1WorkersName(
+                    dependency.name,
+                  );
+                } else if (dependency.kind === "WorkerScriptVersion") {
+                  depResource =
+                    await getApisCfGuberProcIoV1WorkerscriptversionsName(
+                      dependency.name,
+                    );
+                } else if (dependency.kind === "D1") {
+                  depResource = await getApisCfGuberProcIoV1D1sName(
+                    dependency.name,
+                  );
+                } else if (dependency.kind === "Queue") {
+                  depResource = await getApisCfGuberProcIoV1QsName(
+                    dependency.name,
+                  );
                 }
               } catch (error) {
                 depResource = null;
@@ -306,11 +315,11 @@ export class GitHubController implements Controller {
 
           let depResource = null;
           try {
-            if (depKind === 'Worker') {
+            if (depKind === "Worker") {
               depResource = await getApisCfGuberProcIoV1WorkersName(depName);
-            } else if (depKind === 'D1') {
+            } else if (depKind === "D1") {
               depResource = await getApisCfGuberProcIoV1D1sName(depName);
-            } else if (depKind === 'Queue') {
+            } else if (depKind === "Queue") {
               depResource = await getApisCfGuberProcIoV1QsName(depName);
             }
           } catch (error) {
@@ -812,7 +821,9 @@ export class GitHubController implements Controller {
     // Delete WorkerScriptDeployment first (if it exists)
     if (status.workerScriptDeploymentName) {
       try {
-        await deleteApisCfGuberProcIoV1WorkerscriptdeploymentsName(status.workerScriptDeploymentName);
+        await deleteApisCfGuberProcIoV1WorkerscriptdeploymentsName(
+          status.workerScriptDeploymentName,
+        );
         console.log(
           `✅ Deleted WorkerScriptDeployment ${status.workerScriptDeploymentName}`,
         );
@@ -827,7 +838,9 @@ export class GitHubController implements Controller {
     // Delete WorkerScriptVersion (if it exists)
     if (status.workerScriptVersionName) {
       try {
-        await deleteApisCfGuberProcIoV1WorkerscriptversionsName(status.workerScriptVersionName);
+        await deleteApisCfGuberProcIoV1WorkerscriptversionsName(
+          status.workerScriptVersionName,
+        );
         console.log(
           `✅ Deleted WorkerScriptVersion ${status.workerScriptVersionName}`,
         );
@@ -1159,7 +1172,9 @@ export class GitHubController implements Controller {
 
     // Create the resource using the generated client
     try {
-      await postApisCfGuberProcIoV1Workerscriptversions(workerScriptVersionResource);
+      await postApisCfGuberProcIoV1Workerscriptversions(
+        workerScriptVersionResource,
+      );
 
       console.log(
         `✅ Created WorkerScriptVersion ${workerScriptVersionName} from ReleaseDeploy ${releaseDeployName}`,
@@ -1216,7 +1231,9 @@ export class GitHubController implements Controller {
     };
 
     // Create the resource using the generated client
-    await postApisCfGuberProcIoV1Workerscriptdeployments(workerScriptDeploymentResource);
+    await postApisCfGuberProcIoV1Workerscriptdeployments(
+      workerScriptDeploymentResource,
+    );
 
     console.log(
       `✅ Created WorkerScriptDeployment ${workerScriptDeploymentName} from ReleaseDeploy ${releaseDeployName}`,
@@ -1255,14 +1272,23 @@ export class GitHubController implements Controller {
             const depGroup = dependency.group || "gh.guber.proc.io";
             let depResource = null;
             try {
-              if (dependency.kind === 'Worker') {
-                depResource = await getApisCfGuberProcIoV1WorkersName(dependency.name);
-              } else if (dependency.kind === 'WorkerScriptVersion') {
-                depResource = await getApisCfGuberProcIoV1WorkerscriptversionsName(dependency.name);
-              } else if (dependency.kind === 'D1') {
-                depResource = await getApisCfGuberProcIoV1D1sName(dependency.name);
-              } else if (dependency.kind === 'Queue') {
-                depResource = await getApisCfGuberProcIoV1QsName(dependency.name);
+              if (dependency.kind === "Worker") {
+                depResource = await getApisCfGuberProcIoV1WorkersName(
+                  dependency.name,
+                );
+              } else if (dependency.kind === "WorkerScriptVersion") {
+                depResource =
+                  await getApisCfGuberProcIoV1WorkerscriptversionsName(
+                    dependency.name,
+                  );
+              } else if (dependency.kind === "D1") {
+                depResource = await getApisCfGuberProcIoV1D1sName(
+                  dependency.name,
+                );
+              } else if (dependency.kind === "Queue") {
+                depResource = await getApisCfGuberProcIoV1QsName(
+                  dependency.name,
+                );
               }
             } catch (error) {
               depResource = null;
