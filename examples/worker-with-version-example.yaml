@@ -128,9 +128,8 @@ spec:
   compatibility_date: "2023-05-18"
   compatibility_flags: ["nodejs_compat"]
   annotations:
-    alias: "v2.0"
     message: "Enhanced version with metrics and CORS support"
-    tag: "staging"
+    tag: "v2.0.0"
   dependencies:
     - kind: Worker
       name: hello-world-worker
