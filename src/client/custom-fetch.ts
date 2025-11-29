@@ -2,10 +2,6 @@ export const customFetch = async <T>(
   url: string,
   options: RequestInit,
 ): Promise<T> => {
-  const requestUrl = getUrl(url);
-  const requestInit: RequestInit = {
-    ...options,
-  };
   const request = new Request(url, options);
   const response = await env.GUBER_API.fetch(request);
   const data = await getBody<T>(response);
