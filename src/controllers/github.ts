@@ -333,19 +333,65 @@ class GitHubController implements Controller {
         throw new Error("ReleaseDeploy must have 'repository' specified");
       }
 
-      if (!spec.tag) {
-        throw new Error("ReleaseDeploy must have 'tag' specified");
-      }
-
       if (!env.GITHUB_TOKEN) {
         throw new Error("GITHUB_TOKEN environment variable is required");
       }
 
+      // Get the release tag - either specified or latest
+      let releaseTag = spec.tag;
+      let releaseData = null;
+
+      if (!releaseTag) {
+        console.log(`Fetching latest release for ${spec.repository}`);
+        
+        const latestReleaseResponse = await fetch(
+          `https://api.github.com/repos/${spec.repository}/releases/latest`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${env.GITHUB_TOKEN}`,
+              "Accept": "application/vnd.github.v3+json",
+              "User-Agent": "Guber-GitHub-Controller/1.0",
+            },
+          },
+        );
+
+        if (!latestReleaseResponse.ok) {
+          const errorResponse = await latestReleaseResponse.json();
+          throw new Error(
+            `Failed to fetch latest release: ${JSON.stringify(errorResponse)}`,
+          );
+        }
+
+        releaseData = await latestReleaseResponse.json();
+        releaseTag = releaseData.tag_name;
+        console.log(`Using latest release tag: ${releaseTag}`);
+      } else {
+        // Fetch specific release data
+        console.log(`Fetching release data for tag ${releaseTag}`);
+        
+        const releaseResponse = await fetch(
+          `https://api.github.com/repos/${spec.repository}/releases/tags/${releaseTag}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${env.GITHUB_TOKEN}`,
+              "Accept": "application/vnd.github.v3+json",
+              "User-Agent": "Guber-GitHub-Controller/1.0",
+            },
+          },
+        );
+
+        if (releaseResponse.ok) {
+          releaseData = await releaseResponse.json();
+        }
+      }
+
       // Create GitHub deployment
       const deploymentPayload: any = {
-        ref: spec.tag,
+        ref: releaseTag,
         environment: spec.environment || "production",
-        description: spec.description || `Deploy ${spec.tag} to ${spec.environment || "production"}`,
+        description: spec.description || `Deploy ${releaseTag} to ${spec.environment || "production"}`,
         auto_merge: spec.autoMerge || false,
         required_contexts: spec.requiredContexts || [],
       };
@@ -356,7 +402,7 @@ class GitHubController implements Controller {
       }
 
       console.log(
-        `Creating GitHub deployment for ${spec.repository} tag ${spec.tag}`,
+        `Creating GitHub deployment for ${spec.repository} tag ${releaseTag}`,
       );
 
       const deploymentResponse = await fetch(
@@ -386,6 +432,26 @@ class GitHubController implements Controller {
       console.log(
         `GitHub deployment created successfully with ID: ${deploymentId}`,
       );
+
+      // Create WorkerScriptVersion if requested
+      let workerScriptVersionName = null;
+      if (spec.createWorkerScriptVersion && spec.workerScriptVersionSpec) {
+        try {
+          workerScriptVersionName = await this.createWorkerScriptVersion(
+            env,
+            spec,
+            releaseData,
+            releaseTag,
+            resourceName,
+          );
+        } catch (error) {
+          console.error(
+            `Failed to create WorkerScriptVersion for ${resourceName}:`,
+            error,
+          );
+          // Don't fail the entire deployment if WorkerScriptVersion creation fails
+        }
+      }
 
       // Create deployment status if specified
       let statusId = null;
@@ -428,23 +494,26 @@ class GitHubController implements Controller {
       }
 
       // Update the resource status in the database
+      const statusUpdate: any = {
+        state: "Ready",
+        deployment_id: deploymentId,
+        status_id: statusId,
+        repository: spec.repository,
+        tag: releaseTag,
+        environment: spec.environment || "production",
+        createdAt: new Date().toISOString(),
+        endpoint: `https://api.github.com/repos/${spec.repository}/deployments/${deploymentId}`,
+        url: `https://github.com/${spec.repository}/deployments`,
+      };
+
+      if (workerScriptVersionName) {
+        statusUpdate.workerScriptVersionName = workerScriptVersionName;
+      }
+
       await env.DB.prepare(
         "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
       )
-        .bind(
-          JSON.stringify({
-            state: "Ready",
-            deployment_id: deploymentId,
-            status_id: statusId,
-            repository: spec.repository,
-            tag: spec.tag,
-            environment: spec.environment || "production",
-            createdAt: new Date().toISOString(),
-            endpoint: `https://api.github.com/repos/${spec.repository}/deployments/${deploymentId}`,
-            url: `https://github.com/${spec.repository}/deployments`,
-          }),
-          resourceName,
-        )
+        .bind(JSON.stringify(statusUpdate), resourceName)
         .run();
 
       console.log(
@@ -628,6 +697,141 @@ class GitHubController implements Controller {
     } catch (error) {
       console.error("Error during ReleaseDeploy reconciliation:", error);
     }
+  }
+
+  private async createWorkerScriptVersion(
+    env: any,
+    spec: any,
+    releaseData: any,
+    releaseTag: string,
+    releaseDeployName: string,
+  ): Promise<string> {
+    const workerScriptVersionSpec = spec.workerScriptVersionSpec;
+    
+    if (!workerScriptVersionSpec.workerName) {
+      throw new Error("workerScriptVersionSpec.workerName is required when createWorkerScriptVersion is true");
+    }
+
+    // Generate a unique name for the WorkerScriptVersion
+    const workerScriptVersionName = `${workerScriptVersionSpec.workerName}-${releaseTag.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`;
+
+    // Get script content from release if not provided
+    let scriptContent = workerScriptVersionSpec.script;
+    
+    if (!scriptContent && releaseData) {
+      // Look for common script files in release assets
+      const scriptAssets = releaseData.assets?.filter((asset: any) => 
+        asset.name.endsWith('.js') || 
+        asset.name.endsWith('.mjs') || 
+        asset.name === 'worker.js' ||
+        asset.name === 'index.js'
+      );
+
+      if (scriptAssets && scriptAssets.length > 0) {
+        // Use the first matching asset
+        const scriptAsset = scriptAssets[0];
+        console.log(`Downloading script from release asset: ${scriptAsset.name}`);
+
+        const scriptResponse = await fetch(scriptAsset.browser_download_url, {
+          headers: {
+            Authorization: `Bearer ${env.GITHUB_TOKEN}`,
+            "User-Agent": "Guber-GitHub-Controller/1.0",
+          },
+        });
+
+        if (scriptResponse.ok) {
+          scriptContent = await scriptResponse.text();
+        } else {
+          console.warn(`Failed to download script asset ${scriptAsset.name}, will use empty script`);
+          scriptContent = "// Script content could not be fetched from release";
+        }
+      } else {
+        // Try to get the main branch content as fallback
+        console.log("No script assets found in release, trying to fetch from repository");
+        
+        const repoContentResponse = await fetch(
+          `https://api.github.com/repos/${spec.repository}/contents/worker.js`,
+          {
+            headers: {
+              Authorization: `Bearer ${env.GITHUB_TOKEN}`,
+              "Accept": "application/vnd.github.v3+json",
+              "User-Agent": "Guber-GitHub-Controller/1.0",
+            },
+          },
+        );
+
+        if (repoContentResponse.ok) {
+          const contentData = await repoContentResponse.json();
+          if (contentData.content) {
+            scriptContent = atob(contentData.content);
+          }
+        }
+
+        if (!scriptContent) {
+          scriptContent = "// Script content could not be fetched";
+        }
+      }
+    }
+
+    // Create the WorkerScriptVersion resource
+    const workerScriptVersionResource = {
+      name: workerScriptVersionName,
+      namespace: null,
+      group_name: "cf.guber.proc.io",
+      kind: "WorkerScriptVersion",
+      plural: "workerscriptversions",
+      spec: JSON.stringify({
+        workerName: workerScriptVersionSpec.workerName,
+        script: scriptContent,
+        metadata: {
+          ...workerScriptVersionSpec.metadata,
+          sourceRepository: spec.repository,
+          sourceTag: releaseTag,
+          createdBy: `ReleaseDeploy/${releaseDeployName}`,
+          releaseUrl: releaseData?.html_url,
+        },
+      }),
+      status: JSON.stringify({
+        state: "Pending",
+        message: `Created from ReleaseDeploy ${releaseDeployName}`,
+      }),
+    };
+
+    // Insert the WorkerScriptVersion into the database
+    await env.DB.prepare(
+      `INSERT INTO resources (name, namespace, group_name, kind, plural, spec, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+    )
+      .bind(
+        workerScriptVersionResource.name,
+        workerScriptVersionResource.namespace,
+        workerScriptVersionResource.group_name,
+        workerScriptVersionResource.kind,
+        workerScriptVersionResource.plural,
+        workerScriptVersionResource.spec,
+        workerScriptVersionResource.status,
+      )
+      .run();
+
+    console.log(
+      `Created WorkerScriptVersion ${workerScriptVersionName} from ReleaseDeploy ${releaseDeployName}`,
+    );
+
+    // Queue the WorkerScriptVersion for provisioning by the Cloudflare controller
+    if (env.GUBER_BUS) {
+      await env.GUBER_BUS.send({
+        action: "create",
+        resourceType: "workerscriptversion",
+        resourceName: workerScriptVersionName,
+        group: "cf.guber.proc.io",
+        kind: "WorkerScriptVersion",
+        plural: "workerscriptversions",
+        namespace: null,
+        spec: JSON.parse(workerScriptVersionResource.spec),
+      });
+    }
+
+    return workerScriptVersionName;
   }
 
   private async reconcilePendingReleaseDeploys(env: any) {
