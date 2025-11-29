@@ -483,7 +483,7 @@ class GitHubController implements Controller {
       let releaseData = null;
 
       if (!releaseTag) {
-        console.log(`Fetching latest release for ${spec.repository}`);
+        console.log(`🔍 Fetching latest release for repository: ${spec.repository}`);
         
         const latestReleaseResponse = await fetch(
           `https://api.github.com/repos/${spec.repository}/releases/latest`,
@@ -499,6 +499,7 @@ class GitHubController implements Controller {
 
         if (!latestReleaseResponse.ok) {
           const errorResponse = await latestReleaseResponse.json();
+          console.error(`❌ Failed to fetch latest release for ${spec.repository}:`, errorResponse);
           throw new Error(
             `Failed to fetch latest release: ${JSON.stringify(errorResponse)}`,
           );
@@ -506,10 +507,17 @@ class GitHubController implements Controller {
 
         releaseData = await latestReleaseResponse.json();
         releaseTag = releaseData.tag_name;
-        console.log(`Using latest release tag: ${releaseTag}`);
+        console.log(`✅ Found latest release for ${spec.repository}: ${releaseTag} (published: ${releaseData.published_at})`);
+        
+        if (releaseData.prerelease) {
+          console.log(`⚠️  Note: Release ${releaseTag} is marked as prerelease`);
+        }
+        if (releaseData.draft) {
+          console.log(`⚠️  Note: Release ${releaseTag} is marked as draft`);
+        }
       } else {
         // Fetch specific release data
-        console.log(`Fetching release data for tag ${releaseTag}`);
+        console.log(`🔍 Fetching release data for specific tag: ${releaseTag} from ${spec.repository}`);
         
         const releaseResponse = await fetch(
           `https://api.github.com/repos/${spec.repository}/releases/tags/${releaseTag}`,
@@ -525,6 +533,16 @@ class GitHubController implements Controller {
 
         if (releaseResponse.ok) {
           releaseData = await releaseResponse.json();
+          console.log(`✅ Found release data for ${releaseTag}: ${releaseData.name || releaseTag} (published: ${releaseData.published_at})`);
+          
+          if (releaseData.prerelease) {
+            console.log(`⚠️  Note: Release ${releaseTag} is marked as prerelease`);
+          }
+          if (releaseData.draft) {
+            console.log(`⚠️  Note: Release ${releaseTag} is marked as draft`);
+          }
+        } else {
+          console.warn(`⚠️  Could not fetch release data for tag ${releaseTag} from ${spec.repository}`);
         }
       }
 
@@ -543,8 +561,15 @@ class GitHubController implements Controller {
       }
 
       console.log(
-        `Creating GitHub deployment for ${spec.repository} tag ${releaseTag}`,
+        `🚀 Creating GitHub deployment for ${spec.repository} tag ${releaseTag} to environment: ${spec.environment || "production"}`,
       );
+      
+      if (releaseData) {
+        console.log(`📦 Release details: ${releaseData.name || releaseTag} - ${releaseData.body ? releaseData.body.substring(0, 100) + '...' : 'No description'}`);
+        if (releaseData.assets && releaseData.assets.length > 0) {
+          console.log(`📎 Release has ${releaseData.assets.length} assets: ${releaseData.assets.map(a => a.name).join(', ')}`);
+        }
+      }
 
       const deploymentResponse = await fetch(
         `https://api.github.com/repos/${spec.repository}/deployments`,
@@ -571,8 +596,9 @@ class GitHubController implements Controller {
       const deploymentId = deploymentResult.id;
 
       console.log(
-        `GitHub deployment created successfully with ID: ${deploymentId}`,
+        `✅ GitHub deployment created successfully with ID: ${deploymentId} for ${spec.repository}@${releaseTag}`,
       );
+      console.log(`🔗 Deployment URL: https://github.com/${spec.repository}/deployments`);
 
       // Create WorkerScriptVersion if requested
       let workerScriptVersionName = null;
@@ -965,7 +991,7 @@ class GitHubController implements Controller {
       if (scriptAssets && scriptAssets.length > 0) {
         // Use the first matching asset
         const scriptAsset = scriptAssets[0];
-        console.log(`Downloading script from release asset: ${scriptAsset.name}`);
+        console.log(`📥 Downloading script from release asset: ${scriptAsset.name} (${scriptAsset.size} bytes)`);
 
         const scriptResponse = await fetch(scriptAsset.browser_download_url, {
           headers: {
@@ -976,13 +1002,14 @@ class GitHubController implements Controller {
 
         if (scriptResponse.ok) {
           scriptContent = await scriptResponse.text();
+          console.log(`✅ Successfully downloaded script content (${scriptContent.length} characters)`);
         } else {
-          console.warn(`Failed to download script asset ${scriptAsset.name}, will use empty script`);
+          console.warn(`❌ Failed to download script asset ${scriptAsset.name}, will use empty script`);
           scriptContent = "// Script content could not be fetched from release";
         }
       } else {
         // Try to get the main branch content as fallback
-        console.log("No script assets found in release, trying to fetch from repository");
+        console.log(`⚠️  No script assets found in release ${releaseTag}, trying to fetch from repository main branch`);
         
         const repoContentResponse = await fetch(
           `https://api.github.com/repos/${spec.repository}/contents/worker.js`,
@@ -999,10 +1026,14 @@ class GitHubController implements Controller {
           const contentData = await repoContentResponse.json();
           if (contentData.content) {
             scriptContent = atob(contentData.content);
+            console.log(`✅ Successfully fetched worker.js from repository main branch (${scriptContent.length} characters)`);
           }
+        } else {
+          console.warn(`❌ Could not fetch worker.js from repository main branch`);
         }
 
         if (!scriptContent) {
+          console.warn(`⚠️  No script content available for WorkerScriptVersion, using placeholder`);
           scriptContent = "// Script content could not be fetched";
         }
       }
@@ -1058,8 +1089,9 @@ class GitHubController implements Controller {
       }
 
       console.log(
-        `Created WorkerScriptVersion ${workerScriptVersionName} from ReleaseDeploy ${releaseDeployName} via HTTP API`,
+        `✅ Created WorkerScriptVersion ${workerScriptVersionName} from ReleaseDeploy ${releaseDeployName} via HTTP API`,
       );
+      console.log(`📝 WorkerScriptVersion details: worker=${workerScriptVersionSpec.workerName}, source=${spec.repository}@${releaseTag}`);
     } catch (error) {
       console.error(`Failed to create WorkerScriptVersion via HTTP API:`, error);
       throw error;
