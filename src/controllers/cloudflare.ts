@@ -2604,6 +2604,30 @@ class CloudflareController implements Controller {
     spec: any,
   ): Promise<boolean> {
     try {
+      // Validate that scriptName is specified
+      if (!spec.scriptName) {
+        const errorMessage = "WorkerScriptVersion must specify 'scriptName' to target a Worker resource";
+        console.error(`Failed to provision WorkerScriptVersion ${resourceName}: ${errorMessage}`);
+        
+        const workerScriptVersionUpdate: WorkerScriptVersion = {
+          apiVersion: "cf.guber.proc.io/v1",
+          kind: "WorkerScriptVersion",
+          metadata: {
+            name: resourceName,
+            namespace: undefined,
+          },
+          status: {
+            state: "Failed",
+            error: errorMessage,
+          },
+        };
+
+        await patchApisCfGuberProcIoV1WorkerscriptversionsName(
+          resourceName,
+          workerScriptVersionUpdate,
+        );
+        return false;
+      }
       // Check dependencies first
       if (spec.dependencies && spec.dependencies.length > 0) {
         console.log(
@@ -3402,6 +3426,30 @@ class CloudflareController implements Controller {
     spec: any,
   ): Promise<boolean> {
     try {
+      // Validate that scriptName is specified
+      if (!spec.scriptName) {
+        const errorMessage = "WorkerScriptDeployment must specify 'scriptName' to target a Worker resource";
+        console.error(`Failed to provision WorkerScriptDeployment ${resourceName}: ${errorMessage}`);
+        
+        const workerScriptDeploymentUpdate: WorkerScriptDeployment = {
+          apiVersion: "cf.guber.proc.io/v1",
+          kind: "WorkerScriptDeployment",
+          metadata: {
+            name: resourceName,
+            namespace: undefined,
+          },
+          status: {
+            state: "Failed",
+            error: errorMessage,
+          },
+        };
+
+        await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
+          resourceName,
+          workerScriptDeploymentUpdate,
+        );
+        return false;
+      }
       // Check dependencies first
       if (spec.dependencies && spec.dependencies.length > 0) {
         console.log(
