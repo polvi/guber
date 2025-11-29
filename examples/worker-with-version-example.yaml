@@ -135,22 +135,3 @@ spec:
       name: hello-world-worker
       group: cf.guber.proc.io
 
----
-# Finally, create a deployment that routes traffic to the new version
-apiVersion: cf.guber.proc.io/v1
-kind: WorkerScriptDeployment
-metadata:
-  name: hello-world-worker-v2-deployment
-spec:
-  scriptName: hello-world-worker
-  strategy: percentage
-  versions:
-    - version_id: "{{ .hello-world-worker-v2.status.version_id }}"  # This would need to be resolved
-      percentage: 100
-  annotations:
-    message: "Deploying version 2.0 to production"
-    triggered_by: "guber-example"
-  dependencies:
-    - kind: WorkerScriptVersion
-      name: hello-world-worker-v2
-      group: cf.guber.proc.io
