@@ -194,11 +194,20 @@ export class GitHubController implements Controller {
 
             for (const dependency of spec.dependencies) {
               const depGroup = dependency.group || "gh.guber.proc.io";
-              const depResource = await env.DB.prepare(
-                "SELECT * FROM resources WHERE name=? AND kind=? AND group_name=? AND namespace IS NULL",
-              )
-                .bind(dependency.name, dependency.kind, depGroup)
-                .first();
+              let depResource = null;
+              try {
+                if (dependency.kind === 'Worker') {
+                  depResource = await getApisCfGuberProcIoV1WorkersName(dependency.name);
+                } else if (dependency.kind === 'WorkerScriptVersion') {
+                  depResource = await getApisCfGuberProcIoV1WorkerscriptversionsName(dependency.name);
+                } else if (dependency.kind === 'D1') {
+                  depResource = await getApisCfGuberProcIoV1D1sName(dependency.name);
+                } else if (dependency.kind === 'Queue') {
+                  depResource = await getApisCfGuberProcIoV1QsName(dependency.name);
+                }
+              } catch (error) {
+                depResource = null;
+              }
 
               if (!depResource || !depResource.status) {
                 allDependenciesReady = false;
