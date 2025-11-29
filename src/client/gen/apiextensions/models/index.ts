@@ -23,3 +23,7 @@ export * from "./ioK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResource
 export * from "./ioK8sApimachineryPkgApisMetaV1ObjectMeta";
 export * from "./ioK8sApimachineryPkgApisMetaV1ObjectMetaAnnotations";
 export * from "./ioK8sApimachineryPkgApisMetaV1ObjectMetaLabels";
+export * from "./patchApisApiextensionsK8sIoV1CustomresourcedefinitionsNameFieldValidation";
+export * from "./patchApisApiextensionsK8sIoV1CustomresourcedefinitionsNameParams";
+export * from "./putApisApiextensionsK8sIoV1CustomresourcedefinitionsNameFieldValidation";
+export * from "./putApisApiextensionsK8sIoV1CustomresourcedefinitionsNameParams";

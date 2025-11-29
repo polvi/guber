@@ -1077,7 +1077,9 @@ app.patch(
       names: {
         plural: result.plural,
         kind: result.kind,
-        shortNames: result.short_names ? JSON.parse(result.short_names) : undefined,
+        shortNames: result.short_names
+          ? JSON.parse(result.short_names)
+          : undefined,
       },
     };
 

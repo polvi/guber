@@ -390,6 +390,240 @@ export const getGetApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponse
     ...overrideResponse,
   });
 
+export const getPutApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponseMock =
+  (
+    overrideResponse: Partial<IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition> = {},
+  ): IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition => ({
+    apiVersion: faker.helpers.arrayElement([
+      "apiextensions.k8s.io/v1",
+    ] as const),
+    kind: faker.helpers.arrayElement(["CustomResourceDefinition"] as const),
+    metadata: {
+      name: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      namespace: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      creationTimestamp: faker.helpers.arrayElement([
+        `${faker.date.past().toISOString().split(".")[0]}Z`,
+        undefined,
+      ]),
+      labels: faker.helpers.arrayElement([
+        {
+          [faker.string.alphanumeric(5)]: faker.string.alpha({
+            length: { min: 10, max: 20 },
+          }),
+        },
+        undefined,
+      ]),
+      annotations: faker.helpers.arrayElement([
+        {
+          [faker.string.alphanumeric(5)]: faker.string.alpha({
+            length: { min: 10, max: 20 },
+          }),
+        },
+        undefined,
+      ]),
+    },
+    spec: {
+      group: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      names: {
+        kind: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        plural: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        shortNames: faker.helpers.arrayElement([
+          Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+          undefined,
+        ]),
+      },
+      scope: faker.helpers.arrayElement(["Cluster", "Namespaced"] as const),
+      versions: Array.from(
+        { length: faker.number.int({ min: 1, max: 10 }) },
+        (_, i) => i + 1,
+      ).map(() => ({
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        served: faker.datatype.boolean(),
+        storage: faker.datatype.boolean(),
+      })),
+    },
+    status: faker.helpers.arrayElement([
+      {
+        acceptedNames: faker.helpers.arrayElement([
+          {
+            kind: faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              undefined,
+            ]),
+            plural: faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              undefined,
+            ]),
+            shortNames: faker.helpers.arrayElement([
+              Array.from(
+                { length: faker.number.int({ min: 1, max: 10 }) },
+                (_, i) => i + 1,
+              ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+              undefined,
+            ]),
+          },
+          undefined,
+        ]),
+        conditions: faker.helpers.arrayElement([
+          Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => ({
+            type: faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              undefined,
+            ]),
+            status: faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              undefined,
+            ]),
+            lastTransitionTime: faker.helpers.arrayElement([
+              `${faker.date.past().toISOString().split(".")[0]}Z`,
+              undefined,
+            ]),
+            reason: faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              undefined,
+            ]),
+            message: faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              undefined,
+            ]),
+          })),
+          undefined,
+        ]),
+      },
+      undefined,
+    ]),
+    ...overrideResponse,
+  });
+
+export const getPatchApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponseMock =
+  (
+    overrideResponse: Partial<IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition> = {},
+  ): IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition => ({
+    apiVersion: faker.helpers.arrayElement([
+      "apiextensions.k8s.io/v1",
+    ] as const),
+    kind: faker.helpers.arrayElement(["CustomResourceDefinition"] as const),
+    metadata: {
+      name: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      namespace: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+      creationTimestamp: faker.helpers.arrayElement([
+        `${faker.date.past().toISOString().split(".")[0]}Z`,
+        undefined,
+      ]),
+      labels: faker.helpers.arrayElement([
+        {
+          [faker.string.alphanumeric(5)]: faker.string.alpha({
+            length: { min: 10, max: 20 },
+          }),
+        },
+        undefined,
+      ]),
+      annotations: faker.helpers.arrayElement([
+        {
+          [faker.string.alphanumeric(5)]: faker.string.alpha({
+            length: { min: 10, max: 20 },
+          }),
+        },
+        undefined,
+      ]),
+    },
+    spec: {
+      group: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      names: {
+        kind: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        plural: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        shortNames: faker.helpers.arrayElement([
+          Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+          undefined,
+        ]),
+      },
+      scope: faker.helpers.arrayElement(["Cluster", "Namespaced"] as const),
+      versions: Array.from(
+        { length: faker.number.int({ min: 1, max: 10 }) },
+        (_, i) => i + 1,
+      ).map(() => ({
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        served: faker.datatype.boolean(),
+        storage: faker.datatype.boolean(),
+      })),
+    },
+    status: faker.helpers.arrayElement([
+      {
+        acceptedNames: faker.helpers.arrayElement([
+          {
+            kind: faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              undefined,
+            ]),
+            plural: faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              undefined,
+            ]),
+            shortNames: faker.helpers.arrayElement([
+              Array.from(
+                { length: faker.number.int({ min: 1, max: 10 }) },
+                (_, i) => i + 1,
+              ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+              undefined,
+            ]),
+          },
+          undefined,
+        ]),
+        conditions: faker.helpers.arrayElement([
+          Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => ({
+            type: faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              undefined,
+            ]),
+            status: faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              undefined,
+            ]),
+            lastTransitionTime: faker.helpers.arrayElement([
+              `${faker.date.past().toISOString().split(".")[0]}Z`,
+              undefined,
+            ]),
+            reason: faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              undefined,
+            ]),
+            message: faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              undefined,
+            ]),
+          })),
+          undefined,
+        ]),
+      },
+      undefined,
+    ]),
+    ...overrideResponse,
+  });
+
 export const getDeleteApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponseMock =
   (
     overrideResponse: Partial<IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition> = {},
@@ -600,6 +834,68 @@ export const getGetApisApiextensionsK8sIoV1CustomresourcedefinitionsNameMockHand
     );
   };
 
+export const getPutApisApiextensionsK8sIoV1CustomresourcedefinitionsNameMockHandler =
+  (
+    overrideResponse?:
+      | IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition
+      | ((
+          info: Parameters<Parameters<typeof http.put>[1]>[0],
+        ) =>
+          | Promise<IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition>
+          | IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition),
+    options?: RequestHandlerOptions,
+  ) => {
+    return http.put(
+      "*/apis/apiextensions.k8s.io/v1/customresourcedefinitions/:name",
+      async (info) => {
+        await delay(1000);
+
+        return new HttpResponse(
+          JSON.stringify(
+            overrideResponse !== undefined
+              ? typeof overrideResponse === "function"
+                ? await overrideResponse(info)
+                : overrideResponse
+              : getPutApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponseMock(),
+          ),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      },
+      options,
+    );
+  };
+
+export const getPatchApisApiextensionsK8sIoV1CustomresourcedefinitionsNameMockHandler =
+  (
+    overrideResponse?:
+      | IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition
+      | ((
+          info: Parameters<Parameters<typeof http.patch>[1]>[0],
+        ) =>
+          | Promise<IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition>
+          | IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition),
+    options?: RequestHandlerOptions,
+  ) => {
+    return http.patch(
+      "*/apis/apiextensions.k8s.io/v1/customresourcedefinitions/:name",
+      async (info) => {
+        await delay(1000);
+
+        return new HttpResponse(
+          JSON.stringify(
+            overrideResponse !== undefined
+              ? typeof overrideResponse === "function"
+                ? await overrideResponse(info)
+                : overrideResponse
+              : getPatchApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponseMock(),
+          ),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      },
+      options,
+    );
+  };
+
 export const getDeleteApisApiextensionsK8sIoV1CustomresourcedefinitionsNameMockHandler =
   (
     overrideResponse?:
@@ -634,5 +930,7 @@ export const getDefaultMock = () => [
   getGetApisApiextensionsK8sIoV1CustomresourcedefinitionsMockHandler(),
   getPostApisApiextensionsK8sIoV1CustomresourcedefinitionsMockHandler(),
   getGetApisApiextensionsK8sIoV1CustomresourcedefinitionsNameMockHandler(),
+  getPutApisApiextensionsK8sIoV1CustomresourcedefinitionsNameMockHandler(),
+  getPatchApisApiextensionsK8sIoV1CustomresourcedefinitionsNameMockHandler(),
   getDeleteApisApiextensionsK8sIoV1CustomresourcedefinitionsNameMockHandler(),
 ];
