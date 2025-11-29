@@ -220,30 +220,21 @@ export class GitHubController implements Controller {
               };
 
               // Update status using the generated GitHub client
-              try {
-                const releaseDeployUpdate: ReleaseDeploy = {
-                  apiVersion: "gh.guber.proc.io/v1",
-                  kind: "ReleaseDeploy",
-                  metadata: {
-                    name: resource.name,
-                    namespace: resource.namespace || undefined,
-                  },
-                  status: updatedStatus,
-                };
+              const releaseDeployUpdate: ReleaseDeploy = {
+                apiVersion: "gh.guber.proc.io/v1",
+                kind: "ReleaseDeploy",
+                metadata: {
+                  name: resource.name,
+                  namespace: resource.namespace || undefined,
+                },
+                status: updatedStatus,
+              };
 
-                await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
-                  "default",
-                  resource.name,
-                  releaseDeployUpdate,
-                );
-              } catch (clientError) {
-                console.error("Failed to update via client, falling back to database:", clientError);
-                await env.DB.prepare(
-                  "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-                )
-                  .bind(JSON.stringify(updatedStatus), resource.name)
-                  .run();
-              }
+              await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+                "default",
+                resource.name,
+                releaseDeployUpdate,
+              );
             }
           }
         }
@@ -294,30 +285,21 @@ export class GitHubController implements Controller {
             };
 
             // Update status using the generated GitHub client
-            try {
-              const releaseDeployUpdate: ReleaseDeploy = {
-                apiVersion: "gh.guber.proc.io/v1",
-                kind: "ReleaseDeploy",
-                metadata: {
-                  name: resourceName,
-                  namespace: namespace || undefined,
-                },
-                status: pendingStatus,
-              };
+            const releaseDeployUpdate: ReleaseDeploy = {
+              apiVersion: "gh.guber.proc.io/v1",
+              kind: "ReleaseDeploy",
+              metadata: {
+                name: resourceName,
+                namespace: namespace || undefined,
+              },
+              status: pendingStatus,
+            };
 
-              await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
-                namespace || "default",
-                resourceName,
-                releaseDeployUpdate,
-              );
-            } catch (clientError) {
-              console.error("Failed to update via client, falling back to database:", clientError);
-              await env.DB.prepare(
-                "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-              )
-                .bind(JSON.stringify(pendingStatus), resourceName)
-                .run();
-            }
+            await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+              namespace || "default",
+              resourceName,
+              releaseDeployUpdate,
+            );
             return false;
           }
 
@@ -332,30 +314,21 @@ export class GitHubController implements Controller {
             };
 
             // Update status using the generated GitHub client
-            try {
-              const releaseDeployUpdate: ReleaseDeploy = {
-                apiVersion: "gh.guber.proc.io/v1",
-                kind: "ReleaseDeploy",
-                metadata: {
-                  name: resourceName,
-                  namespace: namespace || undefined,
-                },
-                status: pendingStatus,
-              };
+            const releaseDeployUpdate: ReleaseDeploy = {
+              apiVersion: "gh.guber.proc.io/v1",
+              kind: "ReleaseDeploy",
+              metadata: {
+                name: resourceName,
+                namespace: namespace || undefined,
+              },
+              status: pendingStatus,
+            };
 
-              await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
-                namespace || "default",
-                resourceName,
-                releaseDeployUpdate,
-              );
-            } catch (clientError) {
-              console.error("Failed to update via client, falling back to database:", clientError);
-              await env.DB.prepare(
-                "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-              )
-                .bind(JSON.stringify(pendingStatus), resourceName)
-                .run();
-            }
+            await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+              namespace || "default",
+              resourceName,
+              releaseDeployUpdate,
+            );
             return false;
           }
 
@@ -371,30 +344,21 @@ export class GitHubController implements Controller {
             };
 
             // Update status using the generated GitHub client
-            try {
-              const releaseDeployUpdate: ReleaseDeploy = {
-                apiVersion: "gh.guber.proc.io/v1",
-                kind: "ReleaseDeploy",
-                metadata: {
-                  name: resourceName,
-                  namespace: namespace || undefined,
-                },
-                status: pendingStatus,
-              };
+            const releaseDeployUpdate: ReleaseDeploy = {
+              apiVersion: "gh.guber.proc.io/v1",
+              kind: "ReleaseDeploy",
+              metadata: {
+                name: resourceName,
+                namespace: namespace || undefined,
+              },
+              status: pendingStatus,
+            };
 
-              await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
-                namespace || "default",
-                resourceName,
-                releaseDeployUpdate,
-              );
-            } catch (clientError) {
-              console.error("Failed to update via client, falling back to database:", clientError);
-              await env.DB.prepare(
-                "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-              )
-                .bind(JSON.stringify(pendingStatus), resourceName)
-                .run();
-            }
+            await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+              namespace || "default",
+              resourceName,
+              releaseDeployUpdate,
+            );
             return false;
           }
         }
@@ -691,30 +655,21 @@ export class GitHubController implements Controller {
       }
 
       // Update status using the generated GitHub client
-      try {
-        const releaseDeployUpdate: ReleaseDeploy = {
-          apiVersion: "gh.guber.proc.io/v1",
-          kind: "ReleaseDeploy",
-          metadata: {
-            name: resourceName,
-            namespace: namespace || undefined,
-          },
-          status: statusUpdate,
-        };
+      const releaseDeployUpdate: ReleaseDeploy = {
+        apiVersion: "gh.guber.proc.io/v1",
+        kind: "ReleaseDeploy",
+        metadata: {
+          name: resourceName,
+          namespace: namespace || undefined,
+        },
+        status: statusUpdate,
+      };
 
-        await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
-          namespace || "default",
-          resourceName,
-          releaseDeployUpdate,
-        );
-      } catch (clientError) {
-        console.error("Failed to update via client, falling back to database:", clientError);
-        await env.DB.prepare(
-          "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-        )
-          .bind(JSON.stringify(statusUpdate), resourceName)
-          .run();
-      }
+      await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+        namespace || "default",
+        resourceName,
+        releaseDeployUpdate,
+      );
 
       console.log(`ReleaseDeploy ${resourceName} provisioned successfully`);
       return true;
@@ -731,30 +686,21 @@ export class GitHubController implements Controller {
       };
 
       // Update status using the generated GitHub client
-      try {
-        const releaseDeployUpdate: ReleaseDeploy = {
-          apiVersion: "gh.guber.proc.io/v1",
-          kind: "ReleaseDeploy",
-          metadata: {
-            name: resourceName,
-            namespace: namespace || undefined,
-          },
-          status: failedStatus,
-        };
+      const releaseDeployUpdate: ReleaseDeploy = {
+        apiVersion: "gh.guber.proc.io/v1",
+        kind: "ReleaseDeploy",
+        metadata: {
+          name: resourceName,
+          namespace: namespace || undefined,
+        },
+        status: failedStatus,
+      };
 
-        await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
-          namespace || "default",
-          resourceName,
-          releaseDeployUpdate,
-        );
-      } catch (clientError) {
-        console.error("Failed to update via client, falling back to database:", clientError);
-        await env.DB.prepare(
-          "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-        )
-          .bind(JSON.stringify(failedStatus), resourceName)
-          .run();
-      }
+      await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+        namespace || "default",
+        resourceName,
+        releaseDeployUpdate,
+      );
 
       return false;
     }
@@ -891,30 +837,21 @@ export class GitHubController implements Controller {
                 };
 
                 // Update status using the generated GitHub client
-                try {
-                  const releaseDeployUpdate: ReleaseDeploy = {
-                    apiVersion: "gh.guber.proc.io/v1",
-                    kind: "ReleaseDeploy",
-                    metadata: {
-                      name: resource.name,
-                      namespace: resource.namespace || undefined,
-                    },
-                    status: updatedStatus,
-                  };
+                const releaseDeployUpdate: ReleaseDeploy = {
+                  apiVersion: "gh.guber.proc.io/v1",
+                  kind: "ReleaseDeploy",
+                  metadata: {
+                    name: resource.name,
+                    namespace: resource.namespace || undefined,
+                  },
+                  status: updatedStatus,
+                };
 
-                  await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
-                    "default",
-                    resource.name,
-                    releaseDeployUpdate,
-                  );
-                } catch (clientError) {
-                  console.error("Failed to update via client, falling back to database:", clientError);
-                  await env.DB.prepare(
-                    "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-                  )
-                    .bind(JSON.stringify(updatedStatus), resource.name)
-                    .run();
-                }
+                await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+                  "default",
+                  resource.name,
+                  releaseDeployUpdate,
+                );
               } else {
                 // Update last health check timestamp
                 const updatedStatus = {
@@ -1195,30 +1132,21 @@ export class GitHubController implements Controller {
             };
 
             // Update status using the generated GitHub client
-            try {
-              const releaseDeployUpdate: ReleaseDeploy = {
-                apiVersion: "gh.guber.proc.io/v1",
-                kind: "ReleaseDeploy",
-                metadata: {
-                  name: deploy.name,
-                  namespace: deploy.namespace || undefined,
-                },
-                status: updatedStatus,
-              };
+            const releaseDeployUpdate: ReleaseDeploy = {
+              apiVersion: "gh.guber.proc.io/v1",
+              kind: "ReleaseDeploy",
+              metadata: {
+                name: deploy.name,
+                namespace: deploy.namespace || undefined,
+              },
+              status: updatedStatus,
+            };
 
-              await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
-                "default",
-                deploy.name,
-                releaseDeployUpdate,
-              );
-            } catch (clientError) {
-              console.error("Failed to update via client, falling back to database:", clientError);
-              await env.DB.prepare(
-                "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-              )
-                .bind(JSON.stringify(updatedStatus), deploy.name)
-                .run();
-            }
+            await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+              "default",
+              deploy.name,
+              releaseDeployUpdate,
+            );
           }
         }
       } catch (error) {
