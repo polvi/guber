@@ -10,7 +10,6 @@ spec:
       percentage: 100
   annotations:
     message: "Deploying version 2.0 to production"
-    triggered_by: "guber-example"
   dependencies:
     - kind: WorkerScriptVersion
       name: hello-world-worker-v2
