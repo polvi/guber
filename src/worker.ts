@@ -14,6 +14,13 @@ try {
 
 const app = new Hono<Env>();
 
+// Add controllers as middleware
+for (const controller of config.controllers) {
+  if (controller && typeof controller.use === 'function') {
+    app.use('*', controller.use());
+  }
+}
+
 // Helper function to notify controllers of resource events
 async function notifyControllers(
   event: "created" | "deleted",
