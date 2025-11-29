@@ -19,7 +19,11 @@ class CloudflareController implements Controller {
 
     // Queue for provisioning if it's a Cloudflare resource type
     if (
-      (kind === "D1" || kind === "Queue" || kind === "Worker" || kind === "WorkerScriptVersion" || kind === "WorkerScriptDeployment") &&
+      (kind === "D1" ||
+        kind === "Queue" ||
+        kind === "Worker" ||
+        kind === "WorkerScriptVersion" ||
+        kind === "WorkerScriptDeployment") &&
       env.GUBER_BUS
     ) {
       await env.GUBER_BUS.send({
@@ -43,7 +47,11 @@ class CloudflareController implements Controller {
 
     // Queue for deletion if it's a Cloudflare resource type
     if (
-      (kind === "D1" || kind === "Queue" || kind === "Worker" || kind === "WorkerScriptVersion" || kind === "WorkerScriptDeployment") &&
+      (kind === "D1" ||
+        kind === "Queue" ||
+        kind === "Worker" ||
+        kind === "WorkerScriptVersion" ||
+        kind === "WorkerScriptDeployment") &&
       env.GUBER_BUS
     ) {
       await env.GUBER_BUS.send({
@@ -2657,7 +2665,9 @@ class CloudflareController implements Controller {
           }
         }
 
-        console.log(`All dependencies satisfied for worker script version ${resourceName}`);
+        console.log(
+          `All dependencies satisfied for worker script version ${resourceName}`,
+        );
       }
 
       // Get the worker script content
@@ -2924,26 +2934,26 @@ class CloudflareController implements Controller {
 
       // Extract script name from worker endpoint
       // Example: https://api.cloudflare.com/client/v4/accounts/de7a9036d3ef17964cf2ca17735f74ab/workers/scripts/hello-world-worker-c-workers-cf-guber-proc-io-polvi
-      const actualScriptName = workerStatus.endpoint.split('/workers/scripts/')[1];
-      
+      const actualScriptName =
+        workerStatus.endpoint.split("/workers/scripts/")[1];
+
       if (!actualScriptName) {
-        throw new Error(`Could not extract script name from worker endpoint: ${workerStatus.endpoint}`);
+        throw new Error(
+          `Could not extract script name from worker endpoint: ${workerStatus.endpoint}`,
+        );
       }
 
       console.log(
         `Creating worker script version for ${actualScriptName} (from ${spec.scriptName}) with ${bindings.length} bindings`,
       );
 
-      const uploadResponse = await fetch(
-        `${workerStatus.endpoint}/versions`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
-          },
-          body: formData,
+      const uploadResponse = await fetch(`${workerStatus.endpoint}/versions`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
         },
-      );
+        body: formData,
+      });
 
       if (!uploadResponse.ok) {
         const errorResponse = await uploadResponse.json();
@@ -2956,7 +2966,9 @@ class CloudflareController implements Controller {
       const versionId = result.result.id;
       const versionNumber = result.result.number;
 
-      console.log(`Worker script version ${versionNumber} created successfully with ID: ${versionId}`);
+      console.log(
+        `Worker script version ${versionNumber} created successfully with ID: ${versionId}`,
+      );
 
       // Update the resource status in the database
       await env.DB.prepare(
@@ -2982,7 +2994,10 @@ class CloudflareController implements Controller {
       );
       return true;
     } catch (error) {
-      console.error(`Failed to provision WorkerScriptVersion ${resourceName}:`, error);
+      console.error(
+        `Failed to provision WorkerScriptVersion ${resourceName}:`,
+        error,
+      );
 
       // Update status to failed
       await env.DB.prepare(
@@ -3016,7 +3031,9 @@ class CloudflareController implements Controller {
       const versionId = status?.version_id;
 
       if (versionId && spec.scriptName) {
-        console.log(`Deleting worker script version ${resourceName} (ID: ${versionId}) from script ${spec.scriptName}`);
+        console.log(
+          `Deleting worker script version ${resourceName} (ID: ${versionId}) from script ${spec.scriptName}`,
+        );
 
         // Note: Cloudflare API doesn't provide a direct delete endpoint for versions
         // Versions are typically managed through the script lifecycle
@@ -3030,7 +3047,10 @@ class CloudflareController implements Controller {
         );
       }
     } catch (error) {
-      console.error(`Error deleting WorkerScriptVersion ${resourceName}:`, error);
+      console.error(
+        `Error deleting WorkerScriptVersion ${resourceName}:`,
+        error,
+      );
     }
   }
 
@@ -3043,7 +3063,9 @@ class CloudflareController implements Controller {
         "SELECT * FROM resources WHERE group_name='cf.guber.proc.io' AND kind='WorkerScriptVersion'",
       ).all();
 
-      console.log(`Found ${apiResources?.length || 0} WorkerScriptVersion resources in API`);
+      console.log(
+        `Found ${apiResources?.length || 0} WorkerScriptVersion resources in API`,
+      );
 
       // Check each version resource for dependency resolution and health
       for (const resource of apiResources || []) {
@@ -3061,7 +3083,10 @@ class CloudflareController implements Controller {
           }
 
           // Check if this is a pending version waiting for dependencies or target worker
-          if (status.state === "Pending" && (spec.dependencies || status.pendingWorker)) {
+          if (
+            status.state === "Pending" &&
+            (spec.dependencies || status.pendingWorker)
+          ) {
             // First check if we're waiting for a target worker
             if (status.pendingWorker) {
               const targetWorkerResource = await env.DB.prepare(
@@ -3071,7 +3096,9 @@ class CloudflareController implements Controller {
                 .first();
 
               if (targetWorkerResource && targetWorkerResource.status) {
-                const targetWorkerStatus = JSON.parse(targetWorkerResource.status);
+                const targetWorkerStatus = JSON.parse(
+                  targetWorkerResource.status,
+                );
                 if (targetWorkerStatus.state === "Ready") {
                   console.log(
                     `[Reconcile] Target worker ${status.pendingWorker} is now ready for version ${resource.name}, re-queuing for provisioning`,
@@ -3095,7 +3122,7 @@ class CloudflareController implements Controller {
                   console.log(
                     `[Reconcile] Target worker ${status.pendingWorker} still not ready (${targetWorkerStatus.state}) for version ${resource.name}`,
                   );
-                  
+
                   // Update the worker check timestamp
                   const updatedStatus = {
                     ...status,
@@ -3114,7 +3141,7 @@ class CloudflareController implements Controller {
                 console.log(
                   `[Reconcile] Target worker ${status.pendingWorker} not found or has no status for version ${resource.name}`,
                 );
-                
+
                 // Update status to indicate worker still missing
                 const updatedStatus = {
                   ...status,
@@ -3198,17 +3225,18 @@ class CloudflareController implements Controller {
           }
 
           // For ready versions, verify they still exist in Cloudflare
-          if (status.state === "Ready" && status.version_id && status.endpoint) {
+          if (
+            status.state === "Ready" &&
+            status.version_id &&
+            status.endpoint
+          ) {
             try {
-              const versionResponse = await fetch(
-                status.endpoint,
-                {
-                  method: "GET",
-                  headers: {
-                    Authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
-                  },
+              const versionResponse = await fetch(status.endpoint, {
+                method: "GET",
+                headers: {
+                  Authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
                 },
-              );
+              });
 
               if (!versionResponse.ok) {
                 console.log(
@@ -3348,7 +3376,9 @@ class CloudflareController implements Controller {
           }
         }
 
-        console.log(`All dependencies satisfied for worker script deployment ${resourceName}`);
+        console.log(
+          `All dependencies satisfied for worker script deployment ${resourceName}`,
+        );
       }
 
       // Check if scriptName refers to a Worker resource in our system
@@ -3437,22 +3467,32 @@ class CloudflareController implements Controller {
       }
 
       // Extract script name from worker endpoint
-      const actualScriptName = workerStatus.endpoint.split('/workers/scripts/')[1];
-      
+      const actualScriptName =
+        workerStatus.endpoint.split("/workers/scripts/")[1];
+
       if (!actualScriptName) {
-        throw new Error(`Could not extract script name from worker endpoint: ${workerStatus.endpoint}`);
+        throw new Error(
+          `Could not extract script name from worker endpoint: ${workerStatus.endpoint}`,
+        );
       }
 
       // Validate that version percentages add up to 100
-      const totalPercentage = spec.versions.reduce((sum: number, version: any) => sum + version.percentage, 0);
+      const totalPercentage = spec.versions.reduce(
+        (sum: number, version: any) => sum + version.percentage,
+        0,
+      );
       if (totalPercentage !== 100) {
-        throw new Error(`Version percentages must add up to 100, got ${totalPercentage}`);
+        throw new Error(
+          `Version percentages must add up to 100, got ${totalPercentage}`,
+        );
       }
 
       // Validate that all version IDs exist (optional - could be done by checking against WorkerScriptVersion resources)
       for (const version of spec.versions) {
         if (!version.version_id || !version.percentage) {
-          throw new Error(`Each version must have version_id and percentage specified`);
+          throw new Error(
+            `Each version must have version_id and percentage specified`,
+          );
         }
       }
 
@@ -3466,10 +3506,12 @@ class CloudflareController implements Controller {
       if (spec.annotations) {
         deploymentBody.annotations = {};
         if (spec.annotations.message) {
-          deploymentBody.annotations["workers/message"] = spec.annotations.message;
+          deploymentBody.annotations["workers/message"] =
+            spec.annotations.message;
         }
         if (spec.annotations.triggered_by) {
-          deploymentBody.annotations["workers/triggered_by"] = spec.annotations.triggered_by;
+          deploymentBody.annotations["workers/triggered_by"] =
+            spec.annotations.triggered_by;
         }
       }
 
@@ -3480,20 +3522,17 @@ class CloudflareController implements Controller {
       // Build deployment URL with optional force parameter
       let deploymentUrl = `${workerStatus.endpoint}/deployments`;
       if (spec.force) {
-        deploymentUrl += '?force=true';
+        deploymentUrl += "?force=true";
       }
 
-      const deploymentResponse = await fetch(
-        deploymentUrl,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(deploymentBody),
+      const deploymentResponse = await fetch(deploymentUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify(deploymentBody),
+      });
 
       if (!deploymentResponse.ok) {
         const errorResponse = await deploymentResponse.json();
@@ -3505,7 +3544,9 @@ class CloudflareController implements Controller {
       const result = await deploymentResponse.json();
       const deploymentId = result.result.id;
 
-      console.log(`Worker script deployment created successfully with ID: ${deploymentId}`);
+      console.log(
+        `Worker script deployment created successfully with ID: ${deploymentId}`,
+      );
 
       // Update the resource status in the database
       await env.DB.prepare(
@@ -3530,7 +3571,10 @@ class CloudflareController implements Controller {
       );
       return true;
     } catch (error) {
-      console.error(`Failed to provision WorkerScriptDeployment ${resourceName}:`, error);
+      console.error(
+        `Failed to provision WorkerScriptDeployment ${resourceName}:`,
+        error,
+      );
 
       // Update status to failed
       await env.DB.prepare(
@@ -3564,7 +3608,9 @@ class CloudflareController implements Controller {
       const deploymentId = status?.deployment_id;
 
       if (deploymentId && spec.scriptName) {
-        console.log(`Deleting worker script deployment ${resourceName} (ID: ${deploymentId}) from script ${spec.scriptName}`);
+        console.log(
+          `Deleting worker script deployment ${resourceName} (ID: ${deploymentId}) from script ${spec.scriptName}`,
+        );
 
         // Note: Cloudflare API doesn't provide a direct delete endpoint for deployments
         // Deployments are typically managed through creating new deployments
@@ -3578,7 +3624,10 @@ class CloudflareController implements Controller {
         );
       }
     } catch (error) {
-      console.error(`Error deleting WorkerScriptDeployment ${resourceName}:`, error);
+      console.error(
+        `Error deleting WorkerScriptDeployment ${resourceName}:`,
+        error,
+      );
     }
   }
 
@@ -3591,7 +3640,9 @@ class CloudflareController implements Controller {
         "SELECT * FROM resources WHERE group_name='cf.guber.proc.io' AND kind='WorkerScriptDeployment'",
       ).all();
 
-      console.log(`Found ${apiResources?.length || 0} WorkerScriptDeployment resources in API`);
+      console.log(
+        `Found ${apiResources?.length || 0} WorkerScriptDeployment resources in API`,
+      );
 
       // Check each deployment resource for dependency resolution and health
       for (const resource of apiResources || []) {
@@ -3609,7 +3660,10 @@ class CloudflareController implements Controller {
           }
 
           // Check if this is a pending deployment waiting for dependencies or target worker
-          if (status.state === "Pending" && (spec.dependencies || status.pendingWorker)) {
+          if (
+            status.state === "Pending" &&
+            (spec.dependencies || status.pendingWorker)
+          ) {
             // First check if we're waiting for a target worker
             if (status.pendingWorker) {
               const targetWorkerResource = await env.DB.prepare(
@@ -3619,7 +3673,9 @@ class CloudflareController implements Controller {
                 .first();
 
               if (targetWorkerResource && targetWorkerResource.status) {
-                const targetWorkerStatus = JSON.parse(targetWorkerResource.status);
+                const targetWorkerStatus = JSON.parse(
+                  targetWorkerResource.status,
+                );
                 if (targetWorkerStatus.state === "Ready") {
                   console.log(
                     `[Reconcile] Target worker ${status.pendingWorker} is now ready for deployment ${resource.name}, re-queuing for provisioning`,
@@ -3643,7 +3699,7 @@ class CloudflareController implements Controller {
                   console.log(
                     `[Reconcile] Target worker ${status.pendingWorker} still not ready (${targetWorkerStatus.state}) for deployment ${resource.name}`,
                   );
-                  
+
                   // Update the worker check timestamp
                   const updatedStatus = {
                     ...status,
@@ -3662,7 +3718,7 @@ class CloudflareController implements Controller {
                 console.log(
                   `[Reconcile] Target worker ${status.pendingWorker} not found or has no status for deployment ${resource.name}`,
                 );
-                
+
                 // Update status to indicate worker still missing
                 const updatedStatus = {
                   ...status,
@@ -3746,17 +3802,18 @@ class CloudflareController implements Controller {
           }
 
           // For ready deployments, verify they still exist in Cloudflare
-          if (status.state === "Ready" && status.deployment_id && status.endpoint) {
+          if (
+            status.state === "Ready" &&
+            status.deployment_id &&
+            status.endpoint
+          ) {
             try {
-              const deploymentResponse = await fetch(
-                status.endpoint,
-                {
-                  method: "GET",
-                  headers: {
-                    Authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
-                  },
+              const deploymentResponse = await fetch(status.endpoint, {
+                method: "GET",
+                headers: {
+                  Authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
                 },
-              );
+              });
 
               if (!deploymentResponse.ok) {
                 console.log(
@@ -3806,7 +3863,10 @@ class CloudflareController implements Controller {
 
       console.log("WorkerScriptDeployment reconciliation completed");
     } catch (error) {
-      console.error("Error during WorkerScriptDeployment reconciliation:", error);
+      console.error(
+        "Error during WorkerScriptDeployment reconciliation:",
+        error,
+      );
     }
   }
 }

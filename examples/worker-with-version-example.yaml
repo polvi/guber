@@ -134,4 +134,3 @@ spec:
     - kind: Worker
       name: hello-world-worker
       group: cf.guber.proc.io
-

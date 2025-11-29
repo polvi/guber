@@ -22,18 +22,21 @@ for (const controller of config.controllers) {
 
 // Helper function to notify controllers of resource events
 async function notifyControllers(
-  event: 'created' | 'deleted',
-  context: ResourceContext
+  event: "created" | "deleted",
+  context: ResourceContext,
 ) {
   for (const controller of config.controllers) {
     try {
-      if (event === 'created' && controller.onResourceCreated) {
+      if (event === "created" && controller.onResourceCreated) {
         await controller.onResourceCreated(context);
-      } else if (event === 'deleted' && controller.onResourceDeleted) {
+      } else if (event === "deleted" && controller.onResourceDeleted) {
         await controller.onResourceDeleted(context);
       }
     } catch (error) {
-      console.error(`Controller ${controller.constructor?.name || 'unknown'} failed to handle ${event} event:`, error);
+      console.error(
+        `Controller ${controller.constructor?.name || "unknown"} failed to handle ${event} event:`,
+        error,
+      );
     }
   }
 }
@@ -461,7 +464,7 @@ app.post("/apis/:group/:version/:plural", async (c) => {
   );
 
   // Notify controllers of resource creation
-  await notifyControllers('created', {
+  await notifyControllers("created", {
     group,
     version,
     plural,
@@ -533,7 +536,7 @@ app.delete("/apis/:group/:version/:plural/:name", async (c) => {
   if (!result) return c.json({ message: "Not Found" }, 404);
 
   // Notify controllers of resource deletion BEFORE deleting from DB
-  await notifyControllers('deleted', {
+  await notifyControllers("deleted", {
     group,
     version,
     plural,
@@ -675,7 +678,7 @@ app.post("/apis/:group/:version/namespaces/:namespace/:plural", async (c) => {
   );
 
   // Notify controllers of resource creation
-  await notifyControllers('created', {
+  await notifyControllers("created", {
     group,
     version,
     plural,
@@ -759,7 +762,7 @@ app.delete(
     if (!result) return c.json({ message: "Not Found" }, 404);
 
     // Notify controllers of resource deletion BEFORE deleting from DB
-    await notifyControllers('deleted', {
+    await notifyControllers("deleted", {
       group,
       version,
       plural,
@@ -799,10 +802,10 @@ export default {
   async queue(batch: MessageBatch<any>, env: Env): Promise<void> {
     // Find the cloudflare controller specifically for queue handling
     const cloudflareController = config.controllers.find(
-      (controller) => controller.constructor?.name === 'CloudflareController'
+      (controller) => controller.constructor?.name === "CloudflareController",
     );
-    
-    if (cloudflareController && 'handleQueue' in cloudflareController) {
+
+    if (cloudflareController && "handleQueue" in cloudflareController) {
       await (cloudflareController as any).handleQueue(batch, env);
       return;
     }
@@ -819,10 +822,10 @@ export default {
 
     // Find the cloudflare controller specifically for scheduled handling
     const cloudflareController = config.controllers.find(
-      (controller) => controller.constructor?.name === 'CloudflareController'
+      (controller) => controller.constructor?.name === "CloudflareController",
     );
-    
-    if (cloudflareController && 'handleScheduled' in cloudflareController) {
+
+    if (cloudflareController && "handleScheduled" in cloudflareController) {
       await (cloudflareController as any).handleScheduled(event, env);
     }
   },
