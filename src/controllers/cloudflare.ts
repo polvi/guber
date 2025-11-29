@@ -4,6 +4,19 @@ import type { Controller, ResourceContext } from "../config";
 import {
   patchApisCfGuberProcIoV1WorkerscriptversionsName,
   patchApisCfGuberProcIoV1WorkerscriptdeploymentsName,
+  patchApisCfGuberProcIoV1WorkersName,
+  patchApisCfGuberProcIoV1D1sName,
+  patchApisCfGuberProcIoV1QsName,
+  getApisCfGuberProcIoV1Workers,
+  getApisCfGuberProcIoV1WorkersName,
+  getApisCfGuberProcIoV1Workerscriptversions,
+  getApisCfGuberProcIoV1WorkerscriptversionsName,
+  getApisCfGuberProcIoV1Workerscriptdeployments,
+  getApisCfGuberProcIoV1WorkerscriptdeploymentsName,
+  getApisCfGuberProcIoV1D1s,
+  getApisCfGuberProcIoV1D1sName,
+  getApisCfGuberProcIoV1Qs,
+  getApisCfGuberProcIoV1QsName,
 } from "../client/gen/cloudflare/default/default";
 import type { WorkerScriptVersion, WorkerScriptDeployment } from "../client/gen/cloudflare/models";
 import { setEnv } from "../client/custom-fetch";
@@ -283,11 +296,7 @@ class CloudflareController implements Controller {
 
             for (const dependency of spec.dependencies) {
               const depGroup = dependency.group || "cf.guber.proc.io";
-              const depResource = await env.DB.prepare(
-                "SELECT * FROM resources WHERE name=? AND kind=? AND group_name=? AND namespace IS NULL",
-              )
-                .bind(dependency.name, dependency.kind, depGroup)
-                .first();
+              const depResource = await getApisCfGuberProcIoV1WorkersName(dependency.name);
 
               if (!depResource || !depResource.status) {
                 allDependenciesReady = false;
@@ -295,7 +304,7 @@ class CloudflareController implements Controller {
                 continue;
               }
 
-              const depStatus = JSON.parse(depResource.status);
+              const depStatus = depResource.status;
               if (depStatus.state !== "Ready") {
                 allDependenciesReady = false;
                 unresolvedDependencies.push(dependency);
@@ -335,11 +344,29 @@ class CloudflareController implements Controller {
                 lastDependencyCheck: new Date().toISOString(),
               };
 
-              await env.DB.prepare(
-                "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-              )
-                .bind(JSON.stringify(updatedStatus), resource.name)
-                .run();
+              // Update status using the appropriate client based on resource kind
+              if (resource.kind === 'Worker') {
+                await patchApisCfGuberProcIoV1WorkersName(resource.name, {
+                  apiVersion: "cf.guber.proc.io/v1",
+                  kind: "Worker",
+                  metadata: { name: resource.name },
+                  status: updatedStatus,
+                });
+              } else if (resource.kind === 'WorkerScriptVersion') {
+                await patchApisCfGuberProcIoV1WorkerscriptversionsName(resource.name, {
+                  apiVersion: "cf.guber.proc.io/v1",
+                  kind: "WorkerScriptVersion",
+                  metadata: { name: resource.name },
+                  status: updatedStatus,
+                });
+              } else if (resource.kind === 'WorkerScriptDeployment') {
+                await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(resource.name, {
+                  apiVersion: "cf.guber.proc.io/v1",
+                  kind: "WorkerScriptDeployment",
+                  metadata: { name: resource.name },
+                  status: updatedStatus,
+                });
+              }
             }
           }
         }
@@ -408,19 +435,17 @@ class CloudflareController implements Controller {
       const databaseId = result.result.uuid;
 
       // Update the resource status in the database
-      await env.DB.prepare(
-        "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-      )
-        .bind(
-          JSON.stringify({
-            state: "Ready",
-            database_id: databaseId,
-            createdAt: new Date().toISOString(),
-            endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/d1/database/${databaseId}`,
-          }),
-          resourceName,
-        )
-        .run();
+      await patchApisCfGuberProcIoV1D1sName(resourceName, {
+        apiVersion: "cf.guber.proc.io/v1",
+        kind: "D1",
+        metadata: { name: resourceName },
+        status: {
+          state: "Ready",
+          database_id: databaseId,
+          createdAt: new Date().toISOString(),
+          endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/d1/database/${databaseId}`,
+        },
+      });
 
       console.log(
         `D1 database ${fullDatabaseName} provisioned successfully with ID: ${databaseId}`,
@@ -459,19 +484,17 @@ class CloudflareController implements Controller {
             const databaseId = existingDb.uuid;
 
             // Update the resource status to match the existing database
-            await env.DB.prepare(
-              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-            )
-              .bind(
-                JSON.stringify({
-                  state: "Ready",
-                  database_id: databaseId,
-                  createdAt: existingDb.created_on,
-                  endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/d1/database/${databaseId}`,
-                }),
-                resourceName,
-              )
-              .run();
+            await patchApisCfGuberProcIoV1D1sName(resourceName, {
+              apiVersion: "cf.guber.proc.io/v1",
+              kind: "D1",
+              metadata: { name: resourceName },
+              status: {
+                state: "Ready",
+                database_id: databaseId,
+                createdAt: existingDb.created_on,
+                endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/d1/database/${databaseId}`,
+              },
+            });
 
             console.log(
               `Matched existing D1 database ${fullDatabaseName} with ID: ${databaseId}`,
@@ -480,33 +503,29 @@ class CloudflareController implements Controller {
             console.error(
               `Could not find existing database ${fullDatabaseName} in account`,
             );
-            await env.DB.prepare(
-              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-            )
-              .bind(
-                JSON.stringify({
-                  state: "Failed",
-                  error: "Database exists but could not be found in account",
-                }),
-                resourceName,
-              )
-              .run();
+            await patchApisCfGuberProcIoV1D1sName(resourceName, {
+              apiVersion: "cf.guber.proc.io/v1",
+              kind: "D1",
+              metadata: { name: resourceName },
+              status: {
+                state: "Failed",
+                error: "Database exists but could not be found in account",
+              },
+            });
           }
         } else {
           console.error(
             `Failed to list databases to find existing ${fullDatabaseName}`,
           );
-          await env.DB.prepare(
-            "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-          )
-            .bind(
-              JSON.stringify({
-                state: "Failed",
-                error: JSON.stringify(errorResponse),
-              }),
-              resourceName,
-            )
-            .run();
+          await patchApisCfGuberProcIoV1QsName(resourceName, {
+            apiVersion: "cf.guber.proc.io/v1",
+            kind: "Queue",
+            metadata: { name: resourceName },
+            status: {
+              state: "Failed",
+              error: JSON.stringify(errorResponse),
+            },
+          });
         }
       } else {
         console.error(
@@ -515,17 +534,15 @@ class CloudflareController implements Controller {
         );
 
         // Update status to failed
-        await env.DB.prepare(
-          "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-        )
-          .bind(
-            JSON.stringify({
-              state: "Failed",
-              error: JSON.stringify(errorResponse),
-            }),
-            resourceName,
-          )
-          .run();
+        await patchApisCfGuberProcIoV1D1sName(resourceName, {
+          apiVersion: "cf.guber.proc.io/v1",
+          kind: "D1",
+          metadata: { name: resourceName },
+          status: {
+            state: "Failed",
+            error: JSON.stringify(errorResponse),
+          },
+        });
       }
     }
 
@@ -628,19 +645,17 @@ class CloudflareController implements Controller {
       const queueId = result.result.queue_id;
 
       // Update the resource status in the database
-      await env.DB.prepare(
-        "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-      )
-        .bind(
-          JSON.stringify({
-            state: "Ready",
-            queue_id: queueId,
-            createdAt: new Date().toISOString(),
-            endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/queues/${queueId}`,
-          }),
-          resourceName,
-        )
-        .run();
+      await patchApisCfGuberProcIoV1QsName(resourceName, {
+        apiVersion: "cf.guber.proc.io/v1",
+        kind: "Queue",
+        metadata: { name: resourceName },
+        status: {
+          state: "Ready",
+          queue_id: queueId,
+          createdAt: new Date().toISOString(),
+          endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/queues/${queueId}`,
+        },
+      });
 
       console.log(
         `Queue ${fullQueueName} provisioned successfully with ID: ${queueId}`,
@@ -679,19 +694,17 @@ class CloudflareController implements Controller {
             const queueId = existingQueue.queue_id;
 
             // Update the resource status to match the existing queue
-            await env.DB.prepare(
-              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-            )
-              .bind(
-                JSON.stringify({
-                  state: "Ready",
-                  queue_id: queueId,
-                  createdAt: existingQueue.created_on,
-                  endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/queues/${queueId}`,
-                }),
-                resourceName,
-              )
-              .run();
+            await patchApisCfGuberProcIoV1QsName(resourceName, {
+              apiVersion: "cf.guber.proc.io/v1",
+              kind: "Queue",
+              metadata: { name: resourceName },
+              status: {
+                state: "Ready",
+                queue_id: queueId,
+                createdAt: existingQueue.created_on,
+                endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/queues/${queueId}`,
+              },
+            });
 
             console.log(
               `Matched existing Queue ${fullQueueName} with ID: ${queueId}`,
@@ -700,33 +713,29 @@ class CloudflareController implements Controller {
             console.error(
               `Could not find existing queue ${fullQueueName} in account`,
             );
-            await env.DB.prepare(
-              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-            )
-              .bind(
-                JSON.stringify({
-                  state: "Failed",
-                  error: "Queue exists but could not be found in account",
-                }),
-                resourceName,
-              )
-              .run();
+            await patchApisCfGuberProcIoV1QsName(resourceName, {
+              apiVersion: "cf.guber.proc.io/v1",
+              kind: "Queue",
+              metadata: { name: resourceName },
+              status: {
+                state: "Failed",
+                error: "Queue exists but could not be found in account",
+              },
+            });
           }
         } else {
           console.error(
             `Failed to list queues to find existing ${fullQueueName}`,
           );
-          await env.DB.prepare(
-            "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-          )
-            .bind(
-              JSON.stringify({
-                state: "Failed",
-                error: JSON.stringify(errorResponse),
-              }),
-              resourceName,
-            )
-            .run();
+          await patchApisCfGuberProcIoV1QsName(resourceName, {
+            apiVersion: "cf.guber.proc.io/v1",
+            kind: "Queue",
+            metadata: { name: resourceName },
+            status: {
+              state: "Failed",
+              error: JSON.stringify(errorResponse),
+            },
+          });
         }
       } else {
         console.error(
@@ -735,17 +744,15 @@ class CloudflareController implements Controller {
         );
 
         // Update status to failed
-        await env.DB.prepare(
-          "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-        )
-          .bind(
-            JSON.stringify({
-              state: "Failed",
-              error: JSON.stringify(errorResponse),
-            }),
-            resourceName,
-          )
-          .run();
+        await patchApisCfGuberProcIoV1D1sName(resourceName, {
+          apiVersion: "cf.guber.proc.io/v1",
+          kind: "D1",
+          metadata: { name: resourceName },
+          status: {
+            state: "Failed",
+            error: JSON.stringify(errorResponse),
+          },
+        });
       }
     }
 
@@ -810,9 +817,8 @@ class CloudflareController implements Controller {
       console.log("Starting Queue reconciliation...");
 
       // Get all Queue resources from our API
-      const { results: apiResources } = await env.DB.prepare(
-        "SELECT * FROM resources WHERE group_name='cf.guber.proc.io' AND kind='Queue'",
-      ).all();
+      const apiResourcesResponse = await getApisCfGuberProcIoV1Qs();
+      const apiResources = apiResourcesResponse.data.items || [];
 
       // Get all Queues from Cloudflare
       const cloudflareResponse = await fetch(
@@ -980,9 +986,18 @@ class CloudflareController implements Controller {
                   resource.name,
                 ];
 
-            await env.DB.prepare(updateQuery)
-              .bind(...updateParams)
-              .run();
+            await patchApisCfGuberProcIoV1QsName(resource.name, {
+              apiVersion: "cf.guber.proc.io/v1",
+              kind: "Queue",
+              metadata: { name: resource.name },
+              status: {
+                state: "Ready",
+                queue_id: queueId,
+                createdAt: new Date().toISOString(),
+                endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/queues/${queueId}`,
+                reconciledAt: new Date().toISOString(),
+              },
+            });
 
             console.log(
               `Successfully created missing queue: ${fullName} with ID: ${queueId}`,
@@ -1015,9 +1030,16 @@ class CloudflareController implements Controller {
                   resource.name,
                 ];
 
-            await env.DB.prepare(updateQuery)
-              .bind(...updateParams)
-              .run();
+            await patchApisCfGuberProcIoV1QsName(resource.name, {
+              apiVersion: "cf.guber.proc.io/v1",
+              kind: "Queue",
+              metadata: { name: resource.name },
+              status: {
+                state: "Failed",
+                error: error,
+                reconciledAt: new Date().toISOString(),
+              },
+            });
           }
         } catch (error) {
           console.error(`Error creating missing queue ${fullName}:`, error);
@@ -1116,7 +1138,7 @@ class CloudflareController implements Controller {
             return false;
           }
 
-          const depStatus = JSON.parse(depResource.status);
+          const depStatus = depResource.status;
           if (depStatus.state !== "Ready") {
             console.log(
               `Dependency ${depKind}/${depName} not ready (${depStatus.state}), deferring provisioning`,
@@ -1217,14 +1239,15 @@ class CloudflareController implements Controller {
         if (spec.bindings.d1_databases) {
           for (const d1Binding of spec.bindings.d1_databases) {
             // Look up the D1 resource to get its database_id
-            const d1Resource = await env.DB.prepare(
-              "SELECT * FROM resources WHERE name=? AND kind='D1' AND group_name='cf.guber.proc.io' AND namespace IS NULL",
-            )
-              .bind(d1Binding.database_name)
-              .first();
+            let d1Resource = null;
+            try {
+              d1Resource = await getApisCfGuberProcIoV1D1sName(d1Binding.database_name);
+            } catch (error) {
+              d1Resource = null;
+            }
 
             if (d1Resource && d1Resource.status) {
-              const status = JSON.parse(d1Resource.status);
+              const status = d1Resource.status;
               if (status.database_id) {
                 const binding = {
                   type: "d1",
@@ -1250,14 +1273,15 @@ class CloudflareController implements Controller {
         if (spec.bindings.queues) {
           for (const queueBinding of spec.bindings.queues) {
             // Look up the Queue resource to get its queue name
-            const queueResource = await env.DB.prepare(
-              "SELECT * FROM resources WHERE name=? AND kind='Queue' AND group_name='cf.guber.proc.io' AND namespace IS NULL",
-            )
-              .bind(queueBinding.queue_name)
-              .first();
+            let queueResource = null;
+            try {
+              queueResource = await getApisCfGuberProcIoV1QsName(queueBinding.queue_name);
+            } catch (error) {
+              queueResource = null;
+            }
 
             if (queueResource && queueResource.status) {
-              const status = JSON.parse(queueResource.status);
+              const status = queueResource.status;
               if (status.queue_id) {
                 // Build the full queue name that was created in Cloudflare
                 const fullQueueName = this.buildFullDatabaseName(
@@ -1359,21 +1383,19 @@ class CloudflareController implements Controller {
         );
 
         // Still update status as partially successful (script deployed but no custom domain)
-        await env.DB.prepare(
-          "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-        )
-          .bind(
-            JSON.stringify({
-              state: "PartiallyReady",
-              worker_id: fullWorkerName,
-              createdAt: new Date().toISOString(),
-              endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullWorkerName}`,
-              customDomain: customDomain,
-              domainError: JSON.stringify(domainError),
-            }),
-            resourceName,
-          )
-          .run();
+        await patchApisCfGuberProcIoV1WorkersName(resourceName, {
+          apiVersion: "cf.guber.proc.io/v1",
+          kind: "Worker",
+          metadata: { name: resourceName },
+          status: {
+            state: "PartiallyReady",
+            worker_id: fullWorkerName,
+            createdAt: new Date().toISOString(),
+            endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullWorkerName}`,
+            customDomain: customDomain,
+            domainError: JSON.stringify(domainError),
+          },
+        });
 
         console.log(
           `Worker ${fullWorkerName} deployed but custom domain setup failed`,
@@ -1387,22 +1409,20 @@ class CloudflareController implements Controller {
       );
 
       // Step 3: Update the resource status in the database
-      await env.DB.prepare(
-        "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-      )
-        .bind(
-          JSON.stringify({
-            state: "Ready",
-            worker_id: fullWorkerName,
-            createdAt: new Date().toISOString(),
-            endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullWorkerName}`,
-            customDomain: customDomain,
-            domainId: domainResult.result?.id,
-            url: `https://${customDomain}`,
-          }),
-          resourceName,
-        )
-        .run();
+      await patchApisCfGuberProcIoV1WorkersName(resourceName, {
+        apiVersion: "cf.guber.proc.io/v1",
+        kind: "Worker",
+        metadata: { name: resourceName },
+        status: {
+          state: "Ready",
+          worker_id: fullWorkerName,
+          createdAt: new Date().toISOString(),
+          endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullWorkerName}`,
+          customDomain: customDomain,
+          domainId: domainResult.result?.id,
+          url: `https://${customDomain}`,
+        },
+      });
 
       console.log(
         `Worker ${fullWorkerName} provisioned successfully at ${customDomain}`,
@@ -1507,9 +1527,8 @@ class CloudflareController implements Controller {
       await this.reconcilePendingWorkers(env);
 
       // Get all Worker resources from our API
-      const { results: apiResources } = await env.DB.prepare(
-        "SELECT * FROM resources WHERE group_name='cf.guber.proc.io' AND kind='Worker'",
-      ).all();
+      const apiResourcesResponse = await getApisCfGuberProcIoV1Workers();
+      const apiResources = apiResourcesResponse.data.items || [];
 
       // Get all Workers from Cloudflare
       const [workersResponse, domainsResponse] = await Promise.all([
@@ -1904,9 +1923,18 @@ class CloudflareController implements Controller {
               ? [JSON.stringify(statusData), resource.name, resource.namespace]
               : [JSON.stringify(statusData), resource.name];
 
-            await env.DB.prepare(updateQuery)
-              .bind(...updateParams)
-              .run();
+            await patchApisCfGuberProcIoV1D1sName(resource.name, {
+              apiVersion: "cf.guber.proc.io/v1",
+              kind: "D1",
+              metadata: { name: resource.name },
+              status: {
+                state: "Ready",
+                database_id: databaseId,
+                createdAt: new Date().toISOString(),
+                endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/d1/database/${databaseId}`,
+                reconciledAt: new Date().toISOString(),
+              },
+            });
 
             console.log(`Successfully reconciled missing worker: ${fullName}`);
           } else {
@@ -1940,9 +1968,16 @@ class CloudflareController implements Controller {
                   resource.name,
                 ];
 
-            await env.DB.prepare(updateQuery)
-              .bind(...updateParams)
-              .run();
+            await patchApisCfGuberProcIoV1D1sName(resource.name, {
+              apiVersion: "cf.guber.proc.io/v1",
+              kind: "D1",
+              metadata: { name: resource.name },
+              status: {
+                state: "Failed",
+                error: error,
+                reconciledAt: new Date().toISOString(),
+              },
+            });
           }
         } catch (error) {
           console.error(`Error creating missing worker ${fullName}:`, error);
@@ -2314,8 +2349,8 @@ class CloudflareController implements Controller {
 
     for (const worker of pendingWorkers || []) {
       try {
-        const spec = JSON.parse(worker.spec);
-        const status = JSON.parse(worker.status);
+        const spec = worker.spec;
+        const status = worker.status;
 
         if (spec.dependencies && status.pendingDependencies) {
           let allDependenciesReady = true;
@@ -2323,11 +2358,23 @@ class CloudflareController implements Controller {
 
           for (const dependency of spec.dependencies) {
             const depGroup = dependency.group || "cf.guber.proc.io";
-            const depResource = await env.DB.prepare(
-              "SELECT * FROM resources WHERE name=? AND kind=? AND group_name=? AND namespace IS NULL",
-            )
-              .bind(dependency.name, dependency.kind, depGroup)
-              .first();
+            let depResource = null;
+            try {
+              if (dependency.kind === 'Worker') {
+                depResource = await getApisCfGuberProcIoV1WorkersName(dependency.name);
+              } else if (dependency.kind === 'WorkerScriptVersion') {
+                depResource = await getApisCfGuberProcIoV1WorkerscriptversionsName(dependency.name);
+              } else if (dependency.kind === 'WorkerScriptDeployment') {
+                depResource = await getApisCfGuberProcIoV1WorkerscriptdeploymentsName(dependency.name);
+              } else if (dependency.kind === 'D1') {
+                depResource = await getApisCfGuberProcIoV1D1sName(dependency.name);
+              } else if (dependency.kind === 'Queue') {
+                depResource = await getApisCfGuberProcIoV1QsName(dependency.name);
+              }
+            } catch (error) {
+              // Resource not found
+              depResource = null;
+            }
 
             if (!depResource || !depResource.status) {
               allDependenciesReady = false;
@@ -2335,7 +2382,7 @@ class CloudflareController implements Controller {
               continue;
             }
 
-            const depStatus = JSON.parse(depResource.status);
+            const depStatus = depResource.status;
             if (depStatus.state !== "Ready") {
               allDependenciesReady = false;
               unresolvedDependencies.push(dependency);
@@ -2373,11 +2420,12 @@ class CloudflareController implements Controller {
               pendingDependencies: unresolvedDependencies,
             };
 
-            await env.DB.prepare(
-              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-            )
-              .bind(JSON.stringify(updatedStatus), worker.name)
-              .run();
+            await patchApisCfGuberProcIoV1WorkersName(worker.name, {
+              apiVersion: "cf.guber.proc.io/v1",
+              kind: "Worker",
+              metadata: { name: worker.name },
+              status: updatedStatus,
+            });
           }
         }
       } catch (error) {
@@ -2394,9 +2442,8 @@ class CloudflareController implements Controller {
       console.log("Starting D1 database reconciliation...");
 
       // Get all D1 resources from our API
-      const { results: apiResources } = await env.DB.prepare(
-        "SELECT * FROM resources WHERE group_name='cf.guber.proc.io' AND kind='D1'",
-      ).all();
+      const apiResourcesResponse = await getApisCfGuberProcIoV1D1s();
+      const apiResources = apiResourcesResponse.data.items || [];
 
       // Get all D1 databases from Cloudflare
       const cloudflareResponse = await fetch(
@@ -2694,7 +2741,7 @@ class CloudflareController implements Controller {
             return false;
           }
 
-          const depStatus = JSON.parse(depResource.status);
+          const depStatus = depResource.status;
           if (depStatus.state !== "Ready") {
             console.log(
               `Dependency ${depKind}/${depName} not ready (${depStatus.state}), deferring provisioning`,
@@ -2904,11 +2951,12 @@ class CloudflareController implements Controller {
       }
 
       // Check if scriptName refers to a Worker resource in our system
-      const workerResource = await env.DB.prepare(
-        "SELECT * FROM resources WHERE name=? AND kind='Worker' AND group_name='cf.guber.proc.io' AND namespace IS NULL",
-      )
-        .bind(spec.scriptName)
-        .first();
+      let workerResource = null;
+      try {
+        workerResource = await getApisCfGuberProcIoV1WorkersName(spec.scriptName);
+      } catch (error) {
+        workerResource = null;
+      }
 
       if (!workerResource) {
         console.log(
@@ -2961,7 +3009,7 @@ class CloudflareController implements Controller {
         return false;
       }
 
-      const workerStatus = JSON.parse(workerResource.status);
+      const workerStatus = workerResource.status;
       if (workerStatus.state !== "Ready") {
         console.log(
           `Target worker ${spec.scriptName} is not ready (${workerStatus.state}), deferring version creation`,
@@ -3151,9 +3199,8 @@ class CloudflareController implements Controller {
       console.log("Starting WorkerScriptVersion reconciliation...");
 
       // Get all WorkerScriptVersion resources from our API
-      const { results: apiResources } = await env.DB.prepare(
-        "SELECT * FROM resources WHERE group_name='cf.guber.proc.io' AND kind='WorkerScriptVersion'",
-      ).all();
+      const apiResourcesResponse = await getApisCfGuberProcIoV1Workerscriptversions();
+      const apiResources = apiResourcesResponse.data.items || [];
 
       console.log(
         `Found ${apiResources?.length || 0} WorkerScriptVersion resources in API`,
@@ -3162,17 +3209,8 @@ class CloudflareController implements Controller {
       // Check each version resource for dependency resolution and health
       for (const resource of apiResources || []) {
         try {
-          const spec = JSON.parse(resource.spec);
-          let status = {};
-          try {
-            status = resource.status ? JSON.parse(resource.status) : {};
-          } catch (statusParseError) {
-            console.error(
-              `Failed to parse status for worker script version ${resource.name}:`,
-              statusParseError,
-            );
-            status = {};
-          }
+          const spec = resource.spec;
+          const status = resource.status || {};
 
           // Check if this is a pending version waiting for dependencies or target worker
           if (
@@ -3181,16 +3219,15 @@ class CloudflareController implements Controller {
           ) {
             // First check if we're waiting for a target worker
             if (status.pendingWorker) {
-              const targetWorkerResource = await env.DB.prepare(
-                "SELECT * FROM resources WHERE name=? AND kind='Worker' AND group_name='cf.guber.proc.io' AND namespace IS NULL",
-              )
-                .bind(status.pendingWorker)
-                .first();
+              let targetWorkerResource = null;
+              try {
+                targetWorkerResource = await getApisCfGuberProcIoV1WorkersName(status.pendingWorker);
+              } catch (error) {
+                targetWorkerResource = null;
+              }
 
               if (targetWorkerResource && targetWorkerResource.status) {
-                const targetWorkerStatus = JSON.parse(
-                  targetWorkerResource.status,
-                );
+                const targetWorkerStatus = targetWorkerResource.status;
                 if (targetWorkerStatus.state === "Ready") {
                   console.log(
                     `[Reconcile] Target worker ${status.pendingWorker} is now ready for version ${resource.name}, re-queuing for provisioning`,
@@ -3271,11 +3308,18 @@ class CloudflareController implements Controller {
 
               for (const dependency of spec.dependencies) {
                 const depGroup = dependency.group || "cf.guber.proc.io";
-                const depResource = await env.DB.prepare(
-                  "SELECT * FROM resources WHERE name=? AND kind=? AND group_name=? AND namespace IS NULL",
-                )
-                  .bind(dependency.name, dependency.kind, depGroup)
-                  .first();
+                let depResource = null;
+                try {
+                  if (dependency.kind === 'Worker') {
+                    depResource = await getApisCfGuberProcIoV1WorkersName(dependency.name);
+                  } else if (dependency.kind === 'D1') {
+                    depResource = await getApisCfGuberProcIoV1D1sName(dependency.name);
+                  } else if (dependency.kind === 'Queue') {
+                    depResource = await getApisCfGuberProcIoV1QsName(dependency.name);
+                  }
+                } catch (error) {
+                  depResource = null;
+                }
 
                 if (!depResource || !depResource.status) {
                   allDependenciesReady = false;
@@ -3315,17 +3359,16 @@ class CloudflareController implements Controller {
                 );
 
                 // Update the dependency check timestamp
-                const updatedStatus = {
-                  ...status,
-                  lastDependencyCheck: new Date().toISOString(),
-                  pendingDependencies: unresolvedDependencies,
-                };
-
-                await env.DB.prepare(
-                  "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-                )
-                  .bind(JSON.stringify(updatedStatus), resource.name)
-                  .run();
+                await patchApisCfGuberProcIoV1WorkerscriptversionsName(resource.name, {
+                  apiVersion: "cf.guber.proc.io/v1",
+                  kind: "WorkerScriptVersion",
+                  metadata: { name: resource.name },
+                  status: {
+                    ...status,
+                    lastDependencyCheck: new Date().toISOString(),
+                    pendingDependencies: unresolvedDependencies,
+                  },
+                });
               }
             }
           }
@@ -3646,11 +3689,12 @@ class CloudflareController implements Controller {
 
         if (version.version_name) {
           // Look up the WorkerScriptVersion resource to get its version_id
-          const versionResource = await env.DB.prepare(
-            "SELECT * FROM resources WHERE name=? AND kind='WorkerScriptVersion' AND group_name='cf.guber.proc.io' AND namespace IS NULL",
-          )
-            .bind(version.version_name)
-            .first();
+          let versionResource = null;
+          try {
+            versionResource = await getApisCfGuberProcIoV1WorkerscriptversionsName(version.version_name);
+          } catch (error) {
+            versionResource = null;
+          }
 
           if (!versionResource) {
             throw new Error(
@@ -3664,7 +3708,7 @@ class CloudflareController implements Controller {
             );
           }
 
-          const versionStatus = JSON.parse(versionResource.status);
+          const versionStatus = versionResource.status;
           if (versionStatus.state !== "Ready") {
             throw new Error(
               `WorkerScriptVersion resource '${version.version_name}' is not ready (state: ${versionStatus.state})`,
@@ -3796,17 +3840,15 @@ class CloudflareController implements Controller {
       );
 
       // Update status to failed
-      await env.DB.prepare(
-        "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-      )
-        .bind(
-          JSON.stringify({
-            state: "Failed",
-            error: error.message || String(error),
-          }),
-          resourceName,
-        )
-        .run();
+      await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(resourceName, {
+        apiVersion: "cf.guber.proc.io/v1",
+        kind: "WorkerScriptDeployment",
+        metadata: { name: resourceName },
+        status: {
+          state: "Failed",
+          error: error.message || String(error),
+        },
+      });
 
       return false;
     }
@@ -3855,9 +3897,8 @@ class CloudflareController implements Controller {
       console.log("Starting WorkerScriptDeployment reconciliation...");
 
       // Get all WorkerScriptDeployment resources from our API
-      const { results: apiResources } = await env.DB.prepare(
-        "SELECT * FROM resources WHERE group_name='cf.guber.proc.io' AND kind='WorkerScriptDeployment'",
-      ).all();
+      const apiResourcesResponse = await getApisCfGuberProcIoV1Workerscriptdeployments();
+      const apiResources = apiResourcesResponse.data.items || [];
 
       console.log(
         `Found ${apiResources?.length || 0} WorkerScriptDeployment resources in API`,
@@ -3866,17 +3907,8 @@ class CloudflareController implements Controller {
       // Check each deployment resource for dependency resolution and health
       for (const resource of apiResources || []) {
         try {
-          const spec = JSON.parse(resource.spec);
-          let status = {};
-          try {
-            status = resource.status ? JSON.parse(resource.status) : {};
-          } catch (statusParseError) {
-            console.error(
-              `Failed to parse status for worker script deployment ${resource.name}:`,
-              statusParseError,
-            );
-            status = {};
-          }
+          const spec = resource.spec;
+          const status = resource.status || {};
 
           // Check if this is a pending deployment waiting for dependencies or target worker
           if (
@@ -3885,16 +3917,15 @@ class CloudflareController implements Controller {
           ) {
             // First check if we're waiting for a target worker
             if (status.pendingWorker) {
-              const targetWorkerResource = await env.DB.prepare(
-                "SELECT * FROM resources WHERE name=? AND kind='Worker' AND group_name='cf.guber.proc.io' AND namespace IS NULL",
-              )
-                .bind(status.pendingWorker)
-                .first();
+              let targetWorkerResource = null;
+              try {
+                targetWorkerResource = await getApisCfGuberProcIoV1WorkersName(status.pendingWorker);
+              } catch (error) {
+                targetWorkerResource = null;
+              }
 
               if (targetWorkerResource && targetWorkerResource.status) {
-                const targetWorkerStatus = JSON.parse(
-                  targetWorkerResource.status,
-                );
+                const targetWorkerStatus = targetWorkerResource.status;
                 if (targetWorkerStatus.state === "Ready") {
                   console.log(
                     `[Reconcile] Target worker ${status.pendingWorker} is now ready for deployment ${resource.name}, re-queuing for provisioning`,
@@ -3920,17 +3951,16 @@ class CloudflareController implements Controller {
                   );
 
                   // Update the worker check timestamp
-                  const updatedStatus = {
-                    ...status,
-                    lastWorkerCheck: new Date().toISOString(),
-                    message: `Waiting for target worker to be ready: ${status.pendingWorker} (current state: ${targetWorkerStatus.state})`,
-                  };
-
-                  await env.DB.prepare(
-                    "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-                  )
-                    .bind(JSON.stringify(updatedStatus), resource.name)
-                    .run();
+                  await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(resource.name, {
+                    apiVersion: "cf.guber.proc.io/v1",
+                    kind: "WorkerScriptDeployment",
+                    metadata: { name: resource.name },
+                    status: {
+                      ...status,
+                      lastWorkerCheck: new Date().toISOString(),
+                      message: `Waiting for target worker to be ready: ${status.pendingWorker} (current state: ${targetWorkerStatus.state})`,
+                    },
+                  });
                   continue;
                 }
               } else {
@@ -3939,17 +3969,16 @@ class CloudflareController implements Controller {
                 );
 
                 // Update status to indicate worker still missing
-                const updatedStatus = {
-                  ...status,
-                  lastWorkerCheck: new Date().toISOString(),
-                  message: `Waiting for target worker to be provisioned: ${status.pendingWorker}`,
-                };
-
-                await env.DB.prepare(
-                  "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-                )
-                  .bind(JSON.stringify(updatedStatus), resource.name)
-                  .run();
+                await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(resource.name, {
+                  apiVersion: "cf.guber.proc.io/v1",
+                  kind: "WorkerScriptDeployment",
+                  metadata: { name: resource.name },
+                  status: {
+                    ...status,
+                    lastWorkerCheck: new Date().toISOString(),
+                    message: `Waiting for target worker to be provisioned: ${status.pendingWorker}`,
+                  },
+                });
                 continue;
               }
             }
@@ -3961,11 +3990,20 @@ class CloudflareController implements Controller {
 
               for (const dependency of spec.dependencies) {
                 const depGroup = dependency.group || "cf.guber.proc.io";
-                const depResource = await env.DB.prepare(
-                  "SELECT * FROM resources WHERE name=? AND kind=? AND group_name=? AND namespace IS NULL",
-                )
-                  .bind(dependency.name, dependency.kind, depGroup)
-                  .first();
+                let depResource = null;
+                try {
+                  if (dependency.kind === 'Worker') {
+                    depResource = await getApisCfGuberProcIoV1WorkersName(dependency.name);
+                  } else if (dependency.kind === 'WorkerScriptVersion') {
+                    depResource = await getApisCfGuberProcIoV1WorkerscriptversionsName(dependency.name);
+                  } else if (dependency.kind === 'D1') {
+                    depResource = await getApisCfGuberProcIoV1D1sName(dependency.name);
+                  } else if (dependency.kind === 'Queue') {
+                    depResource = await getApisCfGuberProcIoV1QsName(dependency.name);
+                  }
+                } catch (error) {
+                  depResource = null;
+                }
 
                 if (!depResource || !depResource.status) {
                   allDependenciesReady = false;
@@ -4005,17 +4043,16 @@ class CloudflareController implements Controller {
                 );
 
                 // Update the dependency check timestamp
-                const updatedStatus = {
-                  ...status,
-                  lastDependencyCheck: new Date().toISOString(),
-                  pendingDependencies: unresolvedDependencies,
-                };
-
-                await env.DB.prepare(
-                  "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-                )
-                  .bind(JSON.stringify(updatedStatus), resource.name)
-                  .run();
+                await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(resource.name, {
+                  apiVersion: "cf.guber.proc.io/v1",
+                  kind: "WorkerScriptDeployment",
+                  metadata: { name: resource.name },
+                  status: {
+                    ...status,
+                    lastDependencyCheck: new Date().toISOString(),
+                    pendingDependencies: unresolvedDependencies,
+                  },
+                });
               }
             }
           }
@@ -4040,30 +4077,28 @@ class CloudflareController implements Controller {
                 );
 
                 // Update status to indicate the deployment is missing
-                const updatedStatus = {
-                  ...status,
-                  state: "Failed",
-                  error: "Deployment no longer exists in Cloudflare",
-                  lastHealthCheck: new Date().toISOString(),
-                };
-
-                await env.DB.prepare(
-                  "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-                )
-                  .bind(JSON.stringify(updatedStatus), resource.name)
-                  .run();
+                await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(resource.name, {
+                  apiVersion: "cf.guber.proc.io/v1",
+                  kind: "WorkerScriptDeployment",
+                  metadata: { name: resource.name },
+                  status: {
+                    ...status,
+                    state: "Failed",
+                    error: "Deployment no longer exists in Cloudflare",
+                    lastHealthCheck: new Date().toISOString(),
+                  },
+                });
               } else {
                 // Update last health check timestamp
-                const updatedStatus = {
-                  ...status,
-                  lastHealthCheck: new Date().toISOString(),
-                };
-
-                await env.DB.prepare(
-                  "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-                )
-                  .bind(JSON.stringify(updatedStatus), resource.name)
-                  .run();
+                await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(resource.name, {
+                  apiVersion: "cf.guber.proc.io/v1",
+                  kind: "WorkerScriptDeployment",
+                  metadata: { name: resource.name },
+                  status: {
+                    ...status,
+                    lastHealthCheck: new Date().toISOString(),
+                  },
+                });
               }
             } catch (error) {
               console.error(
