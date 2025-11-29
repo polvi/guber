@@ -3079,66 +3079,67 @@ class CloudflareController implements Controller {
 
             // Then check dependencies if any
             if (spec.dependencies) {
-            let allDependenciesReady = true;
-            const unresolvedDependencies = [];
+              let allDependenciesReady = true;
+              const unresolvedDependencies = [];
 
-            for (const dependency of spec.dependencies) {
-              const depGroup = dependency.group || "cf.guber.proc.io";
-              const depResource = await env.DB.prepare(
-                "SELECT * FROM resources WHERE name=? AND kind=? AND group_name=? AND namespace IS NULL",
-              )
-                .bind(dependency.name, dependency.kind, depGroup)
-                .first();
+              for (const dependency of spec.dependencies) {
+                const depGroup = dependency.group || "cf.guber.proc.io";
+                const depResource = await env.DB.prepare(
+                  "SELECT * FROM resources WHERE name=? AND kind=? AND group_name=? AND namespace IS NULL",
+                )
+                  .bind(dependency.name, dependency.kind, depGroup)
+                  .first();
 
-              if (!depResource || !depResource.status) {
-                allDependenciesReady = false;
-                unresolvedDependencies.push(dependency);
-                continue;
+                if (!depResource || !depResource.status) {
+                  allDependenciesReady = false;
+                  unresolvedDependencies.push(dependency);
+                  continue;
+                }
+
+                const depStatus = JSON.parse(depResource.status);
+                if (depStatus.state !== "Ready") {
+                  allDependenciesReady = false;
+                  unresolvedDependencies.push(dependency);
+                }
               }
 
-              const depStatus = JSON.parse(depResource.status);
-              if (depStatus.state !== "Ready") {
-                allDependenciesReady = false;
-                unresolvedDependencies.push(dependency);
+              if (allDependenciesReady) {
+                console.log(
+                  `[Reconcile] All dependencies resolved for worker script version ${resource.name}, re-queuing for provisioning`,
+                );
+
+                // Queue for provisioning
+                if (env.GUBER_BUS) {
+                  await env.GUBER_BUS.send({
+                    action: "create",
+                    resourceType: "workerscriptversion",
+                    resourceName: resource.name,
+                    group: resource.group_name,
+                    kind: resource.kind,
+                    plural: resource.plural,
+                    namespace: resource.namespace,
+                    spec: spec,
+                  });
+                }
+              } else {
+                console.log(
+                  `[Reconcile] Worker script version ${resource.name} still has unresolved dependencies:`,
+                  unresolvedDependencies.map((d) => `${d.kind}/${d.name}`),
+                );
+
+                // Update the dependency check timestamp
+                const updatedStatus = {
+                  ...status,
+                  lastDependencyCheck: new Date().toISOString(),
+                  pendingDependencies: unresolvedDependencies,
+                };
+
+                await env.DB.prepare(
+                  "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+                )
+                  .bind(JSON.stringify(updatedStatus), resource.name)
+                  .run();
               }
-            }
-
-            if (allDependenciesReady) {
-              console.log(
-                `[Reconcile] All dependencies resolved for worker script version ${resource.name}, re-queuing for provisioning`,
-              );
-
-              // Queue for provisioning
-              if (env.GUBER_BUS) {
-                await env.GUBER_BUS.send({
-                  action: "create",
-                  resourceType: "workerscriptversion",
-                  resourceName: resource.name,
-                  group: resource.group_name,
-                  kind: resource.kind,
-                  plural: resource.plural,
-                  namespace: resource.namespace,
-                  spec: spec,
-                });
-              }
-            } else {
-              console.log(
-                `[Reconcile] Worker script version ${resource.name} still has unresolved dependencies:`,
-                unresolvedDependencies.map((d) => `${d.kind}/${d.name}`),
-              );
-
-              // Update the dependency check timestamp
-              const updatedStatus = {
-                ...status,
-                lastDependencyCheck: new Date().toISOString(),
-                pendingDependencies: unresolvedDependencies,
-              };
-
-              await env.DB.prepare(
-                "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-              )
-                .bind(JSON.stringify(updatedStatus), resource.name)
-                .run();
             }
           }
 
