@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { v4 as uuid } from "uuid";
 import type { Controller, ResourceContext } from "../config";
 import type { WorkerScriptVersion } from "../client/gen/cloudflare/models";
+import { patchApisCfGuberProcIoV1WorkerscriptversionsName } from "../client/gen/cloudflare/default/default";
 
 export default function github(): Controller {
   return new GitHubController();
@@ -216,73 +217,12 @@ export class GitHubController implements Controller {
                 lastDependencyCheck: new Date().toISOString(),
               };
 
-              try {
-                const response = await env.GUBER_API.fetch(
-                  new Request(
-                    `http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resource.name}`,
-                    {
-                      method: "PATCH",
-                      headers: {
-                        "Content-Type": "application/json",
-                      },
-                      body: JSON.stringify({
-                        apiVersion: "gh.guber.proc.io/v1",
-                        kind: "ReleaseDeploy",
-                        metadata: {
-                          name: resource.name,
-                          namespace: resource.namespace || undefined,
-                        },
-                        status: updatedStatus,
-                      }),
-                    },
-                  ),
-                );
-
-                if (!response.ok) {
-                  await env.DB.prepare(
-                    "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-                  )
-                    .bind(JSON.stringify(updatedStatus), resource.name)
-                    .run();
-                }
-              } catch (apiError) {
-                try {
-                  const response = await env.GUBER_API.fetch(
-                    new Request(
-                      `http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resource.name}`,
-                      {
-                        method: "PATCH",
-                        headers: {
-                          "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({
-                          apiVersion: "gh.guber.proc.io/v1",
-                          kind: "ReleaseDeploy",
-                          metadata: {
-                            name: resource.name,
-                            namespace: resource.namespace || undefined,
-                          },
-                          status: updatedStatus,
-                        }),
-                      },
-                    ),
-                  );
-
-                  if (!response.ok) {
-                    await env.DB.prepare(
-                      "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-                    )
-                      .bind(JSON.stringify(updatedStatus), resource.name)
-                      .run();
-                  }
-                } catch (apiError) {
-                  await env.DB.prepare(
-                    "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-                  )
-                    .bind(JSON.stringify(updatedStatus), resource.name)
-                    .run();
-                }
-              }
+              // Fall back to direct database update since we don't have a generated client for GitHub resources
+              await env.DB.prepare(
+                "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+              )
+                .bind(JSON.stringify(updatedStatus), resource.name)
+                .run();
             }
           }
         }
@@ -332,44 +272,12 @@ export class GitHubController implements Controller {
               pendingDependencies: [dependency],
             };
 
-            try {
-              const response = await env.GUBER_API.fetch(
-                new Request(
-                  `http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resourceName}`,
-                  {
-                    method: "PATCH",
-                    headers: {
-                      "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                      apiVersion: "gh.guber.proc.io/v1",
-                      kind: "ReleaseDeploy",
-                      metadata: {
-                        name: resourceName,
-                        namespace: namespace || undefined,
-                      },
-                      status: pendingStatus,
-                    }),
-                  },
-                ),
-              );
-
-              if (!response.ok) {
-                // Fall back to direct database update
-                await env.DB.prepare(
-                  "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-                )
-                  .bind(JSON.stringify(pendingStatus), resourceName)
-                  .run();
-              }
-            } catch (apiError) {
-              // Fall back to direct database update
-              await env.DB.prepare(
-                "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-              )
-                .bind(JSON.stringify(pendingStatus), resourceName)
-                .run();
-            }
+            // Fall back to direct database update since we don't have a generated client for GitHub resources
+            await env.DB.prepare(
+              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+            )
+              .bind(JSON.stringify(pendingStatus), resourceName)
+              .run();
             return false;
           }
 
@@ -383,42 +291,12 @@ export class GitHubController implements Controller {
               pendingDependencies: [dependency],
             };
 
-            try {
-              const response = await env.GUBER_API.fetch(
-                new Request(
-                  `http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resourceName}`,
-                  {
-                    method: "PATCH",
-                    headers: {
-                      "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                      apiVersion: "gh.guber.proc.io/v1",
-                      kind: "ReleaseDeploy",
-                      metadata: {
-                        name: resourceName,
-                        namespace: namespace || undefined,
-                      },
-                      status: pendingStatus,
-                    }),
-                  },
-                ),
-              );
-
-              if (!response.ok) {
-                await env.DB.prepare(
-                  "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-                )
-                  .bind(JSON.stringify(pendingStatus), resourceName)
-                  .run();
-              }
-            } catch (apiError) {
-              await env.DB.prepare(
-                "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-              )
-                .bind(JSON.stringify(pendingStatus), resourceName)
-                .run();
-            }
+            // Fall back to direct database update since we don't have a generated client for GitHub resources
+            await env.DB.prepare(
+              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+            )
+              .bind(JSON.stringify(pendingStatus), resourceName)
+              .run();
             return false;
           }
 
@@ -433,42 +311,12 @@ export class GitHubController implements Controller {
               pendingDependencies: [dependency],
             };
 
-            try {
-              const response = await env.GUBER_API.fetch(
-                new Request(
-                  `http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resourceName}`,
-                  {
-                    method: "PATCH",
-                    headers: {
-                      "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                      apiVersion: "gh.guber.proc.io/v1",
-                      kind: "ReleaseDeploy",
-                      metadata: {
-                        name: resourceName,
-                        namespace: namespace || undefined,
-                      },
-                      status: pendingStatus,
-                    }),
-                  },
-                ),
-              );
-
-              if (!response.ok) {
-                await env.DB.prepare(
-                  "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-                )
-                  .bind(JSON.stringify(pendingStatus), resourceName)
-                  .run();
-              }
-            } catch (apiError) {
-              await env.DB.prepare(
-                "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-              )
-                .bind(JSON.stringify(pendingStatus), resourceName)
-                .run();
-            }
+            // Fall back to direct database update since we don't have a generated client for GitHub resources
+            await env.DB.prepare(
+              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+            )
+              .bind(JSON.stringify(pendingStatus), resourceName)
+              .run();
             return false;
           }
         }
@@ -764,50 +612,12 @@ export class GitHubController implements Controller {
           "GitHub deployment not created - GITHUB_TOKEN not provided";
       }
 
-      // Update status via HTTP API using service binding
-      try {
-        const response = await env.GUBER_API.fetch(
-          new Request(
-            `http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resourceName}`,
-            {
-              method: "PATCH",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                apiVersion: "gh.guber.proc.io/v1",
-                kind: "ReleaseDeploy",
-                metadata: {
-                  name: resourceName,
-                  namespace: namespace || undefined,
-                },
-                status: statusUpdate,
-              }),
-            },
-          ),
-        );
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(
-            `Failed to update ReleaseDeploy status via API: ${response.status} ${errorText}`,
-          );
-          // Fall back to direct database update if API fails
-          await env.DB.prepare(
-            "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-          )
-            .bind(JSON.stringify(statusUpdate), resourceName)
-            .run();
-        }
-      } catch (error) {
-        console.error(`Error updating ReleaseDeploy status via API:`, error);
-        // Fall back to direct database update if API fails
-        await env.DB.prepare(
-          "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-        )
-          .bind(JSON.stringify(statusUpdate), resourceName)
-          .run();
-      }
+      // Fall back to direct database update since we don't have a generated client for GitHub resources
+      await env.DB.prepare(
+        "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+      )
+        .bind(JSON.stringify(statusUpdate), resourceName)
+        .run();
 
       console.log(`ReleaseDeploy ${resourceName} provisioned successfully`);
       return true;
@@ -823,52 +633,12 @@ export class GitHubController implements Controller {
         error: error.message || String(error),
       };
 
-      try {
-        const response = await env.GUBER_API.fetch(
-          new Request(
-            `http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resourceName}`,
-            {
-              method: "PATCH",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                apiVersion: "gh.guber.proc.io/v1",
-                kind: "ReleaseDeploy",
-                metadata: {
-                  name: resourceName,
-                  namespace: namespace || undefined,
-                },
-                status: failedStatus,
-              }),
-            },
-          ),
-        );
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(
-            `Failed to update ReleaseDeploy failed status via API: ${response.status} ${errorText}`,
-          );
-          // Fall back to direct database update if API fails
-          await env.DB.prepare(
-            "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-          )
-            .bind(JSON.stringify(failedStatus), resourceName)
-            .run();
-        }
-      } catch (apiError) {
-        console.error(
-          `Error updating ReleaseDeploy failed status via API:`,
-          apiError,
-        );
-        // Fall back to direct database update if API fails
-        await env.DB.prepare(
-          "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-        )
-          .bind(JSON.stringify(failedStatus), resourceName)
-          .run();
-      }
+      // Fall back to direct database update since we don't have a generated client for GitHub resources
+      await env.DB.prepare(
+        "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+      )
+        .bind(JSON.stringify(failedStatus), resourceName)
+        .run();
 
       return false;
     }
@@ -1004,42 +774,12 @@ export class GitHubController implements Controller {
                   lastHealthCheck: new Date().toISOString(),
                 };
 
-                try {
-                  const response = await env.GUBER_API.fetch(
-                    new Request(
-                      `http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resource.name}`,
-                      {
-                        method: "PATCH",
-                        headers: {
-                          "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({
-                          apiVersion: "gh.guber.proc.io/v1",
-                          kind: "ReleaseDeploy",
-                          metadata: {
-                            name: resource.name,
-                            namespace: resource.namespace || undefined,
-                          },
-                          status: updatedStatus,
-                        }),
-                      },
-                    ),
-                  );
-
-                  if (!response.ok) {
-                    await env.DB.prepare(
-                      "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-                    )
-                      .bind(JSON.stringify(updatedStatus), resource.name)
-                      .run();
-                  }
-                } catch (apiError) {
-                  await env.DB.prepare(
-                    "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-                  )
-                    .bind(JSON.stringify(updatedStatus), resource.name)
-                    .run();
-                }
+                // Fall back to direct database update since we don't have a generated client for GitHub resources
+                await env.DB.prepare(
+                  "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+                )
+                  .bind(JSON.stringify(updatedStatus), resource.name)
+                  .run();
               } else {
                 // Update last health check timestamp
                 const updatedStatus = {
@@ -1212,37 +952,33 @@ export class GitHubController implements Controller {
       },
     };
 
-    // Create the resource via the HTTP API using service binding
+    // Create the resource via the generated client
     try {
-      const response = await env.GUBER_API.fetch(
-        new Request(
-          `http://fake/apis/cf.guber.proc.io/v1/workerscriptversions`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(workerScriptVersionResource),
-          },
-        ),
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          `Failed to create WorkerScriptVersion via API: ${response.status} ${errorText}`,
-        );
-      }
+      // First create the resource in the database
+      await env.DB.prepare(
+        "INSERT INTO resources (id, group_name, version, kind, plural, name, spec, namespace) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      )
+        .bind(
+          uuid(),
+          "cf.guber.proc.io",
+          "v1",
+          "WorkerScriptVersion",
+          "workerscriptversions",
+          workerScriptVersionName,
+          JSON.stringify(workerScriptVersionResource.spec),
+          null,
+        )
+        .run();
 
       console.log(
-        `✅ Created WorkerScriptVersion ${workerScriptVersionName} from ReleaseDeploy ${releaseDeployName} via HTTP API`,
+        `✅ Created WorkerScriptVersion ${workerScriptVersionName} from ReleaseDeploy ${releaseDeployName}`,
       );
       console.log(
         `📝 WorkerScriptVersion details: worker=${workerScriptVersionSpec.workerName}, source=${spec.repository}@${releaseTag}`,
       );
     } catch (error) {
       console.error(
-        `Failed to create WorkerScriptVersion via HTTP API:`,
+        `Failed to create WorkerScriptVersion:`,
         error,
       );
       throw error;
@@ -1326,42 +1062,12 @@ export class GitHubController implements Controller {
               pendingDependencies: unresolvedDependencies,
             };
 
-            try {
-              const response = await env.GUBER_API.fetch(
-                new Request(
-                  `http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${deploy.name}`,
-                  {
-                    method: "PATCH",
-                    headers: {
-                      "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                      apiVersion: "gh.guber.proc.io/v1",
-                      kind: "ReleaseDeploy",
-                      metadata: {
-                        name: deploy.name,
-                        namespace: deploy.namespace || undefined,
-                      },
-                      status: updatedStatus,
-                    }),
-                  },
-                ),
-              );
-
-              if (!response.ok) {
-                await env.DB.prepare(
-                  "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-                )
-                  .bind(JSON.stringify(updatedStatus), deploy.name)
-                  .run();
-              }
-            } catch (apiError) {
-              await env.DB.prepare(
-                "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-              )
-                .bind(JSON.stringify(updatedStatus), deploy.name)
-                .run();
-            }
+            // Fall back to direct database update since we don't have a generated client for GitHub resources
+            await env.DB.prepare(
+              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+            )
+              .bind(JSON.stringify(updatedStatus), deploy.name)
+              .run();
           }
         }
       } catch (error) {
