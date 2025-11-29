@@ -1,6 +1,8 @@
 import { Hono } from "hono";
 import { v4 as uuid } from "uuid";
 import type { Controller, ResourceContext } from "../config";
+import { patchApisCfGuberProcIoV1WorkerscriptversionsName } from "../client/gen/cloudflare/default/default";
+import type { WorkerScriptVersion } from "../client/gen/cloudflare/models";
 
 export default function github(): Controller {
   return new GitHubController();
@@ -222,11 +224,67 @@ class GitHubController implements Controller {
                 lastDependencyCheck: new Date().toISOString(),
               };
 
-              await env.DB.prepare(
-                "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-              )
-                .bind(JSON.stringify(updatedStatus), resource.name)
-                .run();
+              try {
+                const response = await env.GUBER_API.fetch(
+                  new Request(`http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resource.name}`, {
+                    method: "PATCH",
+                    headers: {
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                      apiVersion: "gh.guber.proc.io/v1",
+                      kind: "ReleaseDeploy",
+                      metadata: {
+                        name: resource.name,
+                        namespace: resource.namespace || undefined,
+                      },
+                      status: updatedStatus,
+                    }),
+                  })
+                );
+
+                if (!response.ok) {
+                  await env.DB.prepare(
+                    "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+                  )
+                    .bind(JSON.stringify(updatedStatus), resource.name)
+                    .run();
+                }
+              } catch (apiError) {
+                try {
+                  const response = await env.GUBER_API.fetch(
+                    new Request(`http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resource.name}`, {
+                      method: "PATCH",
+                      headers: {
+                        "Content-Type": "application/json",
+                      },
+                      body: JSON.stringify({
+                        apiVersion: "gh.guber.proc.io/v1",
+                        kind: "ReleaseDeploy",
+                        metadata: {
+                          name: resource.name,
+                          namespace: resource.namespace || undefined,
+                        },
+                        status: updatedStatus,
+                      }),
+                    })
+                  );
+
+                  if (!response.ok) {
+                    await env.DB.prepare(
+                      "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+                    )
+                      .bind(JSON.stringify(updatedStatus), resource.name)
+                      .run();
+                  }
+                } catch (apiError) {
+                  await env.DB.prepare(
+                    "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+                  )
+                    .bind(JSON.stringify(updatedStatus), resource.name)
+                    .run();
+                }
+              }
             }
           }
         }
@@ -270,18 +328,47 @@ class GitHubController implements Controller {
             console.log(
               `Dependency ${depKind}/${depName} not found, deferring provisioning`,
             );
-            await env.DB.prepare(
-              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-            )
-              .bind(
-                JSON.stringify({
-                  state: "Pending",
-                  message: `Waiting for dependency: ${depKind}/${depName}`,
-                  pendingDependencies: [dependency],
-                }),
-                resourceName,
+            const pendingStatus = {
+              state: "Pending",
+              message: `Waiting for dependency: ${depKind}/${depName}`,
+              pendingDependencies: [dependency],
+            };
+
+            try {
+              const response = await env.GUBER_API.fetch(
+                new Request(`http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resourceName}`, {
+                  method: "PATCH",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    apiVersion: "gh.guber.proc.io/v1",
+                    kind: "ReleaseDeploy",
+                    metadata: {
+                      name: resourceName,
+                      namespace: namespace || undefined,
+                    },
+                    status: pendingStatus,
+                  }),
+                })
+              );
+
+              if (!response.ok) {
+                // Fall back to direct database update
+                await env.DB.prepare(
+                  "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+                )
+                  .bind(JSON.stringify(pendingStatus), resourceName)
+                  .run();
+              }
+            } catch (apiError) {
+              // Fall back to direct database update
+              await env.DB.prepare(
+                "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
               )
-              .run();
+                .bind(JSON.stringify(pendingStatus), resourceName)
+                .run();
+            }
             return false;
           }
 
@@ -289,18 +376,45 @@ class GitHubController implements Controller {
             console.log(
               `Dependency ${depKind}/${depName} has no status, deferring provisioning`,
             );
-            await env.DB.prepare(
-              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-            )
-              .bind(
-                JSON.stringify({
-                  state: "Pending",
-                  message: `Waiting for dependency to be provisioned: ${depKind}/${depName}`,
-                  pendingDependencies: [dependency],
-                }),
-                resourceName,
+            const pendingStatus = {
+              state: "Pending",
+              message: `Waiting for dependency to be provisioned: ${depKind}/${depName}`,
+              pendingDependencies: [dependency],
+            };
+
+            try {
+              const response = await env.GUBER_API.fetch(
+                new Request(`http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resourceName}`, {
+                  method: "PATCH",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    apiVersion: "gh.guber.proc.io/v1",
+                    kind: "ReleaseDeploy",
+                    metadata: {
+                      name: resourceName,
+                      namespace: namespace || undefined,
+                    },
+                    status: pendingStatus,
+                  }),
+                })
+              );
+
+              if (!response.ok) {
+                await env.DB.prepare(
+                  "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+                )
+                  .bind(JSON.stringify(pendingStatus), resourceName)
+                  .run();
+              }
+            } catch (apiError) {
+              await env.DB.prepare(
+                "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
               )
-              .run();
+                .bind(JSON.stringify(pendingStatus), resourceName)
+                .run();
+            }
             return false;
           }
 
@@ -309,18 +423,45 @@ class GitHubController implements Controller {
             console.log(
               `Dependency ${depKind}/${depName} not ready (${depStatus.state}), deferring provisioning`,
             );
-            await env.DB.prepare(
-              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-            )
-              .bind(
-                JSON.stringify({
-                  state: "Pending",
-                  message: `Waiting for dependency to be ready: ${depKind}/${depName} (current state: ${depStatus.state})`,
-                  pendingDependencies: [dependency],
-                }),
-                resourceName,
+            const pendingStatus = {
+              state: "Pending",
+              message: `Waiting for dependency to be ready: ${depKind}/${depName} (current state: ${depStatus.state})`,
+              pendingDependencies: [dependency],
+            };
+
+            try {
+              const response = await env.GUBER_API.fetch(
+                new Request(`http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resourceName}`, {
+                  method: "PATCH",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    apiVersion: "gh.guber.proc.io/v1",
+                    kind: "ReleaseDeploy",
+                    metadata: {
+                      name: resourceName,
+                      namespace: namespace || undefined,
+                    },
+                    status: pendingStatus,
+                  }),
+                })
+              );
+
+              if (!response.ok) {
+                await env.DB.prepare(
+                  "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+                )
+                  .bind(JSON.stringify(pendingStatus), resourceName)
+                  .run();
+              }
+            } catch (apiError) {
+              await env.DB.prepare(
+                "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
               )
-              .run();
+                .bind(JSON.stringify(pendingStatus), resourceName)
+                .run();
+            }
             return false;
           }
         }
@@ -493,7 +634,7 @@ class GitHubController implements Controller {
         }
       }
 
-      // Update the resource status in the database
+      // Update the resource status via HTTP API
       const statusUpdate: any = {
         state: "Ready",
         deployment_id: deploymentId,
@@ -510,11 +651,45 @@ class GitHubController implements Controller {
         statusUpdate.workerScriptVersionName = workerScriptVersionName;
       }
 
-      await env.DB.prepare(
-        "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-      )
-        .bind(JSON.stringify(statusUpdate), resourceName)
-        .run();
+      // Update status via HTTP API using service binding
+      try {
+        const response = await env.GUBER_API.fetch(
+          new Request(`http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resourceName}`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              apiVersion: "gh.guber.proc.io/v1",
+              kind: "ReleaseDeploy",
+              metadata: {
+                name: resourceName,
+                namespace: namespace || undefined,
+              },
+              status: statusUpdate,
+            }),
+          })
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`Failed to update ReleaseDeploy status via API: ${response.status} ${errorText}`);
+          // Fall back to direct database update if API fails
+          await env.DB.prepare(
+            "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+          )
+            .bind(JSON.stringify(statusUpdate), resourceName)
+            .run();
+        }
+      } catch (error) {
+        console.error(`Error updating ReleaseDeploy status via API:`, error);
+        // Fall back to direct database update if API fails
+        await env.DB.prepare(
+          "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+        )
+          .bind(JSON.stringify(statusUpdate), resourceName)
+          .run();
+      }
 
       console.log(
         `ReleaseDeploy ${resourceName} provisioned successfully`,
@@ -523,18 +698,50 @@ class GitHubController implements Controller {
     } catch (error) {
       console.error(`Failed to provision ReleaseDeploy ${resourceName}:`, error);
 
-      // Update status to failed
-      await env.DB.prepare(
-        "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-      )
-        .bind(
-          JSON.stringify({
-            state: "Failed",
-            error: error.message || String(error),
-          }),
-          resourceName,
+      // Update status to failed via HTTP API
+      const failedStatus = {
+        state: "Failed",
+        error: error.message || String(error),
+      };
+
+      try {
+        const response = await env.GUBER_API.fetch(
+          new Request(`http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resourceName}`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              apiVersion: "gh.guber.proc.io/v1",
+              kind: "ReleaseDeploy",
+              metadata: {
+                name: resourceName,
+                namespace: namespace || undefined,
+              },
+              status: failedStatus,
+            }),
+          })
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`Failed to update ReleaseDeploy failed status via API: ${response.status} ${errorText}`);
+          // Fall back to direct database update if API fails
+          await env.DB.prepare(
+            "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+          )
+            .bind(JSON.stringify(failedStatus), resourceName)
+            .run();
+        }
+      } catch (apiError) {
+        console.error(`Error updating ReleaseDeploy failed status via API:`, apiError);
+        // Fall back to direct database update if API fails
+        await env.DB.prepare(
+          "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
         )
-        .run();
+          .bind(JSON.stringify(failedStatus), resourceName)
+          .run();
+      }
 
       return false;
     }
@@ -660,11 +867,39 @@ class GitHubController implements Controller {
                   lastHealthCheck: new Date().toISOString(),
                 };
 
-                await env.DB.prepare(
-                  "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-                )
-                  .bind(JSON.stringify(updatedStatus), resource.name)
-                  .run();
+                try {
+                  const response = await env.GUBER_API.fetch(
+                    new Request(`http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${resource.name}`, {
+                      method: "PATCH",
+                      headers: {
+                        "Content-Type": "application/json",
+                      },
+                      body: JSON.stringify({
+                        apiVersion: "gh.guber.proc.io/v1",
+                        kind: "ReleaseDeploy",
+                        metadata: {
+                          name: resource.name,
+                          namespace: resource.namespace || undefined,
+                        },
+                        status: updatedStatus,
+                      }),
+                    })
+                  );
+
+                  if (!response.ok) {
+                    await env.DB.prepare(
+                      "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+                    )
+                      .bind(JSON.stringify(updatedStatus), resource.name)
+                      .run();
+                  }
+                } catch (apiError) {
+                  await env.DB.prepare(
+                    "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+                  )
+                    .bind(JSON.stringify(updatedStatus), resource.name)
+                    .run();
+                  }
               } else {
                 // Update last health check timestamp
                 const updatedStatus = {
@@ -773,14 +1008,26 @@ class GitHubController implements Controller {
       }
     }
 
-    // Create the WorkerScriptVersion resource
-    const workerScriptVersionResource = {
-      name: workerScriptVersionName,
-      namespace: null,
-      group_name: "cf.guber.proc.io",
+    // Create the WorkerScriptVersion resource via HTTP API
+    const workerScriptVersionResource: WorkerScriptVersion = {
+      apiVersion: "cf.guber.proc.io/v1",
       kind: "WorkerScriptVersion",
-      plural: "workerscriptversions",
-      spec: JSON.stringify({
+      metadata: {
+        name: workerScriptVersionName,
+        namespace: undefined,
+        labels: {
+          "guber.proc.io/created-by": "ReleaseDeploy",
+          "guber.proc.io/source-repository": spec.repository.replace("/", "-"),
+          "guber.proc.io/source-tag": releaseTag,
+        },
+        annotations: {
+          "guber.proc.io/source-repository": spec.repository,
+          "guber.proc.io/source-tag": releaseTag,
+          "guber.proc.io/created-by": `ReleaseDeploy/${releaseDeployName}`,
+          "guber.proc.io/release-url": releaseData?.html_url || "",
+        },
+      },
+      spec: {
         workerName: workerScriptVersionSpec.workerName,
         script: scriptContent,
         metadata: {
@@ -790,45 +1037,32 @@ class GitHubController implements Controller {
           createdBy: `ReleaseDeploy/${releaseDeployName}`,
           releaseUrl: releaseData?.html_url,
         },
-      }),
-      status: JSON.stringify({
-        state: "Pending",
-        message: `Created from ReleaseDeploy ${releaseDeployName}`,
-      }),
+      },
     };
 
-    // Insert the WorkerScriptVersion into the database
-    await env.DB.prepare(
-      `INSERT INTO resources (name, namespace, group_name, kind, plural, spec, status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-    )
-      .bind(
-        workerScriptVersionResource.name,
-        workerScriptVersionResource.namespace,
-        workerScriptVersionResource.group_name,
-        workerScriptVersionResource.kind,
-        workerScriptVersionResource.plural,
-        workerScriptVersionResource.spec,
-        workerScriptVersionResource.status,
-      )
-      .run();
+    // Create the resource via the HTTP API using service binding
+    try {
+      const response = await env.GUBER_API.fetch(
+        new Request(`http://fake/apis/cf.guber.proc.io/v1/workerscriptversions`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(workerScriptVersionResource),
+        })
+      );
 
-    console.log(
-      `Created WorkerScriptVersion ${workerScriptVersionName} from ReleaseDeploy ${releaseDeployName}`,
-    );
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to create WorkerScriptVersion via API: ${response.status} ${errorText}`);
+      }
 
-    // Queue the WorkerScriptVersion for provisioning by the Cloudflare controller
-    if (env.GUBER_BUS) {
-      await env.GUBER_BUS.send({
-        action: "create",
-        resourceType: "workerscriptversion",
-        resourceName: workerScriptVersionName,
-        group: "cf.guber.proc.io",
-        kind: "WorkerScriptVersion",
-        plural: "workerscriptversions",
-        namespace: null,
-        spec: JSON.parse(workerScriptVersionResource.spec),
-      });
+      console.log(
+        `Created WorkerScriptVersion ${workerScriptVersionName} from ReleaseDeploy ${releaseDeployName} via HTTP API`,
+      );
+    } catch (error) {
+      console.error(`Failed to create WorkerScriptVersion via HTTP API:`, error);
+      throw error;
     }
 
     return workerScriptVersionName;
@@ -907,11 +1141,39 @@ class GitHubController implements Controller {
               pendingDependencies: unresolvedDependencies,
             };
 
-            await env.DB.prepare(
-              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-            )
-              .bind(JSON.stringify(updatedStatus), deploy.name)
-              .run();
+            try {
+              const response = await env.GUBER_API.fetch(
+                new Request(`http://fake/apis/gh.guber.proc.io/v1/releasedeploys/${deploy.name}`, {
+                  method: "PATCH",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    apiVersion: "gh.guber.proc.io/v1",
+                    kind: "ReleaseDeploy",
+                    metadata: {
+                      name: deploy.name,
+                      namespace: deploy.namespace || undefined,
+                    },
+                    status: updatedStatus,
+                  }),
+                })
+              );
+
+              if (!response.ok) {
+                await env.DB.prepare(
+                  "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+                )
+                  .bind(JSON.stringify(updatedStatus), deploy.name)
+                  .run();
+              }
+            } catch (apiError) {
+              await env.DB.prepare(
+                "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
+              )
+                .bind(JSON.stringify(updatedStatus), deploy.name)
+                .run();
+            }
           }
         }
       } catch (error) {
