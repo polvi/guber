@@ -6,11 +6,12 @@
  * OpenAPI spec version: v1
  */
 
-export type IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionSpecNames = {
-  /** kind is the serialized kind of the resource */
-  kind: string;
-  /** plural is the plural name of the resource to serve */
-  plural: string;
-  /** shortNames are short names for the resource */
-  shortNames?: string[];
-};
+export type IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionSpecNames =
+  {
+    /** kind is the serialized kind of the resource */
+    kind: string;
+    /** plural is the plural name of the resource to serve */
+    plural: string;
+    /** shortNames are short names for the resource */
+    shortNames?: string[];
+  };

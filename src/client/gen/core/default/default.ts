@@ -7,51 +7,55 @@
  */
 import type {
   IoK8sApiCoreV1Namespace,
-  PatchApiV1NamespacesNameParams
-} from '.././models';
+  PatchApiV1NamespacesNameParams,
+} from ".././models";
 
-import { customFetch } from '../../../custom-fetch';
+import { customFetch } from "../../../custom-fetch";
 
 export type patchApiV1NamespacesNameResponse200 = {
-  data: IoK8sApiCoreV1Namespace
-  status: 200
-}
-    
-export type patchApiV1NamespacesNameResponseSuccess = (patchApiV1NamespacesNameResponse200) & {
-  headers: Headers;
+  data: IoK8sApiCoreV1Namespace;
+  status: 200;
 };
-;
 
-export type patchApiV1NamespacesNameResponse = (patchApiV1NamespacesNameResponseSuccess)
+export type patchApiV1NamespacesNameResponseSuccess =
+  patchApiV1NamespacesNameResponse200 & {
+    headers: Headers;
+  };
+export type patchApiV1NamespacesNameResponse =
+  patchApiV1NamespacesNameResponseSuccess;
 
-export const getPatchApiV1NamespacesNameUrl = (name: string,
-    params?: PatchApiV1NamespacesNameParams,) => {
+export const getPatchApiV1NamespacesNameUrl = (
+  name: string,
+  params?: PatchApiV1NamespacesNameParams,
+) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
     if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : value.toString())
+      normalizedParams.append(key, value === null ? "null" : value.toString());
     }
   });
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `http://fake/api/v1/namespaces/${name}?${stringifiedParams}` : `http://fake/api/v1/namespaces/${name}`
-}
+  return stringifiedParams.length > 0
+    ? `http://fake/api/v1/namespaces/${name}?${stringifiedParams}`
+    : `http://fake/api/v1/namespaces/${name}`;
+};
 
-export const patchApiV1NamespacesName = async (name: string,
-    ioK8sApiCoreV1Namespace: IoK8sApiCoreV1Namespace,
-    params?: PatchApiV1NamespacesNameParams, options?: RequestInit): Promise<patchApiV1NamespacesNameResponse> => {
-  
-  return customFetch<patchApiV1NamespacesNameResponse>(getPatchApiV1NamespacesNameUrl(name,params),
-  {      
-    ...options,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      ioK8sApiCoreV1Namespace,)
-  }
-);}
-
-
+export const patchApiV1NamespacesName = async (
+  name: string,
+  ioK8sApiCoreV1Namespace: IoK8sApiCoreV1Namespace,
+  params?: PatchApiV1NamespacesNameParams,
+  options?: RequestInit,
+): Promise<patchApiV1NamespacesNameResponse> => {
+  return customFetch<patchApiV1NamespacesNameResponse>(
+    getPatchApiV1NamespacesNameUrl(name, params),
+    {
+      ...options,
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(ioK8sApiCoreV1Namespace),
+    },
+  );
+};

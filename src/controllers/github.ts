@@ -977,10 +977,7 @@ export class GitHubController implements Controller {
         `📝 WorkerScriptVersion details: worker=${workerScriptVersionSpec.workerName}, source=${spec.repository}@${releaseTag}`,
       );
     } catch (error) {
-      console.error(
-        `Failed to create WorkerScriptVersion:`,
-        error,
-      );
+      console.error(`Failed to create WorkerScriptVersion:`, error);
       throw error;
     }
 

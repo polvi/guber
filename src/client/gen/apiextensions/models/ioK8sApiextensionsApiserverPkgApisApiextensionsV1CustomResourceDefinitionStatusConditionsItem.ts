@@ -6,10 +6,11 @@
  * OpenAPI spec version: v1
  */
 
-export type IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionStatusConditionsItem = {
-  type?: string;
-  status?: string;
-  lastTransitionTime?: string;
-  reason?: string;
-  message?: string;
-};
+export type IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionStatusConditionsItem =
+  {
+    type?: string;
+    status?: string;
+    lastTransitionTime?: string;
+    reason?: string;
+    message?: string;
+  };

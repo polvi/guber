@@ -6,4 +6,6 @@
  * OpenAPI spec version: v1
  */
 
-export type IoK8sApimachineryPkgApisMetaV1ObjectMetaLabels = {[key: string]: string};
+export type IoK8sApimachineryPkgApisMetaV1ObjectMetaLabels = {
+  [key: string]: string;
+};

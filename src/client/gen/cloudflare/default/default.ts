@@ -17,266 +17,295 @@ import type {
   Version,
   Worker,
   WorkerScriptDeployment,
-  WorkerScriptVersion
-} from '.././models';
+  WorkerScriptVersion,
+} from ".././models";
 
-import { customFetch } from '../../../custom-fetch';
+import { customFetch } from "../../../custom-fetch";
 
 export type patchApisCfGuberProcIoV1VersionsNameResponse200 = {
-  data: Version
-  status: 200
-}
-    
-export type patchApisCfGuberProcIoV1VersionsNameResponseSuccess = (patchApisCfGuberProcIoV1VersionsNameResponse200) & {
-  headers: Headers;
+  data: Version;
+  status: 200;
 };
-;
 
-export type patchApisCfGuberProcIoV1VersionsNameResponse = (patchApisCfGuberProcIoV1VersionsNameResponseSuccess)
+export type patchApisCfGuberProcIoV1VersionsNameResponseSuccess =
+  patchApisCfGuberProcIoV1VersionsNameResponse200 & {
+    headers: Headers;
+  };
+export type patchApisCfGuberProcIoV1VersionsNameResponse =
+  patchApisCfGuberProcIoV1VersionsNameResponseSuccess;
 
-export const getPatchApisCfGuberProcIoV1VersionsNameUrl = (name: string,
-    params?: PatchApisCfGuberProcIoV1VersionsNameParams,) => {
+export const getPatchApisCfGuberProcIoV1VersionsNameUrl = (
+  name: string,
+  params?: PatchApisCfGuberProcIoV1VersionsNameParams,
+) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
     if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : value.toString())
+      normalizedParams.append(key, value === null ? "null" : value.toString());
     }
   });
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `http://fake/apis/cf.guber.proc.io/v1/versions/${name}?${stringifiedParams}` : `http://fake/apis/cf.guber.proc.io/v1/versions/${name}`
-}
+  return stringifiedParams.length > 0
+    ? `http://fake/apis/cf.guber.proc.io/v1/versions/${name}?${stringifiedParams}`
+    : `http://fake/apis/cf.guber.proc.io/v1/versions/${name}`;
+};
 
-export const patchApisCfGuberProcIoV1VersionsName = async (name: string,
-    version: Version,
-    params?: PatchApisCfGuberProcIoV1VersionsNameParams, options?: RequestInit): Promise<patchApisCfGuberProcIoV1VersionsNameResponse> => {
-  
-  return customFetch<patchApisCfGuberProcIoV1VersionsNameResponse>(getPatchApisCfGuberProcIoV1VersionsNameUrl(name,params),
-  {      
-    ...options,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      version,)
-  }
-);}
-
+export const patchApisCfGuberProcIoV1VersionsName = async (
+  name: string,
+  version: Version,
+  params?: PatchApisCfGuberProcIoV1VersionsNameParams,
+  options?: RequestInit,
+): Promise<patchApisCfGuberProcIoV1VersionsNameResponse> => {
+  return customFetch<patchApisCfGuberProcIoV1VersionsNameResponse>(
+    getPatchApisCfGuberProcIoV1VersionsNameUrl(name, params),
+    {
+      ...options,
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(version),
+    },
+  );
+};
 
 export type patchApisCfGuberProcIoV1D1sNameResponse200 = {
-  data: D1
-  status: 200
-}
-    
-export type patchApisCfGuberProcIoV1D1sNameResponseSuccess = (patchApisCfGuberProcIoV1D1sNameResponse200) & {
-  headers: Headers;
+  data: D1;
+  status: 200;
 };
-;
 
-export type patchApisCfGuberProcIoV1D1sNameResponse = (patchApisCfGuberProcIoV1D1sNameResponseSuccess)
+export type patchApisCfGuberProcIoV1D1sNameResponseSuccess =
+  patchApisCfGuberProcIoV1D1sNameResponse200 & {
+    headers: Headers;
+  };
+export type patchApisCfGuberProcIoV1D1sNameResponse =
+  patchApisCfGuberProcIoV1D1sNameResponseSuccess;
 
-export const getPatchApisCfGuberProcIoV1D1sNameUrl = (name: string,
-    params?: PatchApisCfGuberProcIoV1D1sNameParams,) => {
+export const getPatchApisCfGuberProcIoV1D1sNameUrl = (
+  name: string,
+  params?: PatchApisCfGuberProcIoV1D1sNameParams,
+) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
     if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : value.toString())
+      normalizedParams.append(key, value === null ? "null" : value.toString());
     }
   });
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `http://fake/apis/cf.guber.proc.io/v1/d1s/${name}?${stringifiedParams}` : `http://fake/apis/cf.guber.proc.io/v1/d1s/${name}`
-}
+  return stringifiedParams.length > 0
+    ? `http://fake/apis/cf.guber.proc.io/v1/d1s/${name}?${stringifiedParams}`
+    : `http://fake/apis/cf.guber.proc.io/v1/d1s/${name}`;
+};
 
-export const patchApisCfGuberProcIoV1D1sName = async (name: string,
-    d1: D1,
-    params?: PatchApisCfGuberProcIoV1D1sNameParams, options?: RequestInit): Promise<patchApisCfGuberProcIoV1D1sNameResponse> => {
-  
-  return customFetch<patchApisCfGuberProcIoV1D1sNameResponse>(getPatchApisCfGuberProcIoV1D1sNameUrl(name,params),
-  {      
-    ...options,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      d1,)
-  }
-);}
-
+export const patchApisCfGuberProcIoV1D1sName = async (
+  name: string,
+  d1: D1,
+  params?: PatchApisCfGuberProcIoV1D1sNameParams,
+  options?: RequestInit,
+): Promise<patchApisCfGuberProcIoV1D1sNameResponse> => {
+  return customFetch<patchApisCfGuberProcIoV1D1sNameResponse>(
+    getPatchApisCfGuberProcIoV1D1sNameUrl(name, params),
+    {
+      ...options,
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(d1),
+    },
+  );
+};
 
 export type patchApisCfGuberProcIoV1QsNameResponse200 = {
-  data: Queue
-  status: 200
-}
-    
-export type patchApisCfGuberProcIoV1QsNameResponseSuccess = (patchApisCfGuberProcIoV1QsNameResponse200) & {
-  headers: Headers;
+  data: Queue;
+  status: 200;
 };
-;
 
-export type patchApisCfGuberProcIoV1QsNameResponse = (patchApisCfGuberProcIoV1QsNameResponseSuccess)
+export type patchApisCfGuberProcIoV1QsNameResponseSuccess =
+  patchApisCfGuberProcIoV1QsNameResponse200 & {
+    headers: Headers;
+  };
+export type patchApisCfGuberProcIoV1QsNameResponse =
+  patchApisCfGuberProcIoV1QsNameResponseSuccess;
 
-export const getPatchApisCfGuberProcIoV1QsNameUrl = (name: string,
-    params?: PatchApisCfGuberProcIoV1QsNameParams,) => {
+export const getPatchApisCfGuberProcIoV1QsNameUrl = (
+  name: string,
+  params?: PatchApisCfGuberProcIoV1QsNameParams,
+) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
     if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : value.toString())
+      normalizedParams.append(key, value === null ? "null" : value.toString());
     }
   });
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `http://fake/apis/cf.guber.proc.io/v1/qs/${name}?${stringifiedParams}` : `http://fake/apis/cf.guber.proc.io/v1/qs/${name}`
-}
+  return stringifiedParams.length > 0
+    ? `http://fake/apis/cf.guber.proc.io/v1/qs/${name}?${stringifiedParams}`
+    : `http://fake/apis/cf.guber.proc.io/v1/qs/${name}`;
+};
 
-export const patchApisCfGuberProcIoV1QsName = async (name: string,
-    queue: Queue,
-    params?: PatchApisCfGuberProcIoV1QsNameParams, options?: RequestInit): Promise<patchApisCfGuberProcIoV1QsNameResponse> => {
-  
-  return customFetch<patchApisCfGuberProcIoV1QsNameResponse>(getPatchApisCfGuberProcIoV1QsNameUrl(name,params),
-  {      
-    ...options,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      queue,)
-  }
-);}
-
+export const patchApisCfGuberProcIoV1QsName = async (
+  name: string,
+  queue: Queue,
+  params?: PatchApisCfGuberProcIoV1QsNameParams,
+  options?: RequestInit,
+): Promise<patchApisCfGuberProcIoV1QsNameResponse> => {
+  return customFetch<patchApisCfGuberProcIoV1QsNameResponse>(
+    getPatchApisCfGuberProcIoV1QsNameUrl(name, params),
+    {
+      ...options,
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(queue),
+    },
+  );
+};
 
 export type patchApisCfGuberProcIoV1WorkersNameResponse200 = {
-  data: Worker
-  status: 200
-}
-    
-export type patchApisCfGuberProcIoV1WorkersNameResponseSuccess = (patchApisCfGuberProcIoV1WorkersNameResponse200) & {
-  headers: Headers;
+  data: Worker;
+  status: 200;
 };
-;
 
-export type patchApisCfGuberProcIoV1WorkersNameResponse = (patchApisCfGuberProcIoV1WorkersNameResponseSuccess)
+export type patchApisCfGuberProcIoV1WorkersNameResponseSuccess =
+  patchApisCfGuberProcIoV1WorkersNameResponse200 & {
+    headers: Headers;
+  };
+export type patchApisCfGuberProcIoV1WorkersNameResponse =
+  patchApisCfGuberProcIoV1WorkersNameResponseSuccess;
 
-export const getPatchApisCfGuberProcIoV1WorkersNameUrl = (name: string,
-    params?: PatchApisCfGuberProcIoV1WorkersNameParams,) => {
+export const getPatchApisCfGuberProcIoV1WorkersNameUrl = (
+  name: string,
+  params?: PatchApisCfGuberProcIoV1WorkersNameParams,
+) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
     if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : value.toString())
+      normalizedParams.append(key, value === null ? "null" : value.toString());
     }
   });
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `http://fake/apis/cf.guber.proc.io/v1/workers/${name}?${stringifiedParams}` : `http://fake/apis/cf.guber.proc.io/v1/workers/${name}`
-}
+  return stringifiedParams.length > 0
+    ? `http://fake/apis/cf.guber.proc.io/v1/workers/${name}?${stringifiedParams}`
+    : `http://fake/apis/cf.guber.proc.io/v1/workers/${name}`;
+};
 
-export const patchApisCfGuberProcIoV1WorkersName = async (name: string,
-    worker: Worker,
-    params?: PatchApisCfGuberProcIoV1WorkersNameParams, options?: RequestInit): Promise<patchApisCfGuberProcIoV1WorkersNameResponse> => {
-  
-  return customFetch<patchApisCfGuberProcIoV1WorkersNameResponse>(getPatchApisCfGuberProcIoV1WorkersNameUrl(name,params),
-  {      
-    ...options,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      worker,)
-  }
-);}
-
+export const patchApisCfGuberProcIoV1WorkersName = async (
+  name: string,
+  worker: Worker,
+  params?: PatchApisCfGuberProcIoV1WorkersNameParams,
+  options?: RequestInit,
+): Promise<patchApisCfGuberProcIoV1WorkersNameResponse> => {
+  return customFetch<patchApisCfGuberProcIoV1WorkersNameResponse>(
+    getPatchApisCfGuberProcIoV1WorkersNameUrl(name, params),
+    {
+      ...options,
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(worker),
+    },
+  );
+};
 
 export type patchApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse200 = {
-  data: WorkerScriptDeployment
-  status: 200
-}
-    
-export type patchApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponseSuccess = (patchApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse200) & {
-  headers: Headers;
+  data: WorkerScriptDeployment;
+  status: 200;
 };
-;
 
-export type patchApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse = (patchApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponseSuccess)
+export type patchApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponseSuccess =
+  patchApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse200 & {
+    headers: Headers;
+  };
+export type patchApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse =
+  patchApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponseSuccess;
 
-export const getPatchApisCfGuberProcIoV1WorkerscriptdeploymentsNameUrl = (name: string,
-    params?: PatchApisCfGuberProcIoV1WorkerscriptdeploymentsNameParams,) => {
+export const getPatchApisCfGuberProcIoV1WorkerscriptdeploymentsNameUrl = (
+  name: string,
+  params?: PatchApisCfGuberProcIoV1WorkerscriptdeploymentsNameParams,
+) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
     if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : value.toString())
+      normalizedParams.append(key, value === null ? "null" : value.toString());
     }
   });
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `http://fake/apis/cf.guber.proc.io/v1/workerscriptdeployments/${name}?${stringifiedParams}` : `http://fake/apis/cf.guber.proc.io/v1/workerscriptdeployments/${name}`
-}
+  return stringifiedParams.length > 0
+    ? `http://fake/apis/cf.guber.proc.io/v1/workerscriptdeployments/${name}?${stringifiedParams}`
+    : `http://fake/apis/cf.guber.proc.io/v1/workerscriptdeployments/${name}`;
+};
 
-export const patchApisCfGuberProcIoV1WorkerscriptdeploymentsName = async (name: string,
-    workerScriptDeployment: WorkerScriptDeployment,
-    params?: PatchApisCfGuberProcIoV1WorkerscriptdeploymentsNameParams, options?: RequestInit): Promise<patchApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse> => {
-  
-  return customFetch<patchApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse>(getPatchApisCfGuberProcIoV1WorkerscriptdeploymentsNameUrl(name,params),
-  {      
-    ...options,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      workerScriptDeployment,)
-  }
-);}
-
+export const patchApisCfGuberProcIoV1WorkerscriptdeploymentsName = async (
+  name: string,
+  workerScriptDeployment: WorkerScriptDeployment,
+  params?: PatchApisCfGuberProcIoV1WorkerscriptdeploymentsNameParams,
+  options?: RequestInit,
+): Promise<patchApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse> => {
+  return customFetch<patchApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse>(
+    getPatchApisCfGuberProcIoV1WorkerscriptdeploymentsNameUrl(name, params),
+    {
+      ...options,
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(workerScriptDeployment),
+    },
+  );
+};
 
 export type patchApisCfGuberProcIoV1WorkerscriptversionsNameResponse200 = {
-  data: WorkerScriptVersion
-  status: 200
-}
-    
-export type patchApisCfGuberProcIoV1WorkerscriptversionsNameResponseSuccess = (patchApisCfGuberProcIoV1WorkerscriptversionsNameResponse200) & {
-  headers: Headers;
+  data: WorkerScriptVersion;
+  status: 200;
 };
-;
 
-export type patchApisCfGuberProcIoV1WorkerscriptversionsNameResponse = (patchApisCfGuberProcIoV1WorkerscriptversionsNameResponseSuccess)
+export type patchApisCfGuberProcIoV1WorkerscriptversionsNameResponseSuccess =
+  patchApisCfGuberProcIoV1WorkerscriptversionsNameResponse200 & {
+    headers: Headers;
+  };
+export type patchApisCfGuberProcIoV1WorkerscriptversionsNameResponse =
+  patchApisCfGuberProcIoV1WorkerscriptversionsNameResponseSuccess;
 
-export const getPatchApisCfGuberProcIoV1WorkerscriptversionsNameUrl = (name: string,
-    params?: PatchApisCfGuberProcIoV1WorkerscriptversionsNameParams,) => {
+export const getPatchApisCfGuberProcIoV1WorkerscriptversionsNameUrl = (
+  name: string,
+  params?: PatchApisCfGuberProcIoV1WorkerscriptversionsNameParams,
+) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    
     if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : value.toString())
+      normalizedParams.append(key, value === null ? "null" : value.toString());
     }
   });
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `http://fake/apis/cf.guber.proc.io/v1/workerscriptversions/${name}?${stringifiedParams}` : `http://fake/apis/cf.guber.proc.io/v1/workerscriptversions/${name}`
-}
+  return stringifiedParams.length > 0
+    ? `http://fake/apis/cf.guber.proc.io/v1/workerscriptversions/${name}?${stringifiedParams}`
+    : `http://fake/apis/cf.guber.proc.io/v1/workerscriptversions/${name}`;
+};
 
-export const patchApisCfGuberProcIoV1WorkerscriptversionsName = async (name: string,
-    workerScriptVersion: WorkerScriptVersion,
-    params?: PatchApisCfGuberProcIoV1WorkerscriptversionsNameParams, options?: RequestInit): Promise<patchApisCfGuberProcIoV1WorkerscriptversionsNameResponse> => {
-  
-  return customFetch<patchApisCfGuberProcIoV1WorkerscriptversionsNameResponse>(getPatchApisCfGuberProcIoV1WorkerscriptversionsNameUrl(name,params),
-  {      
-    ...options,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      workerScriptVersion,)
-  }
-);}
-
-
+export const patchApisCfGuberProcIoV1WorkerscriptversionsName = async (
+  name: string,
+  workerScriptVersion: WorkerScriptVersion,
+  params?: PatchApisCfGuberProcIoV1WorkerscriptversionsNameParams,
+  options?: RequestInit,
+): Promise<patchApisCfGuberProcIoV1WorkerscriptversionsNameResponse> => {
+  return customFetch<patchApisCfGuberProcIoV1WorkerscriptversionsNameResponse>(
+    getPatchApisCfGuberProcIoV1WorkerscriptversionsNameUrl(name, params),
+    {
+      ...options,
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(workerScriptVersion),
+    },
+  );
+};

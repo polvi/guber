@@ -60,4 +60,22 @@ export default defineConfig({
       target: "http://localhost:8787/openapi/v3/apis/cf.guber.proc.io/v1",
     },
   },
+  guberGithub: {
+    output: {
+      mode: "tags-split",
+      target: "src/client/gen/github/index.ts",
+      schemas: "src/client/gen/github/models",
+      client: "fetch",
+      baseUrl: "http://fake/",
+      override: {
+        mutator: {
+          path: "./src/client/custom-fetch.ts",
+          name: "customFetch",
+        },
+      },
+    },
+    input: {
+      target: "http://localhost:8787/openapi/v3/apis/gh.guber.proc.io/v1",
+    },
+  },
 });

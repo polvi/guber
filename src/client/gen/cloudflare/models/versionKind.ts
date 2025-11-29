@@ -6,10 +6,9 @@
  * OpenAPI spec version: v1
  */
 
-export type VersionKind = typeof VersionKind[keyof typeof VersionKind];
-
+export type VersionKind = (typeof VersionKind)[keyof typeof VersionKind];
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const VersionKind = {
-  Version: 'Version',
+  Version: "Version",
 } as const;

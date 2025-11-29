@@ -5,7 +5,7 @@
  * Kubernetes API server OpenAPI specification
  * OpenAPI spec version: v1
  */
-import type { IoK8sApiCoreV1NamespaceStatusPhase } from './ioK8sApiCoreV1NamespaceStatusPhase';
+import type { IoK8sApiCoreV1NamespaceStatusPhase } from "./ioK8sApiCoreV1NamespaceStatusPhase";
 
 export type IoK8sApiCoreV1NamespaceStatus = {
   phase?: IoK8sApiCoreV1NamespaceStatusPhase;

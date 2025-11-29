@@ -5,11 +5,11 @@
  * OpenAPI specification for cf.guber.proc.io/v1
  * OpenAPI spec version: v1
  */
-import type { WorkerScriptVersionApiVersion } from './workerScriptVersionApiVersion';
-import type { WorkerScriptVersionKind } from './workerScriptVersionKind';
-import type { IoK8sApimachineryPkgApisMetaV1ObjectMeta } from './ioK8sApimachineryPkgApisMetaV1ObjectMeta';
-import type { WorkerScriptVersionSpec } from './workerScriptVersionSpec';
-import type { WorkerScriptVersionStatus } from './workerScriptVersionStatus';
+import type { WorkerScriptVersionApiVersion } from "./workerScriptVersionApiVersion";
+import type { WorkerScriptVersionKind } from "./workerScriptVersionKind";
+import type { IoK8sApimachineryPkgApisMetaV1ObjectMeta } from "./ioK8sApimachineryPkgApisMetaV1ObjectMeta";
+import type { WorkerScriptVersionSpec } from "./workerScriptVersionSpec";
+import type { WorkerScriptVersionStatus } from "./workerScriptVersionStatus";
 
 export interface WorkerScriptVersion {
   apiVersion: WorkerScriptVersionApiVersion;

@@ -6,10 +6,9 @@
  * OpenAPI spec version: v1
  */
 
-export type WorkerKind = typeof WorkerKind[keyof typeof WorkerKind];
-
+export type WorkerKind = (typeof WorkerKind)[keyof typeof WorkerKind];
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const WorkerKind = {
-  Worker: 'Worker',
+  Worker: "Worker",
 } as const;

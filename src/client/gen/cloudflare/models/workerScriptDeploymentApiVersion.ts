@@ -6,10 +6,10 @@
  * OpenAPI spec version: v1
  */
 
-export type WorkerScriptDeploymentApiVersion = typeof WorkerScriptDeploymentApiVersion[keyof typeof WorkerScriptDeploymentApiVersion];
-
+export type WorkerScriptDeploymentApiVersion =
+  (typeof WorkerScriptDeploymentApiVersion)[keyof typeof WorkerScriptDeploymentApiVersion];
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const WorkerScriptDeploymentApiVersion = {
-  'cfguberprocio/v1': 'cf.guber.proc.io/v1',
+  "cfguberprocio/v1": "cf.guber.proc.io/v1",
 } as const;

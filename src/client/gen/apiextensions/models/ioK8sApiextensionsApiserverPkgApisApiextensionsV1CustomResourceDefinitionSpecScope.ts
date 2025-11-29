@@ -9,11 +9,12 @@
 /**
  * scope indicates whether the defined custom resource is cluster- or namespace-scoped
  */
-export type IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionSpecScope = typeof IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionSpecScope[keyof typeof IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionSpecScope];
-
+export type IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionSpecScope =
+  (typeof IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionSpecScope)[keyof typeof IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionSpecScope];
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionSpecScope = {
-  Cluster: 'Cluster',
-  Namespaced: 'Namespaced',
-} as const;
+export const IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionSpecScope =
+  {
+    Cluster: "Cluster",
+    Namespaced: "Namespaced",
+  } as const;

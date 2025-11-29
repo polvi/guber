@@ -6,10 +6,9 @@
  * OpenAPI spec version: v1
  */
 
-export type D1Kind = typeof D1Kind[keyof typeof D1Kind];
-
+export type D1Kind = (typeof D1Kind)[keyof typeof D1Kind];
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const D1Kind = {
-  D1: 'D1',
+  D1: "D1",
 } as const;

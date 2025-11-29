@@ -6,10 +6,10 @@
  * OpenAPI spec version: v1
  */
 
-export type WorkerScriptVersionKind = typeof WorkerScriptVersionKind[keyof typeof WorkerScriptVersionKind];
-
+export type WorkerScriptVersionKind =
+  (typeof WorkerScriptVersionKind)[keyof typeof WorkerScriptVersionKind];
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const WorkerScriptVersionKind = {
-  WorkerScriptVersion: 'WorkerScriptVersion',
+  WorkerScriptVersion: "WorkerScriptVersion",
 } as const;

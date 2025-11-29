@@ -6,8 +6,9 @@
  * OpenAPI spec version: v1
  */
 
-export type IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionStatusAcceptedNames = {
-  kind?: string;
-  plural?: string;
-  shortNames?: string[];
-};
+export type IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionStatusAcceptedNames =
+  {
+    kind?: string;
+    plural?: string;
+    shortNames?: string[];
+  };

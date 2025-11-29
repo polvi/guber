@@ -5,11 +5,11 @@
  * OpenAPI specification for apiextensions.k8s.io/v1
  * OpenAPI spec version: v1
  */
-import type { IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionApiVersion } from './ioK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionApiVersion';
-import type { IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionKind } from './ioK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionKind';
-import type { IoK8sApimachineryPkgApisMetaV1ObjectMeta } from './ioK8sApimachineryPkgApisMetaV1ObjectMeta';
-import type { IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionSpec } from './ioK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionSpec';
-import type { IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionStatus } from './ioK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionStatus';
+import type { IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionApiVersion } from "./ioK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionApiVersion";
+import type { IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionKind } from "./ioK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionKind";
+import type { IoK8sApimachineryPkgApisMetaV1ObjectMeta } from "./ioK8sApimachineryPkgApisMetaV1ObjectMeta";
+import type { IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionSpec } from "./ioK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionSpec";
+import type { IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionStatus } from "./ioK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionStatus";
 
 export interface IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition {
   apiVersion: IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionApiVersion;

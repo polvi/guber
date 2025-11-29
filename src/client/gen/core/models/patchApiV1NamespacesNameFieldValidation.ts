@@ -6,12 +6,12 @@
  * OpenAPI spec version: v1
  */
 
-export type PatchApiV1NamespacesNameFieldValidation = typeof PatchApiV1NamespacesNameFieldValidation[keyof typeof PatchApiV1NamespacesNameFieldValidation];
-
+export type PatchApiV1NamespacesNameFieldValidation =
+  (typeof PatchApiV1NamespacesNameFieldValidation)[keyof typeof PatchApiV1NamespacesNameFieldValidation];
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const PatchApiV1NamespacesNameFieldValidation = {
-  Ignore: 'Ignore',
-  Warn: 'Warn',
-  Strict: 'Strict',
+  Ignore: "Ignore",
+  Warn: "Warn",
+  Strict: "Strict",
 } as const;
