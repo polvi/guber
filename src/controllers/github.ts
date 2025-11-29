@@ -10,6 +10,12 @@ import {
   patchApisCfGuberProcIoV1WorkerscriptversionsName,
   patchApisCfGuberProcIoV1WorkersName,
   patchApisCfGuberProcIoV1WorkerscriptdeploymentsName,
+  postApisCfGuberProcIoV1Workers,
+  postApisCfGuberProcIoV1Workerscriptversions,
+  postApisCfGuberProcIoV1Workerscriptdeployments,
+  deleteApisCfGuberProcIoV1WorkersName,
+  deleteApisCfGuberProcIoV1WorkerscriptversionsName,
+  deleteApisCfGuberProcIoV1WorkerscriptdeploymentsName,
 } from "../client/gen/cloudflare/default/default";
 import { patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName } from "../client/gen/github/default/default";
 import type { ReleaseDeploy } from "../client/gen/github/models";
@@ -790,29 +796,10 @@ export class GitHubController implements Controller {
     // Delete WorkerScriptDeployment first (if it exists)
     if (status.workerScriptDeploymentName) {
       try {
-        // Use the generated client to delete via API
-        const response = await env.GUBER_API.fetch(
-          new Request(
-            `http://fake/apis/cf.guber.proc.io/v1/workerscriptdeployments/${status.workerScriptDeploymentName}`,
-            {
-              method: "DELETE",
-              headers: {
-                "Content-Type": "application/json",
-              },
-            },
-          ),
+        await deleteApisCfGuberProcIoV1WorkerscriptdeploymentsName(status.workerScriptDeploymentName);
+        console.log(
+          `✅ Deleted WorkerScriptDeployment ${status.workerScriptDeploymentName}`,
         );
-
-        if (response.ok) {
-          console.log(
-            `✅ Deleted WorkerScriptDeployment ${status.workerScriptDeploymentName}`,
-          );
-        } else {
-          const errorText = await response.text();
-          console.error(
-            `❌ Failed to delete WorkerScriptDeployment ${status.workerScriptDeploymentName}: ${response.status} ${errorText}`,
-          );
-        }
       } catch (error) {
         console.error(
           `❌ Failed to delete WorkerScriptDeployment ${status.workerScriptDeploymentName}:`,
@@ -824,29 +811,10 @@ export class GitHubController implements Controller {
     // Delete WorkerScriptVersion (if it exists)
     if (status.workerScriptVersionName) {
       try {
-        // Use the generated client to delete via API
-        const response = await env.GUBER_API.fetch(
-          new Request(
-            `http://fake/apis/cf.guber.proc.io/v1/workerscriptversions/${status.workerScriptVersionName}`,
-            {
-              method: "DELETE",
-              headers: {
-                "Content-Type": "application/json",
-              },
-            },
-          ),
+        await deleteApisCfGuberProcIoV1WorkerscriptversionsName(status.workerScriptVersionName);
+        console.log(
+          `✅ Deleted WorkerScriptVersion ${status.workerScriptVersionName}`,
         );
-
-        if (response.ok) {
-          console.log(
-            `✅ Deleted WorkerScriptVersion ${status.workerScriptVersionName}`,
-          );
-        } else {
-          const errorText = await response.text();
-          console.error(
-            `❌ Failed to delete WorkerScriptVersion ${status.workerScriptVersionName}: ${response.status} ${errorText}`,
-          );
-        }
       } catch (error) {
         console.error(
           `❌ Failed to delete WorkerScriptVersion ${status.workerScriptVersionName}:`,
@@ -858,27 +826,8 @@ export class GitHubController implements Controller {
     // Delete Worker (if it exists)
     if (status.workerName) {
       try {
-        // Use the generated client to delete via API
-        const response = await env.GUBER_API.fetch(
-          new Request(
-            `http://fake/apis/cf.guber.proc.io/v1/workers/${status.workerName}`,
-            {
-              method: "DELETE",
-              headers: {
-                "Content-Type": "application/json",
-              },
-            },
-          ),
-        );
-
-        if (response.ok) {
-          console.log(`✅ Deleted Worker ${status.workerName}`);
-        } else {
-          const errorText = await response.text();
-          console.error(
-            `❌ Failed to delete Worker ${status.workerName}: ${response.status} ${errorText}`,
-          );
-        }
+        await deleteApisCfGuberProcIoV1WorkersName(status.workerName);
+        console.log(`✅ Deleted Worker ${status.workerName}`);
       } catch (error) {
         console.error(
           `❌ Failed to delete Worker ${status.workerName}:`,
@@ -1039,21 +988,8 @@ export class GitHubController implements Controller {
       },
     };
 
-    // Create the resource in the database
-    await env.DB.prepare(
-      "INSERT INTO resources (id, group_name, version, kind, plural, name, spec, namespace) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-    )
-      .bind(
-        uuid(),
-        "cf.guber.proc.io",
-        "v1",
-        "Worker",
-        "workers",
-        workerName,
-        JSON.stringify(workerResource.spec),
-        null,
-      )
-      .run();
+    // Create the resource using the generated client
+    await postApisCfGuberProcIoV1Workers(workerResource);
 
     console.log(
       `✅ Created Worker ${workerName} from ReleaseDeploy ${releaseDeployName}`,
@@ -1161,7 +1097,7 @@ export class GitHubController implements Controller {
       }
     }
 
-    // Create the WorkerScriptVersion resource via HTTP API
+    // Create the WorkerScriptVersion resource
     const workerScriptVersionResource: WorkerScriptVersion = {
       apiVersion: "cf.guber.proc.io/v1",
       kind: "WorkerScriptVersion",
@@ -1193,23 +1129,9 @@ export class GitHubController implements Controller {
       },
     };
 
-    // Create the resource via the generated client
+    // Create the resource using the generated client
     try {
-      // First create the resource in the database
-      await env.DB.prepare(
-        "INSERT INTO resources (id, group_name, version, kind, plural, name, spec, namespace) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-      )
-        .bind(
-          uuid(),
-          "cf.guber.proc.io",
-          "v1",
-          "WorkerScriptVersion",
-          "workerscriptversions",
-          workerScriptVersionName,
-          JSON.stringify(workerScriptVersionResource.spec),
-          null,
-        )
-        .run();
+      await postApisCfGuberProcIoV1Workerscriptversions(workerScriptVersionResource);
 
       console.log(
         `✅ Created WorkerScriptVersion ${workerScriptVersionName} from ReleaseDeploy ${releaseDeployName}`,
@@ -1265,21 +1187,8 @@ export class GitHubController implements Controller {
       },
     };
 
-    // Create the resource in the database
-    await env.DB.prepare(
-      "INSERT INTO resources (id, group_name, version, kind, plural, name, spec, namespace) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-    )
-      .bind(
-        uuid(),
-        "cf.guber.proc.io",
-        "v1",
-        "WorkerScriptDeployment",
-        "workerscriptdeployments",
-        workerScriptDeploymentName,
-        JSON.stringify(workerScriptDeploymentResource.spec),
-        null,
-      )
-      .run();
+    // Create the resource using the generated client
+    await postApisCfGuberProcIoV1Workerscriptdeployments(workerScriptDeploymentResource);
 
     console.log(
       `✅ Created WorkerScriptDeployment ${workerScriptDeploymentName} from ReleaseDeploy ${releaseDeployName}`,
