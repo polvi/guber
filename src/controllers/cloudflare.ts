@@ -263,14 +263,18 @@ class CloudflareController implements Controller {
     );
 
     // Find all resources that depend on this newly resolved resource
-    const { results } = await env.DB.prepare(
-      `
-      SELECT * FROM resources 
-      WHERE group_name='cf.guber.proc.io' 
-      AND (kind='Worker' OR kind='WorkerScriptVersion' OR kind='WorkerScriptDeployment')
-      AND json_extract(status, '$.state') = 'Pending'
-    `,
-    ).all();
+    // Get pending resources using the generated client
+    const [workersResponse, versionsResponse, deploymentsResponse] = await Promise.all([
+      getApisCfGuberProcIoV1Workers(),
+      getApisCfGuberProcIoV1Workerscriptversions(),
+      getApisCfGuberProcIoV1Workerscriptdeployments(),
+    ]);
+
+    const results = [
+      ...(workersResponse.data.items || []).filter(item => item.status?.state === 'Pending'),
+      ...(versionsResponse.data.items || []).filter(item => item.status?.state === 'Pending'),
+      ...(deploymentsResponse.data.items || []).filter(item => item.status?.state === 'Pending'),
+    ];
 
     for (const resource of results || []) {
       try {
@@ -2338,14 +2342,10 @@ class CloudflareController implements Controller {
   private async reconcilePendingWorkers(env: any) {
     console.log("Checking pending workers for dependency resolution...");
 
-    const { results: pendingWorkers } = await env.DB.prepare(
-      `
-      SELECT * FROM resources 
-      WHERE group_name='cf.guber.proc.io' 
-      AND kind='Worker' 
-      AND json_extract(status, '$.state') = 'Pending'
-    `,
-    ).all();
+    const workersResponse = await getApisCfGuberProcIoV1Workers();
+    const pendingWorkers = (workersResponse.data.items || []).filter(
+      worker => worker.status?.state === 'Pending'
+    );
 
     for (const worker of pendingWorkers || []) {
       try {
