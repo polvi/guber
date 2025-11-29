@@ -1099,12 +1099,12 @@ class CloudflareController implements Controller {
 
           let depResource = null;
           try {
-            if (depKind === 'Worker') {
-              depResource = await getApisCfGuberProcIoV1WorkersName(depName);
-            } else if (depKind === 'D1') {
-              depResource = await getApisCfGuberProcIoV1D1sName(depName);
-            } else if (depKind === 'Queue') {
-              depResource = await getApisCfGuberProcIoV1QsName(depName);
+            if (dependency.kind === 'Worker') {
+              depResource = await getApisCfGuberProcIoV1WorkersName(dependency.name);
+            } else if (dependency.kind === 'D1') {
+              depResource = await getApisCfGuberProcIoV1D1sName(dependency.name);
+            } else if (dependency.kind === 'Queue') {
+              depResource = await getApisCfGuberProcIoV1QsName(dependency.name);
             }
           } catch (error) {
             depResource = null;
