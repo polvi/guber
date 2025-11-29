@@ -7,7 +7,6 @@ export default defineConfig({
       target: "src/client/gen/core/index.ts",
       schemas: "src/client/gen/core/models",
       client: "fetch",
-      mock: "true",
       baseUrl: "http://fake/",
       /*
       override: {
@@ -33,7 +32,6 @@ export default defineConfig({
       target: "src/client/gen/apiextensions/index.ts",
       schemas: "src/client/gen/apiextensions/models",
       client: "fetch",
-      mock: "true",
       baseUrl: "http://fake/",
     },
     input: {
@@ -46,7 +44,6 @@ export default defineConfig({
       target: "src/client/gen/cloudflare/index.ts",
       schemas: "src/client/gen/cloudflare/models",
       client: "fetch",
-      mock: "true",
       baseUrl: "http://fake/",
     },
     input: {
