@@ -1145,6 +1145,7 @@ export class GitHubController implements Controller {
         },
       },
       spec: {
+        scriptName: workerName,
         workerName: workerName,
         script: scriptContent,
         metadata: {
@@ -1208,6 +1209,7 @@ export class GitHubController implements Controller {
         },
       },
       spec: {
+        scriptName: workerName,
         workerName: workerName,
         workerScriptVersionName: workerScriptVersionName,
         environment: spec.environment || "production",
