@@ -55,7 +55,7 @@ kind: WorkerScriptVersion
 metadata:
   name: hello-world-worker-v2
 spec:
-  scriptName: hello-world-worker-c-workers-cf-guber-proc-io-guber  # Full worker name as created by Guber
+  scriptName: hello-world-worker
   script: |
     export default {
       async fetch(request, env, ctx) {
