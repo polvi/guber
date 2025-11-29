@@ -1,0 +1,137 @@
+# Example: Worker with inline script and a version
+# This example shows how to create a Worker with an inline script
+# and then create a version of that worker for staging/testing
+
+---
+# First, create the main Worker
+apiVersion: cf.guber.proc.io/v1
+kind: Worker
+metadata:
+  name: hello-world-worker
+spec:
+  name: hello-world-worker
+  script: |
+    export default {
+      async fetch(request, env, ctx) {
+        const url = new URL(request.url);
+        
+        // Simple routing
+        if (url.pathname === '/') {
+          return new Response('Hello World! This is the production version.', {
+            headers: { 'Content-Type': 'text/plain' }
+          });
+        }
+        
+        if (url.pathname === '/health') {
+          return new Response(JSON.stringify({
+            status: 'healthy',
+            timestamp: new Date().toISOString(),
+            version: 'production'
+          }), {
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+        
+        if (url.pathname === '/api/info') {
+          return new Response(JSON.stringify({
+            worker: 'hello-world-worker',
+            environment: 'production',
+            features: ['basic-routing', 'health-check']
+          }), {
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+        
+        return new Response('Not Found', { status: 404 });
+      }
+    };
+  compatibility_date: "2023-05-18"
+  compatibility_flags: []
+
+---
+# Then, create a version of the worker with enhanced features
+apiVersion: cf.guber.proc.io/v1
+kind: WorkerScriptVersion
+metadata:
+  name: hello-world-worker-v2
+spec:
+  scriptName: hello-world-worker-c-workers-cf-guber-proc-io-guber  # Full worker name as created by Guber
+  script: |
+    export default {
+      async fetch(request, env, ctx) {
+        const url = new URL(request.url);
+        
+        // Enhanced routing with new features
+        if (url.pathname === '/') {
+          return new Response('Hello World! This is version 2.0 with enhanced features.', {
+            headers: { 
+              'Content-Type': 'text/plain',
+              'X-Worker-Version': '2.0'
+            }
+          });
+        }
+        
+        if (url.pathname === '/health') {
+          return new Response(JSON.stringify({
+            status: 'healthy',
+            timestamp: new Date().toISOString(),
+            version: '2.0',
+            uptime: Date.now(),
+            features: ['enhanced-routing', 'metrics', 'cors-support']
+          }), {
+            headers: { 
+              'Content-Type': 'application/json',
+              'X-Worker-Version': '2.0'
+            }
+          });
+        }
+        
+        if (url.pathname === '/api/info') {
+          return new Response(JSON.stringify({
+            worker: 'hello-world-worker',
+            environment: 'staging',
+            version: '2.0',
+            features: ['enhanced-routing', 'health-check', 'metrics', 'cors-support'],
+            endpoints: ['/', '/health', '/api/info', '/api/metrics']
+          }), {
+            headers: { 
+              'Content-Type': 'application/json',
+              'X-Worker-Version': '2.0',
+              'Access-Control-Allow-Origin': '*'
+            }
+          });
+        }
+        
+        if (url.pathname === '/api/metrics') {
+          return new Response(JSON.stringify({
+            requests_total: Math.floor(Math.random() * 1000),
+            response_time_ms: Math.floor(Math.random() * 100),
+            memory_usage_mb: Math.floor(Math.random() * 50),
+            timestamp: new Date().toISOString()
+          }), {
+            headers: { 
+              'Content-Type': 'application/json',
+              'X-Worker-Version': '2.0',
+              'Access-Control-Allow-Origin': '*'
+            }
+          });
+        }
+        
+        return new Response('Not Found - Version 2.0', { 
+          status: 404,
+          headers: {
+            'X-Worker-Version': '2.0'
+          }
+        });
+      }
+    };
+  compatibility_date: "2023-05-18"
+  compatibility_flags: ["nodejs_compat"]
+  annotations:
+    alias: "v2.0"
+    message: "Enhanced version with metrics and CORS support"
+    tag: "staging"
+  dependencies:
+    - kind: Worker
+      name: hello-world-worker
+      group: cf.guber.proc.io
