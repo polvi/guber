@@ -563,70 +563,75 @@ export class GitHubController implements Controller {
         }
       }
 
-      // Create GitHub deployment
-      const deploymentPayload: any = {
-        ref: releaseTag,
-        environment: spec.environment || "production",
-        description: spec.description || `Deploy ${releaseTag} to ${spec.environment || "production"}`,
-        auto_merge: spec.autoMerge || false,
-        required_contexts: spec.requiredContexts || [],
-      };
+      // Create GitHub deployment (only if token is available)
+      let deploymentId = null;
+      let deploymentUrl = null;
 
-      // Add payload if specified
-      if (spec.payload) {
-        deploymentPayload.payload = spec.payload;
-      }
+      if (env.GITHUB_TOKEN) {
+        const deploymentPayload: any = {
+          ref: releaseTag,
+          environment: spec.environment || "production",
+          description: spec.description || `Deploy ${releaseTag} to ${spec.environment || "production"}`,
+          auto_merge: spec.autoMerge || false,
+          required_contexts: spec.requiredContexts || [],
+        };
 
-      console.log(
-        `🚀 Creating GitHub deployment for ${spec.repository} tag ${releaseTag} to environment: ${spec.environment || "production"}`,
-      );
-      
-      if (releaseData) {
-        console.log(`📦 Release details: ${releaseData.name || releaseTag} - ${releaseData.body ? releaseData.body.substring(0, 100) + '...' : 'No description'}`);
-        if (releaseData.assets && releaseData.assets.length > 0) {
+        // Add payload if specified
+        if (spec.payload) {
+          deploymentPayload.payload = spec.payload;
+        }
+
+        console.log(
+          `🚀 Creating GitHub deployment for ${spec.repository} tag ${releaseTag} to environment: ${spec.environment || "production"}`,
+        );
+        
+        if (releaseData) {
+          console.log(`📦 Release details: ${releaseData.name || releaseTag} - ${releaseData.body ? releaseData.body.substring(0, 100) + '...' : 'No description'}`);
+          if (releaseData.assets && releaseData.assets.length > 0) {
+            console.log(`📎 Release has ${releaseData.assets.length} assets: ${releaseData.assets.map(a => a.name).join(', ')}`);
+          }
+        }
+
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+          "Accept": "application/vnd.github.v3+json",
+          "User-Agent": "Guber-GitHub-Controller/1.0",
+          Authorization: `Bearer ${env.GITHUB_TOKEN}`,
+        };
+
+        const deploymentResponse = await fetch(
+          `https://api.github.com/repos/${spec.repository}/deployments`,
+          {
+            method: "POST",
+            headers,
+            body: JSON.stringify(deploymentPayload),
+          },
+        );
+
+        if (!deploymentResponse.ok) {
+          const errorResponse = await deploymentResponse.json();
+          throw new Error(
+            `Failed to create GitHub deployment: ${JSON.stringify(errorResponse)}`,
+          );
+        }
+
+        const deploymentResult = await deploymentResponse.json();
+        deploymentId = deploymentResult.id;
+        deploymentUrl = `https://github.com/${spec.repository}/deployments`;
+
+        console.log(
+          `✅ GitHub deployment created successfully with ID: ${deploymentId} for ${spec.repository}@${releaseTag}`,
+        );
+        console.log(`🔗 Deployment URL: ${deploymentUrl}`);
+      } else {
+        console.log(
+          `⚠️  Skipping GitHub deployment creation for ${spec.repository}@${releaseTag} - GITHUB_TOKEN not provided`,
+        );
+        console.log(`📦 Release details: ${releaseData?.name || releaseTag} - ${releaseData?.body ? releaseData.body.substring(0, 100) + '...' : 'No description'}`);
+        if (releaseData?.assets && releaseData.assets.length > 0) {
           console.log(`📎 Release has ${releaseData.assets.length} assets: ${releaseData.assets.map(a => a.name).join(', ')}`);
         }
       }
-
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-        "Accept": "application/vnd.github.v3+json",
-        "User-Agent": "Guber-GitHub-Controller/1.0",
-      };
-
-      if (env.GITHUB_TOKEN) {
-        headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
-      }
-
-      const deploymentResponse = await fetch(
-        `https://api.github.com/repos/${spec.repository}/deployments`,
-        {
-          method: "POST",
-          headers,
-          body: JSON.stringify(deploymentPayload),
-        },
-      );
-
-      if (!deploymentResponse.ok) {
-        const errorResponse = await deploymentResponse.json();
-        
-        // If unauthorized and no token provided, throw specific error
-        if (deploymentResponse.status === 401 && !env.GITHUB_TOKEN) {
-          throw new Error("GITHUB_TOKEN environment variable is required to create deployments");
-        }
-        
-        throw new Error(
-          `Failed to create GitHub deployment: ${JSON.stringify(errorResponse)}`,
-        );
-      }
-
-      const deploymentResult = await deploymentResponse.json();
-      const deploymentId = deploymentResult.id;
-
-      console.log(
-        `✅ GitHub deployment created successfully with ID: ${deploymentId} for ${spec.repository}@${releaseTag}`,
-      );
-      console.log(`🔗 Deployment URL: https://github.com/${spec.repository}/deployments`);
 
       // Create WorkerScriptVersion if requested
       let workerScriptVersionName = null;
@@ -648,9 +653,9 @@ export class GitHubController implements Controller {
         }
       }
 
-      // Create deployment status if specified
+      // Create deployment status if specified and deployment was created
       let statusId = null;
-      if (spec.initialStatus) {
+      if (spec.initialStatus && deploymentId && env.GITHUB_TOKEN) {
         const statusPayload = {
           state: spec.initialStatus.state || "pending",
           target_url: spec.initialStatus.targetUrl,
@@ -664,11 +669,8 @@ export class GitHubController implements Controller {
           "Content-Type": "application/json",
           "Accept": "application/vnd.github.v3+json",
           "User-Agent": "Guber-GitHub-Controller/1.0",
+          Authorization: `Bearer ${env.GITHUB_TOKEN}`,
         };
-
-        if (env.GITHUB_TOKEN) {
-          headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
-        }
 
         const statusResponse = await fetch(
           `https://api.github.com/repos/${spec.repository}/deployments/${deploymentId}/statuses`,
@@ -696,18 +698,29 @@ export class GitHubController implements Controller {
       // Update the resource status via HTTP API
       const statusUpdate: any = {
         state: "Ready",
-        deployment_id: deploymentId,
-        status_id: statusId,
         repository: spec.repository,
         tag: releaseTag,
         environment: spec.environment || "production",
         createdAt: new Date().toISOString(),
-        endpoint: `https://api.github.com/repos/${spec.repository}/deployments/${deploymentId}`,
-        url: `https://github.com/${spec.repository}/deployments`,
+        releaseUrl: releaseData?.html_url,
       };
+
+      if (deploymentId) {
+        statusUpdate.deployment_id = deploymentId;
+        statusUpdate.endpoint = `https://api.github.com/repos/${spec.repository}/deployments/${deploymentId}`;
+        statusUpdate.url = deploymentUrl;
+      }
+
+      if (statusId) {
+        statusUpdate.status_id = statusId;
+      }
 
       if (workerScriptVersionName) {
         statusUpdate.workerScriptVersionName = workerScriptVersionName;
+      }
+
+      if (!env.GITHUB_TOKEN) {
+        statusUpdate.note = "GitHub deployment not created - GITHUB_TOKEN not provided";
       }
 
       // Update status via HTTP API using service binding
