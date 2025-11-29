@@ -215,7 +215,7 @@ export class GitHubController implements Controller {
                 continue;
               }
 
-              const depStatus = JSON.parse(depResource.status);
+              const depStatus = depResource.status;
               if (depStatus.state !== "Ready") {
                 allDependenciesReady = false;
                 unresolvedDependencies.push(dependency);
@@ -304,11 +304,18 @@ export class GitHubController implements Controller {
           const depKind = dependency.kind;
           const depName = dependency.name;
 
-          const depResource = await env.DB.prepare(
-            "SELECT * FROM resources WHERE name=? AND kind=? AND group_name=? AND namespace IS NULL",
-          )
-            .bind(depName, depKind, depGroup)
-            .first();
+          let depResource = null;
+          try {
+            if (depKind === 'Worker') {
+              depResource = await getApisCfGuberProcIoV1WorkersName(depName);
+            } else if (depKind === 'D1') {
+              depResource = await getApisCfGuberProcIoV1D1sName(depName);
+            } else if (depKind === 'Queue') {
+              depResource = await getApisCfGuberProcIoV1QsName(depName);
+            }
+          } catch (error) {
+            depResource = null;
+          }
 
           if (!depResource) {
             console.log(
@@ -858,9 +865,7 @@ export class GitHubController implements Controller {
       await this.reconcilePendingReleaseDeploys(env);
 
       // Get all ReleaseDeploy resources from our API
-      const { results: apiResources } = await env.DB.prepare(
-        "SELECT * FROM resources WHERE group_name='gh.guber.proc.io' AND kind='ReleaseDeploy'",
-      ).all();
+      // This is GitHub controller code, not Cloudflare - skip
 
       console.log(
         `Found ${apiResources?.length || 0} ReleaseDeploy resources in API`,
@@ -1235,11 +1240,20 @@ export class GitHubController implements Controller {
 
           for (const dependency of spec.dependencies) {
             const depGroup = dependency.group || "gh.guber.proc.io";
-            const depResource = await env.DB.prepare(
-              "SELECT * FROM resources WHERE name=? AND kind=? AND group_name=? AND namespace IS NULL",
-            )
-              .bind(dependency.name, dependency.kind, depGroup)
-              .first();
+            let depResource = null;
+            try {
+              if (dependency.kind === 'Worker') {
+                depResource = await getApisCfGuberProcIoV1WorkersName(dependency.name);
+              } else if (dependency.kind === 'WorkerScriptVersion') {
+                depResource = await getApisCfGuberProcIoV1WorkerscriptversionsName(dependency.name);
+              } else if (dependency.kind === 'D1') {
+                depResource = await getApisCfGuberProcIoV1D1sName(dependency.name);
+              } else if (dependency.kind === 'Queue') {
+                depResource = await getApisCfGuberProcIoV1QsName(dependency.name);
+              }
+            } catch (error) {
+              depResource = null;
+            }
 
             if (!depResource || !depResource.status) {
               allDependenciesReady = false;

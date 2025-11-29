@@ -3283,7 +3283,7 @@ class CloudflareController implements Controller {
                   continue;
                 }
 
-                const depStatus = JSON.parse(depResource.status);
+                const depStatus = depResource.status;
                 if (depStatus.state !== "Ready") {
                   allDependenciesReady = false;
                   unresolvedDependencies.push(dependency);
@@ -3430,28 +3430,41 @@ class CloudflareController implements Controller {
           const depKind = dependency.kind;
           const depName = dependency.name;
 
-          const depResource = await env.DB.prepare(
-            "SELECT * FROM resources WHERE name=? AND kind=? AND group_name=? AND namespace IS NULL",
-          )
-            .bind(depName, depKind, depGroup)
-            .first();
+          let depResource = null;
+          try {
+            if (depKind === 'Worker') {
+              depResource = await getApisCfGuberProcIoV1WorkersName(depName);
+            } else if (depKind === 'D1') {
+              depResource = await getApisCfGuberProcIoV1D1sName(depName);
+            } else if (depKind === 'Queue') {
+              depResource = await getApisCfGuberProcIoV1QsName(depName);
+            }
+          } catch (error) {
+            depResource = null;
+          }
 
           if (!depResource) {
             console.log(
               `Dependency ${depKind}/${depName} not found, deferring provisioning`,
             );
-            await env.DB.prepare(
-              "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL",
-            )
-              .bind(
-                JSON.stringify({
-                  state: "Pending",
-                  message: `Waiting for dependency: ${depKind}/${depName}`,
-                  pendingDependencies: [dependency],
-                }),
-                resourceName,
-              )
-              .run();
+            const workerScriptDeploymentUpdate: WorkerScriptDeployment = {
+              apiVersion: "cf.guber.proc.io/v1",
+              kind: "WorkerScriptDeployment",
+              metadata: {
+                name: resourceName,
+                namespace: undefined,
+              },
+              status: {
+                state: "Pending",
+                message: `Waiting for dependency: ${depKind}/${depName}`,
+                pendingDependencies: [dependency],
+              },
+            };
+
+            await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
+              resourceName,
+              workerScriptDeploymentUpdate,
+            );
             return false;
           }
 
@@ -3986,7 +3999,7 @@ class CloudflareController implements Controller {
                   continue;
                 }
 
-                const depStatus = JSON.parse(depResource.status);
+                const depStatus = depResource.status;
                 if (depStatus.state !== "Ready") {
                   allDependenciesReady = false;
                   unresolvedDependencies.push(dependency);
