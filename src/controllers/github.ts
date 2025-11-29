@@ -5,6 +5,7 @@ import type { WorkerScriptVersion } from "../client/gen/cloudflare/models";
 import { patchApisCfGuberProcIoV1WorkerscriptversionsName } from "../client/gen/cloudflare/default/default";
 import { patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName } from "../client/gen/github/default/default";
 import type { ReleaseDeploy } from "../client/gen/github/models";
+import { setEnv } from "../client/custom-fetch";
 
 export default function github(): Controller {
   return new GitHubController();
@@ -13,6 +14,9 @@ export default function github(): Controller {
 export class GitHubController implements Controller {
   async onResourceCreated(context: ResourceContext): Promise<void> {
     const { group, kind, name, spec, env } = context;
+
+    // Set the environment for the generated client
+    setEnv(env);
 
     // Only handle gh.guber.proc.io resources
     if (group !== "gh.guber.proc.io") return;
@@ -35,6 +39,9 @@ export class GitHubController implements Controller {
   async onResourceDeleted(context: ResourceContext): Promise<void> {
     const { group, kind, name, spec, status, env } = context;
 
+    // Set the environment for the generated client
+    setEnv(env);
+
     // Only handle gh.guber.proc.io resources
     if (group !== "gh.guber.proc.io") return;
 
@@ -55,6 +62,9 @@ export class GitHubController implements Controller {
   }
 
   async handleQueue(batch: any, env: any): Promise<void> {
+    // Set the environment for the generated client
+    setEnv(env);
+    
     for (const message of batch.messages) {
       try {
         const {
@@ -117,6 +127,9 @@ export class GitHubController implements Controller {
   }
 
   async handleScheduled(event: any, env: any): Promise<void> {
+    // Set the environment for the generated client
+    setEnv(env);
+    
     console.log(
       `Running GitHub resource reconciliation at ${new Date(event.scheduledTime).toISOString()}`,
     );
