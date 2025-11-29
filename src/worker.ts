@@ -279,6 +279,94 @@ app.get("/openapi/v3/apis/apiextensions.k8s.io/v1", async (c) => {
             },
           },
         },
+        put: {
+          parameters: [
+            {
+              name: "name",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+            {
+              name: "fieldValidation",
+              in: "query",
+              schema: {
+                type: "string",
+                enum: ["Ignore", "Warn", "Strict"],
+              },
+            },
+          ],
+          "x-kubernetes-group-version-kind": {
+            group: "apiextensions.k8s.io",
+            version: "v1",
+            kind: "CustomResourceDefinition",
+          },
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.CustomResourceDefinition",
+                },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "OK",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.CustomResourceDefinition",
+                  },
+                },
+              },
+            },
+          },
+        },
+        patch: {
+          parameters: [
+            {
+              name: "name",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+            {
+              name: "fieldValidation",
+              in: "query",
+              schema: {
+                type: "string",
+                enum: ["Ignore", "Warn", "Strict"],
+              },
+            },
+          ],
+          "x-kubernetes-group-version-kind": {
+            group: "apiextensions.k8s.io",
+            version: "v1",
+            kind: "CustomResourceDefinition",
+          },
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.CustomResourceDefinition",
+                },
+              },
+            },
+          },
+          responses: {
+            "200": {
+              description: "OK",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.CustomResourceDefinition",
+                  },
+                },
+              },
+            },
+          },
+        },
         delete: {
           parameters: [
             {
@@ -934,6 +1022,87 @@ app.get(
         scope: result.scope,
         names,
       },
+    });
+  },
+);
+
+app.put(
+  "/apis/apiextensions.k8s.io/v1/customresourcedefinitions/:name",
+  async (c) => {
+    const { name } = c.req.param();
+    const body = await c.req.json();
+    const spec = body.spec;
+    const group = spec.group;
+    const version = spec.versions[0].name;
+    const kind = spec.names.kind;
+    const plural = spec.names.plural;
+    const shortNames = spec.names.shortNames
+      ? JSON.stringify(spec.names.shortNames)
+      : null;
+    const scope = spec.scope || "Cluster";
+
+    // Update or insert the CRD
+    await c.env.DB.prepare(
+      "INSERT OR REPLACE INTO crds (name, group_name, version, kind, plural, short_names, scope) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    )
+      .bind(name, group, version, kind, plural, shortNames, scope)
+      .run();
+
+    return c.json({
+      apiVersion: "apiextensions.k8s.io/v1",
+      kind: "CustomResourceDefinition",
+      metadata: { name },
+      spec,
+    });
+  },
+);
+
+app.patch(
+  "/apis/apiextensions.k8s.io/v1/customresourcedefinitions/:name",
+  async (c) => {
+    const { name } = c.req.param();
+    const body = await c.req.json();
+
+    // Get existing CRD
+    const result = await c.env.DB.prepare("SELECT * FROM crds WHERE name=?")
+      .bind(name)
+      .first();
+    if (!result) return c.json({ message: "Not Found" }, 404);
+
+    // Merge the patch with existing spec
+    const existingSpec = {
+      group: result.group_name,
+      versions: [{ name: result.version, served: true, storage: true }],
+      scope: result.scope,
+      names: {
+        plural: result.plural,
+        kind: result.kind,
+        shortNames: result.short_names ? JSON.parse(result.short_names) : undefined,
+      },
+    };
+
+    const updatedSpec = { ...existingSpec, ...body.spec };
+    const group = updatedSpec.group;
+    const version = updatedSpec.versions[0].name;
+    const kind = updatedSpec.names.kind;
+    const plural = updatedSpec.names.plural;
+    const shortNames = updatedSpec.names.shortNames
+      ? JSON.stringify(updatedSpec.names.shortNames)
+      : null;
+    const scope = updatedSpec.scope || "Cluster";
+
+    // Update the CRD
+    await c.env.DB.prepare(
+      "UPDATE crds SET group_name=?, version=?, kind=?, plural=?, short_names=?, scope=? WHERE name=?",
+    )
+      .bind(group, version, kind, plural, shortNames, scope, name)
+      .run();
+
+    return c.json({
+      apiVersion: "apiextensions.k8s.io/v1",
+      kind: "CustomResourceDefinition",
+      metadata: { name, creationTimestamp: result.created_at },
+      spec: updatedSpec,
     });
   },
 );
