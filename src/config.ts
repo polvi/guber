@@ -1,7 +1,5 @@
 export interface Controller {
   register(app: Hono<any>): void;
-  handleQueue?(batch: any, env: any): Promise<void>;
-  handleScheduled?(event: any, env: any): Promise<void>;
   onResourceCreated?(context: ResourceContext): Promise<void>;
   onResourceDeleted?(context: ResourceContext): Promise<void>;
 }

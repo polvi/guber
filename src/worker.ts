@@ -797,15 +797,17 @@ app.delete(
 export default {
   fetch: app.fetch,
   async queue(batch: MessageBatch<any>, env: Env): Promise<void> {
-    // Delegate to controllers that support queue handling
-    for (const controller of config.controllers) {
-      if (controller.handleQueue) {
-        await controller.handleQueue(batch, env);
-        return;
-      }
+    // Find the cloudflare controller specifically for queue handling
+    const cloudflareController = config.controllers.find(
+      (controller) => controller.constructor?.name === 'CloudflareController'
+    );
+    
+    if (cloudflareController && 'handleQueue' in cloudflareController) {
+      await (cloudflareController as any).handleQueue(batch, env);
+      return;
     }
 
-    // Default behavior if no controller handles queues
+    // Default behavior if no cloudflare controller handles queues
     for (const message of batch.messages) {
       message.ack();
     }
@@ -815,11 +817,13 @@ export default {
       `Running scheduled tasks at ${new Date(event.scheduledTime).toISOString()}`,
     );
 
-    // Delegate to controllers that support scheduled handling
-    for (const controller of config.controllers) {
-      if (controller.handleScheduled) {
-        await controller.handleScheduled(event, env);
-      }
+    // Find the cloudflare controller specifically for scheduled handling
+    const cloudflareController = config.controllers.find(
+      (controller) => controller.constructor?.name === 'CloudflareController'
+    );
+    
+    if (cloudflareController && 'handleScheduled' in cloudflareController) {
+      await (cloudflareController as any).handleScheduled(event, env);
     }
   },
 };
