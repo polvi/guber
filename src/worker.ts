@@ -1415,6 +1415,7 @@ app.patch(
     const scope = updatedSpec.scope || "Cluster";
 
     // Update the CRD
+      console.log("POLVI", body, existingSpec, updatedSpec, group, version, kind, plural, shortNames, scope, name);
     await c.env.DB.prepare(
       "UPDATE crds SET group_name=?, version=?, kind=?, plural=?, short_names=?, scope=? WHERE name=?",
     )
@@ -1608,6 +1609,7 @@ app.get("/apis/:group/:version/:plural/:name", async (c) => {
 app.patch("/apis/:group/:version/:plural/:name", async (c) => {
   const { group, version, plural, name } = c.req.param();
   const body = await c.req.json();
+  console.log("POLVI 2:", group, version, plural, name);
   const current = await c.env.DB.prepare(
     "SELECT * FROM resources WHERE group_name=? AND version=? AND plural=? AND name=? AND namespace IS NULL",
   )
