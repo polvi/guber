@@ -3776,10 +3776,133 @@ class CloudflareController implements Controller {
         );
       }
 
+      // Handle the case where we have a workerScriptVersionName instead of versions array
+      let versions = spec.versions;
+      
+      if (!versions && spec.workerScriptVersionName) {
+        console.log(`[DEBUG] WorkerScriptDeployment ${resourceName} using workerScriptVersionName: ${spec.workerScriptVersionName}`);
+        
+        // Look up the WorkerScriptVersion resource to get its version_id
+        let versionResource = null;
+        try {
+          versionResource = await getApisCfGuberProcIoV1WorkerscriptversionsName(
+            spec.workerScriptVersionName
+          );
+          console.log(`[DEBUG] WorkerScriptVersion found:`, versionResource ? 'YES' : 'NO');
+          if (versionResource) {
+            console.log(`[DEBUG] WorkerScriptVersion data:`, JSON.stringify(versionResource.data, null, 2));
+          }
+        } catch (error) {
+          console.log(`[DEBUG] Error looking up WorkerScriptVersion:`, error);
+          versionResource = null;
+        }
+
+        if (!versionResource) {
+          console.log(`WorkerScriptVersion ${spec.workerScriptVersionName} not found, deferring deployment`);
+          const workerScriptDeploymentUpdate: WorkerScriptDeployment = {
+            apiVersion: "cf.guber.proc.io/v1",
+            kind: "WorkerScriptDeployment",
+            metadata: {
+              name: resourceName,
+              namespace: undefined,
+            },
+            status: {
+              state: "Pending",
+              message: `Waiting for WorkerScriptVersion to be created: ${spec.workerScriptVersionName}`,
+              pendingVersions: [spec.workerScriptVersionName],
+            },
+          };
+
+          await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
+            resourceName,
+            workerScriptDeploymentUpdate
+          );
+          return false;
+        }
+
+        if (!versionResource.data || !versionResource.data.status) {
+          console.log(`WorkerScriptVersion ${spec.workerScriptVersionName} has no status, deferring deployment`);
+          const workerScriptDeploymentUpdate: WorkerScriptDeployment = {
+            apiVersion: "cf.guber.proc.io/v1",
+            kind: "WorkerScriptDeployment",
+            metadata: {
+              name: resourceName,
+              namespace: undefined,
+            },
+            status: {
+              state: "Pending",
+              message: `Waiting for WorkerScriptVersion to be provisioned: ${spec.workerScriptVersionName}`,
+              pendingVersions: [spec.workerScriptVersionName],
+            },
+          };
+
+          await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
+            resourceName,
+            workerScriptDeploymentUpdate
+          );
+          return false;
+        }
+
+        const versionStatus = versionResource.data.status;
+        if (versionStatus.state !== "Ready") {
+          console.log(`WorkerScriptVersion ${spec.workerScriptVersionName} not ready (${versionStatus.state}), deferring deployment`);
+          const workerScriptDeploymentUpdate: WorkerScriptDeployment = {
+            apiVersion: "cf.guber.proc.io/v1",
+            kind: "WorkerScriptDeployment",
+            metadata: {
+              name: resourceName,
+              namespace: undefined,
+            },
+            status: {
+              state: "Pending",
+              message: `Waiting for WorkerScriptVersion to be ready: ${spec.workerScriptVersionName} (current state: ${versionStatus.state})`,
+              pendingVersions: [spec.workerScriptVersionName],
+            },
+          };
+
+          await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
+            resourceName,
+            workerScriptDeploymentUpdate
+          );
+          return false;
+        }
+
+        if (!versionStatus.version_id) {
+          console.log(`WorkerScriptVersion ${spec.workerScriptVersionName} has no version_id, deferring deployment`);
+          const workerScriptDeploymentUpdate: WorkerScriptDeployment = {
+            apiVersion: "cf.guber.proc.io/v1",
+            kind: "WorkerScriptDeployment",
+            metadata: {
+              name: resourceName,
+              namespace: undefined,
+            },
+            status: {
+              state: "Pending",
+              message: `Waiting for WorkerScriptVersion to have version_id: ${spec.workerScriptVersionName}`,
+              pendingVersions: [spec.workerScriptVersionName],
+            },
+          };
+
+          await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
+            resourceName,
+            workerScriptDeploymentUpdate
+          );
+          return false;
+        }
+
+        // Create a versions array with 100% traffic to this version
+        versions = [{
+          version_id: versionStatus.version_id,
+          percentage: 100
+        }];
+        
+        console.log(`[DEBUG] Created versions array from WorkerScriptVersion ${spec.workerScriptVersionName}: version_id=${versionStatus.version_id}`);
+      }
+
       // Validate that version percentages add up to 100
       console.log(`[DEBUG] WorkerScriptDeployment ${resourceName} spec:`, JSON.stringify(spec, null, 2));
       
-      if (!spec.versions || !Array.isArray(spec.versions) || spec.versions.length === 0) {
+      if (!versions || !Array.isArray(versions) || versions.length === 0) {
         console.log(`WorkerScriptDeployment ${resourceName} has no versions array, deferring to allow time for provisioning`);
         const workerScriptDeploymentUpdate: WorkerScriptDeployment = {
           apiVersion: "cf.guber.proc.io/v1",
@@ -3801,9 +3924,9 @@ class CloudflareController implements Controller {
         return false;
       }
       
-      console.log(`[DEBUG] WorkerScriptDeployment ${resourceName} versions:`, spec.versions);
+      console.log(`[DEBUG] WorkerScriptDeployment ${resourceName} versions:`, versions);
       
-      const totalPercentage = spec.versions.reduce(
+      const totalPercentage = versions.reduce(
         (sum: number, version: any) => sum + version.percentage,
         0
       );
@@ -3814,9 +3937,9 @@ class CloudflareController implements Controller {
       }
 
       // Resolve version names to version IDs and validate versions
-      console.log(`[DEBUG] Resolving ${spec.versions.length} versions for deployment ${resourceName}`);
+      console.log(`[DEBUG] Resolving ${versions.length} versions for deployment ${resourceName}`);
       const resolvedVersions = [];
-      for (const version of spec.versions) {
+      for (const version of versions) {
         console.log(`[DEBUG] Processing version:`, version);
         if (!version.percentage) {
           throw new Error(`Each version must have percentage specified`);
