@@ -3779,12 +3779,26 @@ class CloudflareController implements Controller {
       // Validate that version percentages add up to 100
       console.log(`[DEBUG] WorkerScriptDeployment ${resourceName} spec:`, JSON.stringify(spec, null, 2));
       
-      if (!spec.versions) {
-        throw new Error("WorkerScriptDeployment spec must include 'versions' array");
-      }
-      
-      if (!Array.isArray(spec.versions)) {
-        throw new Error("WorkerScriptDeployment spec.versions must be an array");
+      if (!spec.versions || !Array.isArray(spec.versions) || spec.versions.length === 0) {
+        console.log(`WorkerScriptDeployment ${resourceName} has no versions array, deferring to allow time for provisioning`);
+        const workerScriptDeploymentUpdate: WorkerScriptDeployment = {
+          apiVersion: "cf.guber.proc.io/v1",
+          kind: "WorkerScriptDeployment",
+          metadata: {
+            name: resourceName,
+            namespace: undefined,
+          },
+          status: {
+            state: "Pending",
+            message: `Waiting for versions array to be populated`,
+          },
+        };
+
+        await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
+          resourceName,
+          workerScriptDeploymentUpdate
+        );
+        return false;
       }
       
       console.log(`[DEBUG] WorkerScriptDeployment ${resourceName} versions:`, spec.versions);
