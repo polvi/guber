@@ -1470,7 +1470,7 @@ export class GitHubController implements Controller {
         status: updatedStatus,
       };
 
-      await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+      await patchNamespacedReleaseDeploy(
         resource.namespace || "default",
         resource.name,
         releaseDeployUpdate,
