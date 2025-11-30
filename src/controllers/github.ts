@@ -21,7 +21,7 @@ import {
   getApisCfGuberProcIoV1D1sName,
   getApisCfGuberProcIoV1QsName,
 } from "../client/gen/cloudflare/default/default";
-import { patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName } from "../client/gen/github/default/default";
+import { patchNamespacedReleaseDeploy } from "../client/gen/github/default/default";
 import type { ReleaseDeploy } from "../client/gen/github/models";
 import { setEnv } from "../client/custom-fetch";
 
@@ -279,7 +279,7 @@ export class GitHubController implements Controller {
                 status: updatedStatus,
               };
 
-              await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+              await patchNamespacedReleaseDeploy(
                 "default",
                 resource.name,
                 releaseDeployUpdate,
@@ -351,7 +351,7 @@ export class GitHubController implements Controller {
               status: pendingStatus,
             };
 
-            await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+            await patchNamespacedReleaseDeploy(
               namespace || "default",
               resourceName,
               releaseDeployUpdate,
@@ -380,7 +380,7 @@ export class GitHubController implements Controller {
               status: pendingStatus,
             };
 
-            await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+            await patchNamespacedReleaseDeploy(
               namespace || "default",
               resourceName,
               releaseDeployUpdate,
@@ -410,7 +410,7 @@ export class GitHubController implements Controller {
               status: pendingStatus,
             };
 
-            await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+            await patchNamespacedReleaseDeploy(
               namespace || "default",
               resourceName,
               releaseDeployUpdate,
@@ -752,7 +752,7 @@ export class GitHubController implements Controller {
         status: statusUpdate,
       };
 
-      await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+      await patchNamespacedReleaseDeploy(
         namespace || "default",
         resourceName,
         releaseDeployUpdate,
@@ -783,7 +783,7 @@ export class GitHubController implements Controller {
         status: failedStatus,
       };
 
-      await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+      await patchNamespacedReleaseDeploy(
         namespace || "default",
         resourceName,
         releaseDeployUpdate,
@@ -953,7 +953,7 @@ export class GitHubController implements Controller {
                     status: updatedStatus,
                   };
 
-                  await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+                  await patchNamespacedReleaseDeploy(
                     "default",
                     resource.name,
                     releaseDeployUpdate,
@@ -976,7 +976,7 @@ export class GitHubController implements Controller {
                     status: updatedStatus,
                   };
 
-                  await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+                  await patchNamespacedReleaseDeploy(
                     "default",
                     resource.name,
                     releaseDeployUpdate,
@@ -1352,7 +1352,7 @@ export class GitHubController implements Controller {
               status: updatedStatus,
             };
 
-            await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+            await patchNamespacedReleaseDeploy(
               resource.namespace || "default",
               resource.name,
               releaseDeployUpdate,
@@ -1384,7 +1384,7 @@ export class GitHubController implements Controller {
               status: updatedStatus,
             };
 
-            await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+            await patchNamespacedReleaseDeploy(
               resource.namespace || "default",
               resource.name,
               releaseDeployUpdate,
@@ -1410,7 +1410,7 @@ export class GitHubController implements Controller {
             status: updatedStatus,
           };
 
-          await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+          await patchNamespacedReleaseDeploy(
             resource.namespace || "default",
             resource.name,
             releaseDeployUpdate,
@@ -1441,7 +1441,7 @@ export class GitHubController implements Controller {
           status: updatedStatus,
         };
 
-        await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+        await patchNamespacedReleaseDeploy(
           resource.namespace || "default",
           resource.name,
           releaseDeployUpdate,
@@ -1582,7 +1582,7 @@ export class GitHubController implements Controller {
               status: updatedStatus,
             };
 
-            await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+            await patchNamespacedReleaseDeploy(
               "default",
               deploy.name,
               releaseDeployUpdate,
