@@ -1114,9 +1114,6 @@ class CloudflareController implements Controller {
     try {
       // Check dependencies first
       if (spec.dependencies && spec.dependencies.length > 0) {
-        console.log(
-          `Checking ${spec.dependencies.length} dependencies for worker ${fullWorkerName}`
-        );
 
         for (const dependency of spec.dependencies) {
           const depGroup = dependency.group || "cf.guber.proc.io";
@@ -1218,7 +1215,6 @@ class CloudflareController implements Controller {
           }
         }
 
-        console.log(`All dependencies satisfied for worker ${fullWorkerName}`);
       }
 
       // Get the worker script content
@@ -1262,11 +1258,9 @@ class CloudflareController implements Controller {
           });
           if (sourceMapResponse.ok) {
             sourceMap = await sourceMapResponse.text();
-            console.log(`Found source map at ${sourceMapUrl}`);
           }
         } catch (error) {
           // Source map is optional, continue without it
-          console.log(`No source map found for ${spec.scriptUrl}`);
         }
       }
 
@@ -1310,16 +1304,7 @@ class CloudflareController implements Controller {
                   id: status.database_id,
                 };
                 bindings.push(binding);
-                console.log(
-                  `Added D1 binding: ${d1Binding.database_name} -> ${d1Binding.binding}`
-                );
-              } else {
-                console.log(
-                  `D1 resource ${d1Binding.database_name} has no database_id`
-                );
               }
-            } else {
-              console.log(`D1 resource ${d1Binding.database_name} not found`);
             }
           }
         }
@@ -1354,18 +1339,7 @@ class CloudflareController implements Controller {
                   queue_name: fullQueueName,
                 };
                 bindings.push(binding);
-                console.log(
-                  `Added Queue binding: ${queueBinding.queue_name} -> ${queueBinding.binding}`
-                );
-              } else {
-                console.log(
-                  `Queue resource ${queueBinding.queue_name} has no queue_id`
-                );
               }
-            } else {
-              console.log(
-                `Queue resource ${queueBinding.queue_name} not found`
-              );
             }
           }
         }
@@ -1391,9 +1365,6 @@ class CloudflareController implements Controller {
         );
       }
 
-      console.log(
-        `Deploying worker ${fullWorkerName} with ${bindings.length} bindings`
-      );
 
       const deployResponse = await fetch(
         `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullWorkerName}`,
@@ -1413,7 +1384,6 @@ class CloudflareController implements Controller {
         );
       }
 
-      console.log(`Worker script ${fullWorkerName} deployed successfully`);
 
       // Step 2: Create custom domain
       const domainResponse = await fetch(
@@ -1461,9 +1431,6 @@ class CloudflareController implements Controller {
       }
 
       const domainResult = await domainResponse.json();
-      console.log(
-        `Custom domain ${customDomain} created successfully for worker ${fullWorkerName}`
-      );
 
       // Step 3: Update the resource status in the database
       await env.DB.prepare(
@@ -2694,9 +2661,6 @@ class CloudflareController implements Controller {
       }
       // Check dependencies first
       if (spec.dependencies && spec.dependencies.length > 0) {
-        console.log(
-          `Checking ${spec.dependencies.length} dependencies for worker script version ${resourceName}`
-        );
 
         for (const dependency of spec.dependencies) {
           const depGroup = dependency.group || "cf.guber.proc.io";
@@ -2793,9 +2757,6 @@ class CloudflareController implements Controller {
           }
         }
 
-        console.log(
-          `All dependencies satisfied for worker script version ${resourceName}`
-        );
       }
 
       // Get the worker script content
@@ -2838,11 +2799,9 @@ class CloudflareController implements Controller {
           });
           if (sourceMapResponse.ok) {
             sourceMap = await sourceMapResponse.text();
-            console.log(`Found source map at ${sourceMapUrl}`);
           }
         } catch (error) {
           // Source map is optional, continue without it
-          console.log(`No source map found for ${spec.scriptUrl}`);
         }
       }
 
@@ -2900,16 +2859,7 @@ class CloudflareController implements Controller {
                   id: status.database_id,
                 };
                 bindings.push(binding);
-                console.log(
-                  `Added D1 binding: ${d1Binding.database_name} -> ${d1Binding.binding}`
-                );
-              } else {
-                console.log(
-                  `D1 resource ${d1Binding.database_name} has no database_id`
-                );
               }
-            } else {
-              console.log(`D1 resource ${d1Binding.database_name} not found`);
             }
           }
         }
@@ -2944,18 +2894,7 @@ class CloudflareController implements Controller {
                   queue_name: fullQueueName,
                 };
                 bindings.push(binding);
-                console.log(
-                  `Added Queue binding: ${queueBinding.queue_name} -> ${queueBinding.binding}`
-                );
-              } else {
-                console.log(
-                  `Queue resource ${queueBinding.queue_name} has no queue_id`
-                );
               }
-            } else {
-              console.log(
-                `Queue resource ${queueBinding.queue_name} not found`
-              );
             }
           }
         }
@@ -2982,18 +2921,12 @@ class CloudflareController implements Controller {
       }
 
       // Check if scriptName refers to a Worker resource in our system
-      console.log(`[DEBUG] Looking up worker resource: ${spec.scriptName}`);
       let workerResource = null;
       try {
         workerResource = await getApisCfGuberProcIoV1WorkersName(
           spec.scriptName
         );
-        console.log(`[DEBUG] Worker resource found:`, workerResource ? 'YES' : 'NO');
-        if (workerResource) {
-          console.log(`[DEBUG] Worker resource data:`, JSON.stringify(workerResource.data, null, 2));
-        }
       } catch (error) {
-        console.log(`[DEBUG] Error looking up worker resource:`, error);
         workerResource = null;
       }
 
@@ -3111,9 +3044,6 @@ class CloudflareController implements Controller {
         );
       }
 
-      console.log(
-        `Creating worker script version for ${actualScriptName} (from ${spec.scriptName}) with ${bindings.length} bindings`
-      );
 
       const uploadResponse = await fetch(`${workerStatus.endpoint}/versions`, {
         method: "POST",
@@ -3136,9 +3066,6 @@ class CloudflareController implements Controller {
       const versionId = result.result.id;
       const versionNumber = result.result.number;
 
-      console.log(
-        `Worker script version ${versionNumber} created successfully with ID: ${versionId}`
-      );
 
       // Update the resource status using the generated client
       const workerScriptVersionUpdate: WorkerScriptVersion = {
@@ -3548,9 +3475,6 @@ class CloudflareController implements Controller {
       }
       // Check dependencies first
       if (spec.dependencies && spec.dependencies.length > 0) {
-        console.log(
-          `Checking ${spec.dependencies.length} dependencies for worker script deployment ${resourceName}`
-        );
 
         for (const dependency of spec.dependencies) {
           const depGroup = dependency.group || "cf.guber.proc.io";
@@ -3648,9 +3572,6 @@ class CloudflareController implements Controller {
           }
         }
 
-        console.log(
-          `All dependencies satisfied for worker script deployment ${resourceName}`
-        );
       }
 
       // Check if scriptName refers to a Worker resource in our system
@@ -3780,20 +3701,13 @@ class CloudflareController implements Controller {
       let versions = spec.versions;
       
       if (!versions && spec.workerScriptVersionName) {
-        console.log(`[DEBUG] WorkerScriptDeployment ${resourceName} using workerScriptVersionName: ${spec.workerScriptVersionName}`);
-        
         // Look up the WorkerScriptVersion resource to get its version_id
         let versionResource = null;
         try {
           versionResource = await getApisCfGuberProcIoV1WorkerscriptversionsName(
             spec.workerScriptVersionName
           );
-          console.log(`[DEBUG] WorkerScriptVersion found:`, versionResource ? 'YES' : 'NO');
-          if (versionResource) {
-            console.log(`[DEBUG] WorkerScriptVersion data:`, JSON.stringify(versionResource.data, null, 2));
-          }
         } catch (error) {
-          console.log(`[DEBUG] Error looking up WorkerScriptVersion:`, error);
           versionResource = null;
         }
 
@@ -3895,13 +3809,9 @@ class CloudflareController implements Controller {
           version_id: versionStatus.version_id,
           percentage: 100
         }];
-        
-        console.log(`[DEBUG] Created versions array from WorkerScriptVersion ${spec.workerScriptVersionName}: version_id=${versionStatus.version_id}`);
       }
 
       // Validate that version percentages add up to 100
-      console.log(`[DEBUG] WorkerScriptDeployment ${resourceName} spec:`, JSON.stringify(spec, null, 2));
-      
       if (!versions || !Array.isArray(versions) || versions.length === 0) {
         console.log(`WorkerScriptDeployment ${resourceName} has no versions array, deferring to allow time for provisioning`);
         const workerScriptDeploymentUpdate: WorkerScriptDeployment = {
@@ -3924,8 +3834,6 @@ class CloudflareController implements Controller {
         return false;
       }
       
-      console.log(`[DEBUG] WorkerScriptDeployment ${resourceName} versions:`, versions);
-      
       const totalPercentage = versions.reduce(
         (sum: number, version: any) => sum + version.percentage,
         0
@@ -3937,10 +3845,8 @@ class CloudflareController implements Controller {
       }
 
       // Resolve version names to version IDs and validate versions
-      console.log(`[DEBUG] Resolving ${versions.length} versions for deployment ${resourceName}`);
       const resolvedVersions = [];
       for (const version of versions) {
-        console.log(`[DEBUG] Processing version:`, version);
         if (!version.percentage) {
           throw new Error(`Each version must have percentage specified`);
         }
@@ -3959,19 +3865,13 @@ class CloudflareController implements Controller {
 
         if (version.version_name) {
           // Look up the WorkerScriptVersion resource to get its version_id
-          console.log(`[DEBUG] Looking up WorkerScriptVersion: ${version.version_name}`);
           let versionResource = null;
           try {
             versionResource =
               await getApisCfGuberProcIoV1WorkerscriptversionsName(
                 version.version_name
               );
-            console.log(`[DEBUG] WorkerScriptVersion found:`, versionResource ? 'YES' : 'NO');
-            if (versionResource) {
-              console.log(`[DEBUG] WorkerScriptVersion data:`, JSON.stringify(versionResource.data, null, 2));
-            }
           } catch (error) {
-            console.log(`[DEBUG] Error looking up WorkerScriptVersion:`, error);
             versionResource = null;
           }
 
@@ -4051,9 +3951,6 @@ class CloudflareController implements Controller {
         }
       }
 
-      console.log(
-        `Creating worker script deployment for ${actualScriptName} (from ${spec.scriptName}) with ${resolvedVersions.length} versions`
-      );
 
       // Build deployment URL with optional force parameter
       let deploymentUrl = `${workerStatus.endpoint}/deployments`;
@@ -4082,9 +3979,6 @@ class CloudflareController implements Controller {
       const result = await deploymentResponse.json();
       const deploymentId = result.result.id;
 
-      console.log(
-        `Worker script deployment created successfully with ID: ${deploymentId}`
-      );
 
       // Update the resource status using the generated client
       const workerScriptDeploymentUpdate: WorkerScriptDeployment = {
