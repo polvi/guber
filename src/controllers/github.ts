@@ -1253,9 +1253,16 @@ export class GitHubController implements Controller {
     return workerScriptDeploymentName;
   }
 
-  private async checkForNewerVersion(env: any, resource: any, spec: any, status: any) {
+  private async checkForNewerVersion(
+    env: any,
+    resource: any,
+    spec: any,
+    status: any,
+  ) {
     try {
-      console.log(`🔍 Checking for newer version of ${spec.repository} (current: ${status.tag})`);
+      console.log(
+        `🔍 Checking for newer version of ${spec.repository} (current: ${status.tag})`,
+      );
 
       const headers: Record<string, string> = {
         Accept: "application/vnd.github.v3+json",
@@ -1285,30 +1292,34 @@ export class GitHubController implements Controller {
 
       // Compare versions - if current tag is different from latest, we have a newer version
       if (status.tag !== latestTag) {
-        console.log(`🆕 Found newer version: ${latestTag} (current: ${status.tag}) for ${resource.name}`);
+        console.log(
+          `🆕 Found newer version: ${latestTag} (current: ${status.tag}) for ${resource.name}`,
+        );
 
         // Only create new resources if Cloudflare resources were originally created
         if (spec.createCloudflareResources && status.workerName) {
           try {
             // Create new WorkerScriptVersion for the newer release
-            const newWorkerScriptVersionName = await this.createWorkerScriptVersion(
-              env,
-              spec,
-              latestRelease,
-              latestTag,
-              resource.name,
-              status.workerName,
-            );
+            const newWorkerScriptVersionName =
+              await this.createWorkerScriptVersion(
+                env,
+                spec,
+                latestRelease,
+                latestTag,
+                resource.name,
+                status.workerName,
+              );
 
             // Create new WorkerScriptDeployment for the newer version
-            const newWorkerScriptDeploymentName = await this.createWorkerScriptDeployment(
-              env,
-              spec,
-              resource.name,
-              latestTag,
-              status.workerName,
-              newWorkerScriptVersionName,
-            );
+            const newWorkerScriptDeploymentName =
+              await this.createWorkerScriptDeployment(
+                env,
+                spec,
+                resource.name,
+                latestTag,
+                status.workerName,
+                newWorkerScriptVersionName,
+              );
 
             // Update the ReleaseDeploy status with new version info
             const updatedStatus = {
@@ -1326,8 +1337,8 @@ export class GitHubController implements Controller {
                   workerScriptDeploymentName: newWorkerScriptDeploymentName,
                   createdAt: new Date().toISOString(),
                   releaseUrl: latestRelease.html_url,
-                }
-              ]
+                },
+              ],
             };
 
             // Update status using the generated GitHub client
@@ -1347,10 +1358,15 @@ export class GitHubController implements Controller {
               releaseDeployUpdate,
             );
 
-            console.log(`✅ Successfully created new version ${latestTag} for ReleaseDeploy ${resource.name}`);
+            console.log(
+              `✅ Successfully created new version ${latestTag} for ReleaseDeploy ${resource.name}`,
+            );
           } catch (error) {
-            console.error(`❌ Failed to create new version ${latestTag} for ReleaseDeploy ${resource.name}:`, error);
-            
+            console.error(
+              `❌ Failed to create new version ${latestTag} for ReleaseDeploy ${resource.name}:`,
+              error,
+            );
+
             // Update status to indicate version check failure
             const updatedStatus = {
               ...status,
@@ -1381,7 +1397,7 @@ export class GitHubController implements Controller {
             tag: latestTag,
             releaseUrl: latestRelease.html_url,
             lastVersionCheck: new Date().toISOString(),
-            note: "Newer version available but Cloudflare resources not configured for auto-update"
+            note: "Newer version available but Cloudflare resources not configured for auto-update",
           };
 
           const releaseDeployUpdate: ReleaseDeploy = {
@@ -1400,11 +1416,15 @@ export class GitHubController implements Controller {
             releaseDeployUpdate,
           );
 
-          console.log(`📝 Updated ReleaseDeploy ${resource.name} with newer version info: ${latestTag}`);
+          console.log(
+            `📝 Updated ReleaseDeploy ${resource.name} with newer version info: ${latestTag}`,
+          );
         }
       } else {
-        console.log(`✅ ReleaseDeploy ${resource.name} is already on latest version: ${latestTag}`);
-        
+        console.log(
+          `✅ ReleaseDeploy ${resource.name} is already on latest version: ${latestTag}`,
+        );
+
         // Update last version check timestamp
         const updatedStatus = {
           ...status,
@@ -1428,8 +1448,11 @@ export class GitHubController implements Controller {
         );
       }
     } catch (error) {
-      console.error(`Error checking for newer version of ${resource.name}:`, error);
-      
+      console.error(
+        `Error checking for newer version of ${resource.name}:`,
+        error,
+      );
+
       // Update status to indicate version check failure
       const updatedStatus = {
         ...status,

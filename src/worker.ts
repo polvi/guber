@@ -1406,15 +1406,15 @@ app.patch(
 
     // Deep merge the spec, handling nested objects properly
     const updatedSpec = { ...existingSpec };
-    
+
     if (body.spec) {
       if (body.spec.group) updatedSpec.group = body.spec.group;
       if (body.spec.scope) updatedSpec.scope = body.spec.scope;
-      
+
       if (body.spec.versions) {
         updatedSpec.versions = body.spec.versions;
       }
-      
+
       if (body.spec.names) {
         updatedSpec.names = { ...existingSpec.names, ...body.spec.names };
       }
@@ -1430,7 +1430,19 @@ app.patch(
     const scope = updatedSpec.scope || "Cluster";
 
     // Update the CRD
-      console.log("POLVI", body, existingSpec, updatedSpec, group, version, kind, plural, shortNames, scope, name);
+    console.log(
+      "POLVI",
+      body,
+      existingSpec,
+      updatedSpec,
+      group,
+      version,
+      kind,
+      plural,
+      shortNames,
+      scope,
+      name,
+    );
     await c.env.DB.prepare(
       "UPDATE crds SET group_name=?, version=?, kind=?, plural=?, short_names=?, scope=? WHERE name=?",
     )
@@ -1652,7 +1664,10 @@ app.patch("/apis/:group/:version/:plural/:name", async (c) => {
   }
 
   if (body.metadata) {
-    updatedResource.metadata = { ...currentResource.metadata, ...body.metadata };
+    updatedResource.metadata = {
+      ...currentResource.metadata,
+      ...body.metadata,
+    };
     // Preserve system fields
     updatedResource.metadata.name = name;
     updatedResource.metadata.creationTimestamp = current.created_at;
@@ -1900,7 +1915,10 @@ app.patch(
     }
 
     if (body.metadata) {
-      updatedResource.metadata = { ...currentResource.metadata, ...body.metadata };
+      updatedResource.metadata = {
+        ...currentResource.metadata,
+        ...body.metadata,
+      };
       // Preserve system fields
       updatedResource.metadata.name = name;
       updatedResource.metadata.namespace = namespace;
