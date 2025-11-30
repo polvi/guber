@@ -329,14 +329,14 @@ class CloudflareController implements Controller {
                 depResource = null;
               }
 
-              if (!depResource || !depResource.status) {
+              if (!depResource || !depResource.data || !depResource.data.status) {
                 allDependenciesReady = false;
                 unresolvedDependencies.push(dependency);
                 continue;
               }
 
-              const depStatus = depResource.status;
-              if (depStatus.state !== "Ready") {
+              const depStatus = depResource.data.status;
+              if (!depStatus || !depStatus.state || depStatus.state !== "Ready") {
                 allDependenciesReady = false;
                 unresolvedDependencies.push(dependency);
               }
@@ -354,11 +354,11 @@ class CloudflareController implements Controller {
                 await env.GUBER_BUS.send({
                   action: "create",
                   resourceType: resource.kind.toLowerCase(),
-                  resourceName: resource.name,
-                  group: resource.group_name,
+                  resourceName: resource.metadata.name,
+                  group: resource.apiVersion.split('/')[0],
                   kind: resource.kind,
-                  plural: resource.plural,
-                  namespace: resource.namespace,
+                  plural: resource.kind.toLowerCase() + 's',
+                  namespace: resource.metadata.namespace,
                   spec: spec,
                 });
               }
@@ -381,29 +381,29 @@ class CloudflareController implements Controller {
 
               // Update status using the appropriate client based on resource kind
               if (resource.kind === "Worker") {
-                await patchApisCfGuberProcIoV1WorkersName(resource.name, {
+                await patchApisCfGuberProcIoV1WorkersName(resource.metadata.name, {
                   apiVersion: "cf.guber.proc.io/v1",
                   kind: "Worker",
-                  metadata: { name: resource.name },
+                  metadata: { name: resource.metadata.name },
                   status: updatedStatus,
                 });
               } else if (resource.kind === "WorkerScriptVersion") {
                 await patchApisCfGuberProcIoV1WorkerscriptversionsName(
-                  resource.name,
+                  resource.metadata.name,
                   {
                     apiVersion: "cf.guber.proc.io/v1",
                     kind: "WorkerScriptVersion",
-                    metadata: { name: resource.name },
+                    metadata: { name: resource.metadata.name },
                     status: updatedStatus,
                   }
                 );
               } else if (resource.kind === "WorkerScriptDeployment") {
                 await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
-                  resource.name,
+                  resource.metadata.name,
                   {
                     apiVersion: "cf.guber.proc.io/v1",
                     kind: "WorkerScriptDeployment",
-                    metadata: { name: resource.name },
+                    metadata: { name: resource.metadata.name },
                     status: updatedStatus,
                   }
                 );
@@ -413,7 +413,7 @@ class CloudflareController implements Controller {
         }
       } catch (error) {
         console.error(
-          `Error checking dependencies for resource ${resource.name}:`,
+          `Error checking dependencies for resource ${resource.metadata.name}:`,
           error
         );
       }
