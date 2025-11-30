@@ -392,35 +392,26 @@ class CloudflareController implements Controller {
 
               // Update status using the appropriate client based on resource kind
               if (resource.kind === "Worker") {
-                await patchWorker(
-                  resource.metadata.name!,
-                  {
-                    apiVersion: "cf.guber.proc.io/v1",
-                    kind: "Worker",
-                    metadata: { name: resource.metadata.name },
-                    status: updatedStatus,
-                  },
-                );
+                await patchWorker(resource.metadata.name!, {
+                  apiVersion: "cf.guber.proc.io/v1",
+                  kind: "Worker",
+                  metadata: { name: resource.metadata.name },
+                  status: updatedStatus,
+                });
               } else if (resource.kind === "WorkerScriptVersion") {
-                await patchWorkerScriptVersion(
-                  resource.metadata.name!,
-                  {
-                    apiVersion: "cf.guber.proc.io/v1",
-                    kind: "WorkerScriptVersion",
-                    metadata: { name: resource.metadata.name },
-                    status: updatedStatus,
-                  },
-                );
+                await patchWorkerScriptVersion(resource.metadata.name!, {
+                  apiVersion: "cf.guber.proc.io/v1",
+                  kind: "WorkerScriptVersion",
+                  metadata: { name: resource.metadata.name },
+                  status: updatedStatus,
+                });
               } else if (resource.kind === "WorkerScriptDeployment") {
-                await patchWorkerScriptDeployment(
-                  resource.metadata.name!,
-                  {
-                    apiVersion: "cf.guber.proc.io/v1",
-                    kind: "WorkerScriptDeployment",
-                    metadata: { name: resource.metadata.name },
-                    status: updatedStatus,
-                  },
-                );
+                await patchWorkerScriptDeployment(resource.metadata.name!, {
+                  apiVersion: "cf.guber.proc.io/v1",
+                  kind: "WorkerScriptDeployment",
+                  metadata: { name: resource.metadata.name },
+                  status: updatedStatus,
+                });
               }
             }
           }
@@ -1164,7 +1155,10 @@ class CloudflareController implements Controller {
               },
             };
 
-            await patchWorkerScriptVersion(resourceName, workerScriptVersionUpdate);
+            await patchWorkerScriptVersion(
+              resourceName,
+              workerScriptVersionUpdate,
+            );
             return false;
           }
 
@@ -1186,7 +1180,10 @@ class CloudflareController implements Controller {
               },
             };
 
-            await patchWorkerScriptVersion(resourceName, workerScriptVersionUpdate);
+            await patchWorkerScriptVersion(
+              resourceName,
+              workerScriptVersionUpdate,
+            );
             return false;
           }
 
@@ -1210,7 +1207,10 @@ class CloudflareController implements Controller {
               },
             };
 
-            await patchWorkerScriptVersion(resourceName, workerScriptVersionUpdate);
+            await patchWorkerScriptVersion(
+              resourceName,
+              workerScriptVersionUpdate,
+            );
             return false;
           }
         }
@@ -3538,7 +3538,10 @@ class CloudflareController implements Controller {
           },
         };
 
-        await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
+        await patchWorkerScriptDeployment(
+          resourceName,
+          workerScriptDeploymentUpdate,
+        );
         return false;
       }
       // Check dependencies first
@@ -3579,7 +3582,10 @@ class CloudflareController implements Controller {
               },
             };
 
-            await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
+            await patchWorkerScriptDeployment(
+              resourceName,
+              workerScriptDeploymentUpdate,
+            );
             return false;
           }
 
@@ -3601,7 +3607,10 @@ class CloudflareController implements Controller {
               },
             };
 
-            await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
+            await patchWorkerScriptDeployment(
+              resourceName,
+              workerScriptDeploymentUpdate,
+            );
             return false;
           }
 
@@ -3625,7 +3634,10 @@ class CloudflareController implements Controller {
               },
             };
 
-            await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
+            await patchWorkerScriptDeployment(
+              resourceName,
+              workerScriptDeploymentUpdate,
+            );
             return false;
           }
         }
@@ -3657,7 +3669,10 @@ class CloudflareController implements Controller {
           },
         };
 
-        await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
+        await patchWorkerScriptDeployment(
+          resourceName,
+          workerScriptDeploymentUpdate,
+        );
         return false;
       }
 
@@ -3680,7 +3695,10 @@ class CloudflareController implements Controller {
           },
         };
 
-        await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
+        await patchWorkerScriptDeployment(
+          resourceName,
+          workerScriptDeploymentUpdate,
+        );
         return false;
       }
 
@@ -3708,7 +3726,10 @@ class CloudflareController implements Controller {
           },
         };
 
-        await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
+        await patchWorkerScriptDeployment(
+          resourceName,
+          workerScriptDeploymentUpdate,
+        );
         return false;
       }
 
@@ -3730,7 +3751,10 @@ class CloudflareController implements Controller {
           },
         };
 
-        await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
+        await patchWorkerScriptDeployment(
+          resourceName,
+          workerScriptDeploymentUpdate,
+        );
         return false;
       }
 
@@ -3752,7 +3776,9 @@ class CloudflareController implements Controller {
         // Look up the WorkerScriptVersion resource to get its version_id
         let versionResource = null;
         try {
-          versionResource = await getWorkerScriptVersion(spec.workerScriptVersionName);
+          versionResource = await getWorkerScriptVersion(
+            spec.workerScriptVersionName,
+          );
         } catch (error) {
           versionResource = null;
         }
@@ -3775,7 +3801,10 @@ class CloudflareController implements Controller {
             },
           };
 
-          await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
+          await patchWorkerScriptDeployment(
+            resourceName,
+            workerScriptDeploymentUpdate,
+          );
           return false;
         }
 
@@ -3797,7 +3826,10 @@ class CloudflareController implements Controller {
             },
           };
 
-          await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
+          await patchWorkerScriptDeployment(
+            resourceName,
+            workerScriptDeploymentUpdate,
+          );
           return false;
         }
 
@@ -3820,7 +3852,10 @@ class CloudflareController implements Controller {
             },
           };
 
-          await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
+          await patchWorkerScriptDeployment(
+            resourceName,
+            workerScriptDeploymentUpdate,
+          );
           return false;
         }
 
@@ -3842,7 +3877,10 @@ class CloudflareController implements Controller {
             },
           };
 
-          await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
+          await patchWorkerScriptDeployment(
+            resourceName,
+            workerScriptDeploymentUpdate,
+          );
           return false;
         }
 
@@ -3873,7 +3911,10 @@ class CloudflareController implements Controller {
           },
         };
 
-        await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
+        await patchWorkerScriptDeployment(
+          resourceName,
+          workerScriptDeploymentUpdate,
+        );
         return false;
       }
 
@@ -3910,7 +3951,9 @@ class CloudflareController implements Controller {
           // Look up the WorkerScriptVersion resource to get its version_id
           let versionResource = null;
           try {
-            versionResource = await getWorkerScriptVersion(version.version_name);
+            versionResource = await getWorkerScriptVersion(
+              version.version_name,
+            );
           } catch (error) {
             versionResource = null;
           }
@@ -3952,7 +3995,10 @@ class CloudflareController implements Controller {
               },
             };
 
-            await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
+            await patchWorkerScriptDeployment(
+              resourceName,
+              workerScriptDeploymentUpdate,
+            );
             return false;
           }
 
@@ -4034,7 +4080,10 @@ class CloudflareController implements Controller {
         },
       };
 
-      await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
+      await patchWorkerScriptDeployment(
+        resourceName,
+        workerScriptDeploymentUpdate,
+      );
 
       console.log(
         `Worker script deployment ${resourceName} provisioned successfully`,
