@@ -1189,9 +1189,10 @@ class CloudflareController implements Controller {
           }
 
           const depStatus = depResource.status;
-          if (depStatus.state !== "Ready") {
+          if (!depStatus || !depStatus.state || depStatus.state !== "Ready") {
+            const currentState = depStatus?.state || "unknown";
             console.log(
-              `Dependency ${depKind}/${depName} not ready (${depStatus.state}), deferring provisioning`
+              `Dependency ${depKind}/${depName} not ready (${currentState}), deferring provisioning`
             );
             const workerScriptVersionUpdate: WorkerScriptVersion = {
               apiVersion: "cf.guber.proc.io/v1",
@@ -1202,7 +1203,7 @@ class CloudflareController implements Controller {
               },
               status: {
                 state: "Pending",
-                message: `Waiting for dependency to be ready: ${depKind}/${depName} (current state: ${depStatus.state})`,
+                message: `Waiting for dependency to be ready: ${depKind}/${depName} (current state: ${currentState})`,
                 pendingDependencies: [dependency],
               },
             };
@@ -3040,9 +3041,10 @@ class CloudflareController implements Controller {
       }
 
       const workerStatus = workerResource.status;
-      if (workerStatus.state !== "Ready") {
+      if (!workerStatus || !workerStatus.state || workerStatus.state !== "Ready") {
+        const currentState = workerStatus?.state || "unknown";
         console.log(
-          `Target worker ${spec.scriptName} is not ready (${workerStatus.state}), deferring version creation`
+          `Target worker ${spec.scriptName} is not ready (${currentState}), deferring version creation`
         );
         const workerScriptVersionUpdate: WorkerScriptVersion = {
           apiVersion: "cf.guber.proc.io/v1",
@@ -3053,7 +3055,7 @@ class CloudflareController implements Controller {
           },
           status: {
             state: "Pending",
-            message: `Waiting for target worker to be ready: ${spec.scriptName} (current state: ${workerStatus.state})`,
+            message: `Waiting for target worker to be ready: ${spec.scriptName} (current state: ${currentState})`,
             pendingWorker: spec.scriptName,
           },
         };
@@ -3611,9 +3613,10 @@ class CloudflareController implements Controller {
           }
 
           const depStatus = depResource.status;
-          if (depStatus.state !== "Ready") {
+          if (!depStatus || !depStatus.state || depStatus.state !== "Ready") {
+            const currentState = depStatus?.state || "unknown";
             console.log(
-              `Dependency ${depKind}/${depName} not ready (${depStatus.state}), deferring provisioning`
+              `Dependency ${depKind}/${depName} not ready (${currentState}), deferring provisioning`
             );
             const workerScriptDeploymentUpdate: WorkerScriptDeployment = {
               apiVersion: "cf.guber.proc.io/v1",
@@ -3624,7 +3627,7 @@ class CloudflareController implements Controller {
               },
               status: {
                 state: "Pending",
-                message: `Waiting for dependency to be ready: ${depKind}/${depName} (current state: ${depStatus.state})`,
+                message: `Waiting for dependency to be ready: ${depKind}/${depName} (current state: ${currentState})`,
                 pendingDependencies: [dependency],
               },
             };
@@ -3704,9 +3707,10 @@ class CloudflareController implements Controller {
       }
 
       const workerStatus = workerResource.status;
-      if (workerStatus.state !== "Ready") {
+      if (!workerStatus || !workerStatus.state || workerStatus.state !== "Ready") {
+        const currentState = workerStatus?.state || "unknown";
         console.log(
-          `Target worker ${spec.scriptName} is not ready (${workerStatus.state}), deferring deployment creation`
+          `Target worker ${spec.scriptName} is not ready (${currentState}), deferring deployment creation`
         );
         const workerScriptDeploymentUpdate: WorkerScriptDeployment = {
           apiVersion: "cf.guber.proc.io/v1",
@@ -3717,7 +3721,7 @@ class CloudflareController implements Controller {
           },
           status: {
             state: "Pending",
-            message: `Waiting for target worker to be ready: ${spec.scriptName} (current state: ${workerStatus.state})`,
+            message: `Waiting for target worker to be ready: ${spec.scriptName} (current state: ${currentState})`,
             pendingWorker: spec.scriptName,
           },
         };
