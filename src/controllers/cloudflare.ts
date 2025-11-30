@@ -293,7 +293,12 @@ class CloudflareController implements Controller {
         const spec = resource.spec;
         const status = resource.status || {};
 
-        if (spec.dependencies && status.pendingDependencies) {
+        if (
+          spec &&
+          spec.dependencies &&
+          Array.isArray(spec.dependencies) &&
+          status.pendingDependencies
+        ) {
           const hasDependency = spec.dependencies.some(
             (dep: any) =>
               dep.name === resolvedResourceName &&
@@ -303,7 +308,7 @@ class CloudflareController implements Controller {
 
           if (hasDependency) {
             console.log(
-              `Found dependent resource ${resource.name}, checking if all dependencies are now ready`,
+              `Found dependent resource ${resource.metadata.name}, checking if all dependencies are now ready`,
             );
 
             // Check if ALL dependencies are now ready
@@ -352,7 +357,7 @@ class CloudflareController implements Controller {
             if (allDependenciesReady) {
               console.log(
                 `✅ All dependencies resolved for ${resource.kind.toLowerCase()} ${
-                  resource.name
+                  resource.metadata.name
                 }, re-queuing for provisioning`,
               );
 
@@ -371,7 +376,7 @@ class CloudflareController implements Controller {
               }
             } else {
               console.log(
-                `⏳ ${resource.kind} ${resource.name} still has unresolved dependencies:`,
+                `⏳ ${resource.kind} ${resource.metadata.name} still has unresolved dependencies:`,
                 unresolvedDependencies.map((d) => `${d.kind}/${d.name}`),
               );
 
@@ -389,7 +394,7 @@ class CloudflareController implements Controller {
               // Update status using the appropriate client based on resource kind
               if (resource.kind === "Worker") {
                 await patchApisCfGuberProcIoV1WorkersName(
-                  resource.metadata.name,
+                  resource.metadata.name!,
                   {
                     apiVersion: "cf.guber.proc.io/v1",
                     kind: "Worker",
@@ -399,7 +404,7 @@ class CloudflareController implements Controller {
                 );
               } else if (resource.kind === "WorkerScriptVersion") {
                 await patchApisCfGuberProcIoV1WorkerscriptversionsName(
-                  resource.metadata.name,
+                  resource.metadata.name!,
                   {
                     apiVersion: "cf.guber.proc.io/v1",
                     kind: "WorkerScriptVersion",
@@ -409,7 +414,7 @@ class CloudflareController implements Controller {
                 );
               } else if (resource.kind === "WorkerScriptDeployment") {
                 await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
-                  resource.metadata.name,
+                  resource.metadata.name!,
                   {
                     apiVersion: "cf.guber.proc.io/v1",
                     kind: "WorkerScriptDeployment",
@@ -482,7 +487,7 @@ class CloudflareController implements Controller {
     );
 
     if (response.ok) {
-      const result = await response.json();
+      const result = (await response.json()) as any;
       const databaseId = result.result.uuid;
 
       // Update the resource status in the database
@@ -503,7 +508,7 @@ class CloudflareController implements Controller {
       );
       return true;
     } else {
-      const errorResponse = await response.json();
+      const errorResponse = (await response.json()) as any;
 
       // Check if the error is because the database already exists
       if (
@@ -526,7 +531,7 @@ class CloudflareController implements Controller {
         );
 
         if (listResponse.ok) {
-          const listResult = await listResponse.json();
+          const listResult = (await listResponse.json()) as any;
           const existingDb = listResult.result.find(
             (db: any) => db.name === fullDatabaseName,
           );
@@ -692,7 +697,7 @@ class CloudflareController implements Controller {
     );
 
     if (response.ok) {
-      const result = await response.json();
+      const result = (await response.json()) as any;
       const queueId = result.result.queue_id;
 
       // Update the resource status in the database
@@ -713,7 +718,7 @@ class CloudflareController implements Controller {
       );
       return true;
     } else {
-      const errorResponse = await response.json();
+      const errorResponse = (await response.json()) as any;
 
       // Check if the error is because the queue already exists
       if (
@@ -736,7 +741,7 @@ class CloudflareController implements Controller {
         );
 
         if (listResponse.ok) {
-          const listResult = await listResponse.json();
+          const listResult = (await listResponse.json()) as any;
           const existingQueue = listResult.result.find(
             (queue: any) => queue.queue_name === fullQueueName,
           );
@@ -890,7 +895,7 @@ class CloudflareController implements Controller {
         return;
       }
 
-      const cloudflareResult = await cloudflareResponse.json();
+      const cloudflareResult = (await cloudflareResponse.json()) as any;
       const cloudflareQueues = cloudflareResult.result || [];
 
       // Create maps for easier comparison
@@ -1006,7 +1011,7 @@ class CloudflareController implements Controller {
           );
 
           if (createResponse.ok) {
-            const result = await createResponse.json();
+            const result = (await createResponse.json()) as any;
             const queueId = result.result.queue_id;
 
             // Update the resource status in our database
@@ -1331,14 +1336,15 @@ class CloudflareController implements Controller {
             }
 
             if (queueResource && queueResource.status) {
-              const status = queueResource.status;
+              const status = queueResource.status as any;
               if (status.queue_id) {
                 // Build the full queue name that was created in Cloudflare
                 const fullQueueName = this.buildFullDatabaseName(
-                  queueResource.metadata?.name || queueResource.name,
+                  queueResource.metadata?.name || (queueResource as any).name,
                   "cf.guber.proc.io",
                   "qs",
-                  queueResource.metadata?.namespace || queueResource.namespace,
+                  queueResource.metadata?.namespace ||
+                    (queueResource as any).namespace,
                   env.GUBER_NAME,
                 );
                 const binding = {
@@ -1436,7 +1442,7 @@ class CloudflareController implements Controller {
         return false;
       }
 
-      const domainResult = await domainResponse.json();
+      const domainResult = (await domainResponse.json()) as any;
       console.log(
         `Custom domain ${customDomain} created successfully for worker ${fullWorkerName}`,
       );
@@ -1474,7 +1480,7 @@ class CloudflareController implements Controller {
         },
         status: {
           state: "Failed",
-          error: error.message || String(error),
+          error: (error as Error).message || String(error),
         },
       };
 
@@ -1597,8 +1603,8 @@ class CloudflareController implements Controller {
         return;
       }
 
-      const workersResult = await workersResponse.json();
-      const domainsResult = await domainsResponse.json();
+      const workersResult = (await workersResponse.json()) as any;
+      const domainsResult = (await domainsResponse.json()) as any;
       const cloudflareWorkers = workersResult.result || [];
       const cloudflareDomains = domainsResult.result || [];
 
@@ -1610,10 +1616,10 @@ class CloudflareController implements Controller {
       // Build API worker map with full names
       for (const resource of apiResources || []) {
         const fullWorkerName = this.buildFullDatabaseName(
-          resource.metadata?.name || resource.name,
+          resource.metadata?.name || (resource as any).name,
           "cf.guber.proc.io",
           "workers",
-          resource.metadata?.namespace || resource.namespace,
+          resource.metadata?.namespace || (resource as any).namespace,
           env.GUBER_NAME,
         );
         apiWorkerMap.set(fullWorkerName, resource);
@@ -1855,7 +1861,7 @@ class CloudflareController implements Controller {
                 }
 
                 if (d1Resource && d1Resource.status) {
-                  const status = d1Resource.status;
+                  const status = d1Resource.status as any;
                   if (status.database_id) {
                     bindings.push({
                       type: "d1",
@@ -1958,7 +1964,7 @@ class CloudflareController implements Controller {
 
             let domainId = null;
             if (domainResponse.ok) {
-              const domainResult = await domainResponse.json();
+              const domainResult = (await domainResponse.json()) as any;
               domainId = domainResult.result?.id;
               console.log(
                 `Successfully created custom domain: ${customDomain} with ID: ${domainId}`,
@@ -1976,7 +1982,7 @@ class CloudflareController implements Controller {
               ? "UPDATE resources SET status=? WHERE name=? AND namespace=?"
               : "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL";
 
-            const statusData = {
+            const statusData: any = {
               state: domainId ? "Ready" : "PartiallyReady",
               worker_id: fullName,
               createdAt: new Date().toISOString(),
@@ -2075,7 +2081,7 @@ class CloudflareController implements Controller {
                   }
 
                   if (d1Resource && d1Resource.status) {
-                    const d1Status = d1Resource.status;
+                    const d1Status = d1Resource.status as any;
                     if (d1Status.database_id) {
                       expectedBindings.push({
                         type: "d1",
@@ -2103,14 +2109,15 @@ class CloudflareController implements Controller {
                   }
 
                   if (queueResource && queueResource.status) {
-                    const queueStatus = queueResource.status;
+                    const queueStatus = queueResource.status as any;
                     if (queueStatus.queue_id) {
                       const fullQueueName = this.buildFullDatabaseName(
-                        queueResource.metadata?.name || queueResource.name,
+                        (queueResource as any).metadata?.name ||
+                          (queueResource as any).name,
                         "cf.guber.proc.io",
                         "qs",
-                        queueResource.metadata?.namespace ||
-                          queueResource.namespace,
+                        (queueResource as any).metadata?.namespace ||
+                          (queueResource as any).namespace,
                         env.GUBER_NAME,
                       );
                       expectedBindings.push({
@@ -2143,6 +2150,7 @@ class CloudflareController implements Controller {
                 },
               );
 
+              let currentBindings: any[] = [];
               if (workerResponse.ok) {
                 let workerData;
                 try {
@@ -2156,7 +2164,7 @@ class CloudflareController implements Controller {
                   continue;
                 }
 
-                const currentBindings = workerData.result?.bindings || [];
+                currentBindings = workerData.result?.bindings || [];
               } else {
                 const errorText = await workerResponse.text();
                 console.error(
@@ -2334,7 +2342,9 @@ class CloudflareController implements Controller {
                       }: ${errorText.substring(0, 500)}`;
                     }
                   } catch (e) {
-                    newStatus.healthCheckError = `HTTP ${healthResponse.status}: Failed to read response body - ${e.message}`;
+                    newStatus.healthCheckError = `HTTP ${
+                      healthResponse.status
+                    }: Failed to read response body - ${(e as Error).message}`;
                   }
                 }
 
@@ -2351,7 +2361,8 @@ class CloudflareController implements Controller {
               }
             } catch (healthError) {
               // Check if this is a timeout or network error vs API error
-              const errorMessage = healthError.message || String(healthError);
+              const errorMessage =
+                (healthError as Error).message || String(healthError);
 
               if (errorMessage.includes("internal error; reference =")) {
                 console.error(
@@ -2397,7 +2408,7 @@ class CloudflareController implements Controller {
               state: "Failed",
               lastHealthCheck: new Date().toISOString(),
               healthCheckError: `Worker check failed: ${
-                error.message || String(error)
+                (error as Error).message || String(error)
               }`,
             };
 
@@ -2435,9 +2446,14 @@ class CloudflareController implements Controller {
     for (const worker of pendingWorkers || []) {
       try {
         const spec = worker.spec;
-        const status = worker.status;
+        const status = worker.status || {};
 
-        if (spec.dependencies && status.pendingDependencies) {
+        if (
+          spec &&
+          spec.dependencies &&
+          Array.isArray(spec.dependencies) &&
+          status.pendingDependencies
+        ) {
           let allDependenciesReady = true;
           const unresolvedDependencies = [];
 
@@ -2479,7 +2495,7 @@ class CloudflareController implements Controller {
               continue;
             }
 
-            const depStatus = depResource.data.status;
+            const depStatus = depResource.data.status as any;
             if (depStatus.state !== "Ready") {
               allDependenciesReady = false;
               unresolvedDependencies.push(dependency);
@@ -2488,7 +2504,7 @@ class CloudflareController implements Controller {
 
           if (allDependenciesReady) {
             console.log(
-              `[Reconcile] All dependencies resolved for worker ${worker.name}, re-queuing for provisioning`,
+              `[Reconcile] All dependencies resolved for worker ${worker.metadata.name}, re-queuing for provisioning`,
             );
 
             // Queue for provisioning
@@ -2496,17 +2512,17 @@ class CloudflareController implements Controller {
               await env.GUBER_BUS.send({
                 action: "create",
                 resourceType: "worker",
-                resourceName: worker.name,
-                group: worker.group_name,
+                resourceName: worker.metadata.name,
+                group: worker.apiVersion.split("/")[0],
                 kind: worker.kind,
-                plural: worker.plural,
-                namespace: worker.namespace,
+                plural: worker.kind.toLowerCase() + "s",
+                namespace: worker.metadata.namespace,
                 spec: spec,
               });
             }
           } else {
             console.log(
-              `[Reconcile] Worker ${worker.name} still has unresolved dependencies:`,
+              `[Reconcile] Worker ${worker.metadata.name} still has unresolved dependencies:`,
               unresolvedDependencies.map((d) => `${d.kind}/${d.name}`),
             );
 
@@ -2517,17 +2533,17 @@ class CloudflareController implements Controller {
               pendingDependencies: unresolvedDependencies,
             };
 
-            await patchApisCfGuberProcIoV1WorkersName(worker.name, {
+            await patchApisCfGuberProcIoV1WorkersName(worker.metadata.name!, {
               apiVersion: "cf.guber.proc.io/v1",
               kind: "Worker",
-              metadata: { name: worker.name },
+              metadata: { name: worker.metadata.name },
               status: updatedStatus,
             });
           }
         }
       } catch (error) {
         console.error(
-          `[Reconcile] Error checking dependencies for worker ${worker.name}:`,
+          `[Reconcile] Error checking dependencies for worker ${worker.metadata.name}:`,
           error,
         );
       }
@@ -2561,7 +2577,7 @@ class CloudflareController implements Controller {
         return;
       }
 
-      const cloudflareResult = await cloudflareResponse.json();
+      const cloudflareResult = (await cloudflareResponse.json()) as any;
       const cloudflareDatabases = cloudflareResult.result || [];
 
       // Create maps for easier comparison
@@ -2571,10 +2587,10 @@ class CloudflareController implements Controller {
       // Build API database map with full names
       for (const resource of apiResources || []) {
         const fullDatabaseName = this.buildFullDatabaseName(
-          resource.metadata?.name || resource.name,
+          resource.metadata?.name || (resource as any).name,
           "cf.guber.proc.io",
           "d1s",
-          resource.metadata?.namespace || resource.namespace,
+          resource.metadata?.namespace || (resource as any).namespace,
           env.GUBER_NAME,
         );
         apiDatabaseMap.set(fullDatabaseName, resource);
@@ -2677,7 +2693,7 @@ class CloudflareController implements Controller {
           );
 
           if (createResponse.ok) {
-            const result = await createResponse.json();
+            const result = (await createResponse.json()) as any;
             const databaseId = result.result.uuid;
 
             await patchApisCfGuberProcIoV1D1sName(resource.name, {
@@ -2952,7 +2968,7 @@ class CloudflareController implements Controller {
             }
 
             if (d1Resource && d1Resource.status) {
-              const status = d1Resource.status;
+              const status = d1Resource.status as any;
               if (status.database_id) {
                 const binding = {
                   type: "d1",
@@ -2979,14 +2995,14 @@ class CloudflareController implements Controller {
             }
 
             if (queueResource && queueResource.status) {
-              const status = queueResource.status;
+              const status = queueResource.status as any;
               if (status.queue_id) {
                 // Build the full queue name that was created in Cloudflare
                 const fullQueueName = this.buildFullDatabaseName(
-                  queueResource.name,
-                  queueResource.group_name,
-                  queueResource.plural,
-                  queueResource.namespace,
+                  (queueResource as any).name,
+                  (queueResource as any).group_name,
+                  (queueResource as any).plural,
+                  (queueResource as any).namespace,
                   env.GUBER_NAME,
                 );
                 const binding = {
@@ -3140,8 +3156,9 @@ class CloudflareController implements Controller {
 
       // Extract script name from worker endpoint
       // Example: https://api.cloudflare.com/client/v4/accounts/de7a9036d3ef17964cf2ca17735f74ab/workers/scripts/hello-world-worker-c-workers-cf-guber-proc-io-polvi
-      const actualScriptName =
-        workerStatus.endpoint.split("/workers/scripts/")[1];
+      const actualScriptName = (workerStatus.endpoint as string).split(
+        "/workers/scripts/",
+      )[1];
 
       if (!actualScriptName) {
         throw new Error(
@@ -3166,7 +3183,7 @@ class CloudflareController implements Controller {
         );
       }
 
-      const result = await uploadResponse.json();
+      const result = (await uploadResponse.json()) as any;
       const versionId = result.result.id;
       const versionNumber = result.result.number;
 
@@ -3186,7 +3203,7 @@ class CloudflareController implements Controller {
           target_worker: spec.scriptName,
           createdAt: new Date().toISOString(),
           endpoint: `${workerStatus.endpoint}/versions/${versionId}`,
-          metadata: result.result.metadata || {},
+          metadata: (result.result.metadata as any) || {},
         },
       };
 
@@ -3215,7 +3232,7 @@ class CloudflareController implements Controller {
         },
         status: {
           state: "Failed",
-          error: error.message || String(error),
+          error: (error as Error).message || String(error),
         },
       };
 
@@ -3290,6 +3307,7 @@ class CloudflareController implements Controller {
           // Check if this is a pending version waiting for dependencies or target worker
           if (
             status.state === "Pending" &&
+            spec &&
             (spec.dependencies || status.pendingWorker)
           ) {
             // First check if we're waiting for a target worker
@@ -3311,7 +3329,7 @@ class CloudflareController implements Controller {
                 const targetWorkerStatus = targetWorkerResource.data.status;
                 if (targetWorkerStatus.state === "Ready") {
                   console.log(
-                    `[Reconcile] Target worker ${status.pendingWorker} is now ready for version ${resource.name}, re-queuing for provisioning`,
+                    `[Reconcile] Target worker ${status.pendingWorker} is now ready for version ${resource.metadata.name}, re-queuing for provisioning`,
                   );
 
                   // Queue for provisioning
@@ -3319,18 +3337,18 @@ class CloudflareController implements Controller {
                     await env.GUBER_BUS.send({
                       action: "create",
                       resourceType: "workerscriptversion",
-                      resourceName: resource.name,
-                      group: resource.group_name,
+                      resourceName: resource.metadata.name,
+                      group: resource.apiVersion.split("/")[0],
                       kind: resource.kind,
-                      plural: resource.plural,
-                      namespace: resource.namespace,
+                      plural: resource.kind.toLowerCase() + "s",
+                      namespace: resource.metadata.namespace,
                       spec: spec,
                     });
                   }
                   continue; // Skip dependency check since we're re-queuing
                 } else {
                   console.log(
-                    `[Reconcile] Target worker ${status.pendingWorker} still not ready (${targetWorkerStatus.state}) for version ${resource.name}`,
+                    `[Reconcile] Target worker ${status.pendingWorker} still not ready (${targetWorkerStatus.state}) for version ${resource.metadata.name}`,
                   );
 
                   // Update the worker check timestamp using the generated client
@@ -3338,8 +3356,8 @@ class CloudflareController implements Controller {
                     apiVersion: "cf.guber.proc.io/v1",
                     kind: "WorkerScriptVersion",
                     metadata: {
-                      name: resource.name,
-                      namespace: resource.namespace || undefined,
+                      name: resource.metadata.name,
+                      namespace: resource.metadata.namespace || undefined,
                     },
                     status: {
                       ...status,
@@ -3349,14 +3367,14 @@ class CloudflareController implements Controller {
                   };
 
                   await patchApisCfGuberProcIoV1WorkerscriptversionsName(
-                    resource.name,
+                    resource.metadata.name!,
                     workerScriptVersionUpdate,
                   );
                   continue;
                 }
               } else {
                 console.log(
-                  `[Reconcile] Target worker ${status.pendingWorker} not found or has no status for version ${resource.name}`,
+                  `[Reconcile] Target worker ${status.pendingWorker} not found or has no status for version ${resource.metadata.name}`,
                 );
 
                 // Update status to indicate worker still missing using the generated client
@@ -3364,8 +3382,8 @@ class CloudflareController implements Controller {
                   apiVersion: "cf.guber.proc.io/v1",
                   kind: "WorkerScriptVersion",
                   metadata: {
-                    name: resource.name,
-                    namespace: resource.namespace || undefined,
+                    name: resource.metadata.name,
+                    namespace: resource.metadata.namespace || undefined,
                   },
                   status: {
                     ...status,
@@ -3375,7 +3393,7 @@ class CloudflareController implements Controller {
                 };
 
                 await patchApisCfGuberProcIoV1WorkerscriptversionsName(
-                  resource.name,
+                  resource.metadata.name!,
                   workerScriptVersionUpdate,
                 );
                 continue;
@@ -3383,7 +3401,7 @@ class CloudflareController implements Controller {
             }
 
             // Then check dependencies if any
-            if (spec.dependencies) {
+            if (spec && spec.dependencies && Array.isArray(spec.dependencies)) {
               let allDependenciesReady = true;
               const unresolvedDependencies = [];
 
@@ -3427,7 +3445,7 @@ class CloudflareController implements Controller {
 
               if (allDependenciesReady) {
                 console.log(
-                  `[Reconcile] All dependencies resolved for worker script version ${resource.name}, re-queuing for provisioning`,
+                  `[Reconcile] All dependencies resolved for worker script version ${resource.metadata.name}, re-queuing for provisioning`,
                 );
 
                 // Queue for provisioning
@@ -3435,27 +3453,27 @@ class CloudflareController implements Controller {
                   await env.GUBER_BUS.send({
                     action: "create",
                     resourceType: "workerscriptversion",
-                    resourceName: resource.name,
-                    group: resource.group_name,
+                    resourceName: resource.metadata.name,
+                    group: resource.apiVersion.split("/")[0],
                     kind: resource.kind,
-                    plural: resource.plural,
-                    namespace: resource.namespace,
+                    plural: resource.kind.toLowerCase() + "s",
+                    namespace: resource.metadata.namespace,
                     spec: spec,
                   });
                 }
               } else {
                 console.log(
-                  `[Reconcile] Worker script version ${resource.name} still has unresolved dependencies:`,
+                  `[Reconcile] Worker script version ${resource.metadata.name} still has unresolved dependencies:`,
                   unresolvedDependencies.map((d) => `${d.kind}/${d.name}`),
                 );
 
                 // Update the dependency check timestamp
                 await patchApisCfGuberProcIoV1WorkerscriptversionsName(
-                  resource.name,
+                  resource.metadata.name!,
                   {
                     apiVersion: "cf.guber.proc.io/v1",
                     kind: "WorkerScriptVersion",
-                    metadata: { name: resource.name },
+                    metadata: { name: resource.metadata.name },
                     status: {
                       ...status,
                       lastDependencyCheck: new Date().toISOString(),
@@ -3483,7 +3501,7 @@ class CloudflareController implements Controller {
 
               if (!versionResponse.ok) {
                 console.log(
-                  `Worker script version ${resource.name} (ID: ${status.version_id}) no longer exists in Cloudflare`,
+                  `Worker script version ${resource.metadata.name} (ID: ${status.version_id}) no longer exists in Cloudflare`,
                 );
 
                 // Update status to indicate the version is missing using the generated client
@@ -3491,8 +3509,8 @@ class CloudflareController implements Controller {
                   apiVersion: "cf.guber.proc.io/v1",
                   kind: "WorkerScriptVersion",
                   metadata: {
-                    name: resource.name,
-                    namespace: resource.namespace || undefined,
+                    name: resource.metadata.name,
+                    namespace: resource.metadata.namespace || undefined,
                   },
                   status: {
                     ...status,
@@ -3503,7 +3521,7 @@ class CloudflareController implements Controller {
                 };
 
                 await patchApisCfGuberProcIoV1WorkerscriptversionsName(
-                  resource.name,
+                  resource.metadata.name!,
                   workerScriptVersionUpdate,
                 );
               } else {
@@ -3512,8 +3530,8 @@ class CloudflareController implements Controller {
                   apiVersion: "cf.guber.proc.io/v1",
                   kind: "WorkerScriptVersion",
                   metadata: {
-                    name: resource.name,
-                    namespace: resource.namespace || undefined,
+                    name: resource.metadata.name,
+                    namespace: resource.metadata.namespace || undefined,
                   },
                   status: {
                     ...status,
@@ -3522,7 +3540,7 @@ class CloudflareController implements Controller {
                 };
 
                 await patchApisCfGuberProcIoV1WorkerscriptversionsName(
-                  resource.name,
+                  resource.metadata.name!,
                   workerScriptVersionUpdate,
                 );
               }
@@ -3634,7 +3652,7 @@ class CloudflareController implements Controller {
               `Dependency ${depKind}/${depName} has no status, deferring provisioning`,
             );
             const workerScriptDeploymentUpdate: WorkerScriptDeployment = {
-              apiVersion: "cf.guber.proc.io/1",
+              apiVersion: "cf.guber.proc.io/v1",
               kind: "WorkerScriptDeployment",
               metadata: {
                 name: resourceName,
@@ -3801,8 +3819,9 @@ class CloudflareController implements Controller {
       }
 
       // Extract script name from worker endpoint
-      const actualScriptName =
-        workerStatus.endpoint.split("/workers/scripts/")[1];
+      const actualScriptName = (workerStatus.endpoint as string).split(
+        "/workers/scripts/",
+      )[1];
 
       if (!actualScriptName) {
         throw new Error(

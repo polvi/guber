@@ -1340,7 +1340,10 @@ app.get(
     return c.json({
       apiVersion: "apiextensions.k8s.io/v1",
       kind: "CustomResourceDefinition",
-      metadata: { name: resultData.name, creationTimestamp: resultData.created_at },
+      metadata: {
+        name: resultData.name,
+        creationTimestamp: resultData.created_at,
+      },
       spec: {
         group: resultData.group_name,
         versions: [{ name: resultData.version, served: true, storage: true }],
@@ -1434,24 +1437,18 @@ app.patch(
       : null;
     const scope = updatedSpec.scope || "Cluster";
 
-    // Update the CRD
-    console.log(
-      "POLVI",
-      body,
-      existingSpec,
-      updatedSpec,
-      group,
-      version,
-      kind,
-      plural,
-      shortNames,
-      scope,
-      name,
-    );
     await c.env.DB.prepare(
       "UPDATE crds SET group_name=?, version=?, kind=?, plural=?, short_names=?, scope=? WHERE name=?",
     )
-      .bind(String(group), String(version), String(kind), String(plural), shortNames, String(scope), String(name))
+      .bind(
+        String(group),
+        String(version),
+        String(kind),
+        String(plural),
+        shortNames,
+        String(scope),
+        String(name),
+      )
       .run();
 
     return c.json({
@@ -1483,7 +1480,9 @@ app.delete(
       .run();
 
     // Delete the CRD itself
-    await c.env.DB.prepare("DELETE FROM crds WHERE name=?").bind(name as string).run();
+    await c.env.DB.prepare("DELETE FROM crds WHERE name=?")
+      .bind(name as string)
+      .run();
 
     const names: any = { plural: resultData.plural, kind: resultData.kind };
     if (resultData.short_names) {
@@ -1494,7 +1493,10 @@ app.delete(
     return c.json({
       apiVersion: "apiextensions.k8s.io/v1",
       kind: "CustomResourceDefinition",
-      metadata: { name: resultData.name, creationTimestamp: resultData.created_at },
+      metadata: {
+        name: resultData.name,
+        creationTimestamp: resultData.created_at,
+      },
       spec: {
         group: resultData.group_name,
         versions: [{ name: resultData.version, served: true, storage: true }],
@@ -1529,7 +1531,9 @@ app.get("/apis/:group/:version/:plural", async (c) => {
     status: r.status ? JSON.parse(r.status) : {},
   }));
 
-  const kind = items[0]?.kind || (plural as string)[0].toUpperCase() + (plural as string).slice(1);
+  const kind =
+    items[0]?.kind ||
+    (plural as string)[0].toUpperCase() + (plural as string).slice(1);
 
   // Handle kubectl table format requests
   const accept = c.req.header("Accept") || "";
@@ -1634,7 +1638,10 @@ app.get("/apis/:group/:version/:plural/:name", async (c) => {
   return c.json({
     apiVersion: `${group}/${version}`,
     kind: resultData.kind,
-    metadata: { name: resultData.name, creationTimestamp: resultData.created_at },
+    metadata: {
+      name: resultData.name,
+      creationTimestamp: resultData.created_at,
+    },
     spec: JSON.parse(resultData.spec),
     status: resultData.status ? JSON.parse(resultData.status) : {},
   });
@@ -1731,7 +1738,10 @@ app.delete("/apis/:group/:version/:plural/:name", async (c) => {
   return c.json({
     apiVersion: `${group}/${version}`,
     kind: resultData.kind,
-    metadata: { name: resultData.name, creationTimestamp: resultData.created_at },
+    metadata: {
+      name: resultData.name,
+      creationTimestamp: resultData.created_at,
+    },
     spec: JSON.parse(resultData.spec),
     status: resultData.status ? JSON.parse(resultData.status) : {},
   });
@@ -1760,7 +1770,9 @@ app.get("/apis/:group/:version/namespaces/:namespace/:plural", async (c) => {
     status: r.status ? JSON.parse(r.status) : {},
   }));
 
-  const kind = items[0]?.kind || (plural as string)[0].toUpperCase() + (plural as string).slice(1);
+  const kind =
+    items[0]?.kind ||
+    (plural as string)[0].toUpperCase() + (plural as string).slice(1);
 
   // Handle kubectl table format requests
   const accept = c.req.header("Accept") || "";
@@ -1984,7 +1996,13 @@ app.delete(
     await c.env.DB.prepare(
       "DELETE FROM resources WHERE group_name=? AND version=? AND plural=? AND name=? AND namespace=?",
     )
-      .bind(String(group), String(version), String(plural), String(name), String(namespace))
+      .bind(
+        String(group),
+        String(version),
+        String(plural),
+        String(name),
+        String(namespace),
+      )
       .run();
 
     // Return the deleted object
