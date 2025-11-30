@@ -2123,28 +2123,27 @@ class CloudflareController implements Controller {
                 continue;
               }
 
-                // Compare expected vs current bindings
-                if (expectedBindings.length !== currentBindings.length) {
-                  needsBindingUpdate = true;
-                } else {
-                  // Check if bindings match
-                  for (const expectedBinding of expectedBindings) {
-                    const matchingBinding = currentBindings.find(
-                      (cb: any) =>
-                        cb.name === expectedBinding.name &&
-                        cb.type === expectedBinding.type &&
-                        (expectedBinding.id
-                          ? cb.id === expectedBinding.id
-                          : true) &&
-                        (expectedBinding.queue_name
-                          ? cb.queue_name === expectedBinding.queue_name
-                          : true)
-                    );
+              // Compare expected vs current bindings
+              if (expectedBindings.length !== currentBindings.length) {
+                needsBindingUpdate = true;
+              } else {
+                // Check if bindings match
+                for (const expectedBinding of expectedBindings) {
+                  const matchingBinding = currentBindings.find(
+                    (cb: any) =>
+                      cb.name === expectedBinding.name &&
+                      cb.type === expectedBinding.type &&
+                      (expectedBinding.id
+                        ? cb.id === expectedBinding.id
+                        : true) &&
+                      (expectedBinding.queue_name
+                        ? cb.queue_name === expectedBinding.queue_name
+                        : true)
+                  );
 
-                    if (!matchingBinding) {
-                      needsBindingUpdate = true;
-                      break;
-                    }
+                  if (!matchingBinding) {
+                    needsBindingUpdate = true;
+                    break;
                   }
                 }
               }
