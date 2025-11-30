@@ -56,7 +56,8 @@ app.get("/openapi/v3", async (c) => {
 
   const gvSet = new Set<string>();
   for (const row of results || []) {
-    gvSet.add(`${row.group_name}/${row.version}`);
+    const rowData = row as any;
+    gvSet.add(`${rowData.group_name}/${rowData.version}`);
   }
 
   // Add CRD group/versions
@@ -1523,7 +1524,7 @@ app.get("/apis/:group/:version/:plural", async (c) => {
     status: r.status ? JSON.parse(r.status) : {},
   }));
 
-  const kind = items[0]?.kind || plural[0].toUpperCase() + plural.slice(1);
+  const kind = items[0]?.kind || (plural as string)[0].toUpperCase() + (plural as string).slice(1);
 
   // Handle kubectl table format requests
   const accept = c.req.header("Accept") || "";
@@ -1573,6 +1574,7 @@ app.post("/apis/:group/:version/:plural", async (c) => {
     .first();
   if (!crd) return c.json({ message: "Unknown resource type" }, 404);
 
+  const crdData = crd as any;
   await c.env.DB.prepare(
     "INSERT INTO resources (id, group_name, version, kind, plural, name, spec, namespace) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
   )
@@ -1580,7 +1582,7 @@ app.post("/apis/:group/:version/:plural", async (c) => {
       uuid(),
       group,
       version,
-      crd.kind,
+      crdData.kind,
       plural,
       name,
       JSON.stringify(body.spec),
@@ -1591,7 +1593,7 @@ app.post("/apis/:group/:version/:plural", async (c) => {
   const response = c.json(
     {
       apiVersion: `${group}/${version}`,
-      kind: crd.kind,
+      kind: crdData.kind,
       metadata: { name, creationTimestamp: new Date().toISOString() },
       spec: body.spec,
     },
@@ -1605,7 +1607,7 @@ app.post("/apis/:group/:version/:plural", async (c) => {
     plural,
     name,
     namespace: null,
-    kind: crd.kind,
+    kind: crdData.kind,
     spec: body.spec,
     env: c.env,
   });
@@ -1623,12 +1625,13 @@ app.get("/apis/:group/:version/:plural/:name", async (c) => {
     .first();
   if (!result) return c.json({ message: "Not Found" }, 404);
 
+  const resultData = result as any;
   return c.json({
     apiVersion: `${group}/${version}`,
-    kind: result.kind,
-    metadata: { name: result.name, creationTimestamp: result.created_at },
-    spec: JSON.parse(result.spec),
-    status: result.status ? JSON.parse(result.status) : {},
+    kind: resultData.kind,
+    metadata: { name: resultData.name, creationTimestamp: resultData.created_at },
+    spec: JSON.parse(resultData.spec),
+    status: resultData.status ? JSON.parse(resultData.status) : {},
   });
 });
 
@@ -1679,7 +1682,7 @@ app.patch("/apis/:group/:version/:plural/:name", async (c) => {
     .bind(
       JSON.stringify(updatedResource.spec),
       JSON.stringify(updatedResource.status),
-      name,
+      name as string,
     )
     .run();
 
@@ -1698,6 +1701,7 @@ app.delete("/apis/:group/:version/:plural/:name", async (c) => {
     .first();
   if (!result) return c.json({ message: "Not Found" }, 404);
 
+  const resultData = result as any;
   // Notify controllers of resource deletion BEFORE deleting from DB
   await notifyControllers("deleted", {
     group,
@@ -1705,9 +1709,9 @@ app.delete("/apis/:group/:version/:plural/:name", async (c) => {
     plural,
     name,
     namespace: null,
-    kind: result.kind,
-    spec: JSON.parse(result.spec),
-    status: result.status ? JSON.parse(result.status) : {},
+    kind: resultData.kind,
+    spec: JSON.parse(resultData.spec),
+    status: resultData.status ? JSON.parse(resultData.status) : {},
     env: c.env,
   });
 
@@ -1721,10 +1725,10 @@ app.delete("/apis/:group/:version/:plural/:name", async (c) => {
   // Return the deleted object
   return c.json({
     apiVersion: `${group}/${version}`,
-    kind: result.kind,
-    metadata: { name: result.name, creationTimestamp: result.created_at },
-    spec: JSON.parse(result.spec),
-    status: result.status ? JSON.parse(result.status) : {},
+    kind: resultData.kind,
+    metadata: { name: resultData.name, creationTimestamp: resultData.created_at },
+    spec: JSON.parse(resultData.spec),
+    status: resultData.status ? JSON.parse(resultData.status) : {},
   });
 });
 
@@ -1751,7 +1755,7 @@ app.get("/apis/:group/:version/namespaces/:namespace/:plural", async (c) => {
     status: r.status ? JSON.parse(r.status) : {},
   }));
 
-  const kind = items[0]?.kind || plural[0].toUpperCase() + plural.slice(1);
+  const kind = items[0]?.kind || (plural as string)[0].toUpperCase() + (plural as string).slice(1);
 
   // Handle kubectl table format requests
   const accept = c.req.header("Accept") || "";
@@ -1811,6 +1815,7 @@ app.post("/apis/:group/:version/namespaces/:namespace/:plural", async (c) => {
     .first();
   if (!crd) return c.json({ message: "Unknown resource type" }, 404);
 
+  const crdData = crd as any;
   await c.env.DB.prepare(
     "INSERT INTO resources (id, group_name, version, kind, plural, name, spec, namespace) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
   )
@@ -1818,7 +1823,7 @@ app.post("/apis/:group/:version/namespaces/:namespace/:plural", async (c) => {
       uuid(),
       group,
       version,
-      crd.kind,
+      crdData.kind,
       plural,
       name,
       JSON.stringify(body.spec),
@@ -1829,7 +1834,7 @@ app.post("/apis/:group/:version/namespaces/:namespace/:plural", async (c) => {
   const response = c.json(
     {
       apiVersion: `${group}/${version}`,
-      kind: crd.kind,
+      kind: crdData.kind,
       metadata: {
         name,
         namespace,
@@ -1847,7 +1852,7 @@ app.post("/apis/:group/:version/namespaces/:namespace/:plural", async (c) => {
     plural,
     name,
     namespace,
-    kind: crd.kind,
+    kind: crdData.kind,
     spec: body.spec,
     env: c.env,
   });
@@ -1867,16 +1872,17 @@ app.get(
       .first();
     if (!result) return c.json({ message: "Not Found" }, 404);
 
+    const resultData = result as any;
     return c.json({
       apiVersion: `${group}/${version}`,
-      kind: result.kind,
+      kind: resultData.kind,
       metadata: {
-        name: result.name,
-        namespace: result.namespace,
-        creationTimestamp: result.created_at,
+        name: resultData.name,
+        namespace: resultData.namespace,
+        creationTimestamp: resultData.created_at,
       },
-      spec: JSON.parse(result.spec),
-      status: result.status ? JSON.parse(result.status) : {},
+      spec: JSON.parse(resultData.spec),
+      status: resultData.status ? JSON.parse(resultData.status) : {},
     });
   },
 );
@@ -1932,8 +1938,8 @@ app.patch(
       .bind(
         JSON.stringify(updatedResource.spec),
         JSON.stringify(updatedResource.status),
-        name,
-        namespace,
+        name as string,
+        namespace as string,
       )
       .run();
 
@@ -1955,6 +1961,7 @@ app.delete(
       .first();
     if (!result) return c.json({ message: "Not Found" }, 404);
 
+    const resultData = result as any;
     // Notify controllers of resource deletion BEFORE deleting from DB
     await notifyControllers("deleted", {
       group,
@@ -1962,9 +1969,9 @@ app.delete(
       plural,
       name,
       namespace,
-      kind: result.kind,
-      spec: JSON.parse(result.spec),
-      status: result.status ? JSON.parse(result.status) : {},
+      kind: resultData.kind,
+      spec: JSON.parse(resultData.spec),
+      status: resultData.status ? JSON.parse(resultData.status) : {},
       env: c.env,
     });
 
@@ -1978,14 +1985,14 @@ app.delete(
     // Return the deleted object
     return c.json({
       apiVersion: `${group}/${version}`,
-      kind: result.kind,
+      kind: resultData.kind,
       metadata: {
-        name: result.name,
-        namespace: result.namespace,
-        creationTimestamp: result.created_at,
+        name: resultData.name,
+        namespace: resultData.namespace,
+        creationTimestamp: resultData.created_at,
       },
-      spec: JSON.parse(result.spec),
-      status: result.status ? JSON.parse(result.status) : {},
+      spec: JSON.parse(resultData.spec),
+      status: resultData.status ? JSON.parse(resultData.status) : {},
     });
   },
 );
