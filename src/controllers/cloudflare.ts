@@ -2258,16 +2258,20 @@ class CloudflareController implements Controller {
 
             // Test the worker endpoint for health check
             try {
+              console.log(`Performing health check for worker ${fullName} at https://${customDomain}`);
+              
               const healthResponse = await fetch(`https://${customDomain}`, {
                 method: "GET",
                 headers: {
                   "User-Agent": "Guber-Health-Check/1.0",
                 },
-                timeout: 10000, // 10 second timeout
+                signal: AbortSignal.timeout(10000), // 10 second timeout
               });
 
               const isHealthy = healthResponse.ok;
               const currentState = status.state;
+
+              console.log(`Health check for ${fullName}: ${healthResponse.status} ${healthResponse.statusText} (healthy: ${isHealthy})`);
 
               // Update status if health state changed
               if (
@@ -2309,18 +2313,34 @@ class CloudflareController implements Controller {
                 );
               }
             } catch (healthError) {
+              // Check if this is a timeout or network error vs API error
+              const errorMessage = healthError.message || String(healthError);
+              
+              if (errorMessage.includes("internal error; reference =")) {
+                console.error(
+                  `Cloudflare API error during health check for worker ${fullName}:`,
+                  errorMessage
+                );
+                // Don't update status for API errors - this might be temporary
+                return;
+              }
+              
               console.error(
                 `Health check failed for worker ${fullName}:`,
-                healthError.message || String(healthError)
+                errorMessage
               );
               
-              // Update status to indicate health check failed
+              // Only update status for actual health check failures, not API errors
               const newStatus = {
                 ...status,
-                state: "Failed",
                 lastHealthCheck: new Date().toISOString(),
-                healthCheckError: `Health check failed: ${healthError.message || String(healthError)}`,
+                healthCheckError: `Health check failed: ${errorMessage}`,
               };
+
+              // Only mark as failed if it was previously ready
+              if (status.state === "Ready") {
+                newStatus.state = "Failed";
+              }
 
               await patchApisCfGuberProcIoV1WorkersName(apiResource.name, {
                 apiVersion: "cf.guber.proc.io/v1",
