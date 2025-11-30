@@ -2,10 +2,7 @@ import { Hono } from "hono";
 import { v4 as uuid } from "uuid";
 import type { GuberConfig, ResourceContext } from "./config";
 
-interface Env {
-  DB: D1Database;
-  [key: string]: any;
-}
+import * from "wrangler-types.d";
 
 // Load config
 let config: GuberConfig;
