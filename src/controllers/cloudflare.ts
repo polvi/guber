@@ -1431,6 +1431,7 @@ class CloudflareController implements Controller {
       }
 
       const domainResult = await domainResponse.json();
+      console.log(`Custom domain ${customDomain} created successfully for worker ${fullWorkerName}`);
 
       // Step 3: Update the resource status in the database
       await patchApisCfGuberProcIoV1WorkersName(resourceName, {
@@ -1920,7 +1921,7 @@ class CloudflareController implements Controller {
               const domainResult = await domainResponse.json();
               domainId = domainResult.result?.id;
               console.log(
-                `Successfully created custom domain: ${customDomain}`
+                `Successfully created custom domain: ${customDomain} with ID: ${domainId}`
               );
             } else {
               const domainError = await domainResponse.text();
