@@ -2029,7 +2029,7 @@ class CloudflareController implements Controller {
           try {
             const spec = apiResource.spec;
             const status = apiResource.status || {};
-            const customDomain = `${apiResource.name}.${env.GUBER_NAME}.${env.GUBER_DOMAIN}`;
+            const customDomain = status.customDomain || `${apiResource.name}.${env.GUBER_NAME}.${env.GUBER_DOMAIN}`;
 
             // Check if bindings need to be updated
             let needsBindingUpdate = false;
@@ -2257,6 +2257,11 @@ class CloudflareController implements Controller {
             }
 
             // Test the worker endpoint for health check
+            if (!customDomain || customDomain.includes('undefined')) {
+              console.log(`Skipping health check for worker ${fullName} - invalid custom domain: ${customDomain}`);
+              continue;
+            }
+
             try {
               console.log(`Performing health check for worker ${fullName} at https://${customDomain}`);
               
