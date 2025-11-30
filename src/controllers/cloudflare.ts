@@ -905,10 +905,10 @@ class CloudflareController implements Controller {
       // Build API queue map with full names
       for (const resource of apiResources || []) {
         const fullQueueName = this.buildFullDatabaseName(
-          resource.metadata?.name || resource.name,
+          resource.metadata!.name!,
           "cf.guber.proc.io",
           "qs",
-          resource.metadata?.namespace || resource.namespace,
+          resource.metadata?.namespace || null,
           env.GUBER_NAME,
         );
         apiQueueMap.set(fullQueueName, resource);
@@ -1308,8 +1308,8 @@ class CloudflareController implements Controller {
               d1Resource = null;
             }
 
-            if (d1Resource && d1Resource.status) {
-              const status = d1Resource.status;
+            if (d1Resource && d1Resource.data && d1Resource.data.status) {
+              const status = d1Resource.data.status;
               if (status.database_id) {
                 const binding = {
                   type: "d1",
@@ -1335,16 +1335,19 @@ class CloudflareController implements Controller {
               queueResource = null;
             }
 
-            if (queueResource && queueResource.status) {
-              const status = queueResource.status as any;
+            if (
+              queueResource &&
+              queueResource.data &&
+              queueResource.data.status
+            ) {
+              const status = queueResource.data.status;
               if (status.queue_id) {
                 // Build the full queue name that was created in Cloudflare
                 const fullQueueName = this.buildFullDatabaseName(
-                  queueResource.metadata?.name || (queueResource as any).name,
+                  queueResource.data.metadata!.name!,
                   "cf.guber.proc.io",
                   "qs",
-                  queueResource.metadata?.namespace ||
-                    (queueResource as any).namespace,
+                  queueResource.data.metadata?.namespace || null,
                   env.GUBER_NAME,
                 );
                 const binding = {
@@ -1860,8 +1863,8 @@ class CloudflareController implements Controller {
                   d1Resource = null;
                 }
 
-                if (d1Resource && d1Resource.status) {
-                  const status = d1Resource.status as any;
+                if (d1Resource && d1Resource.data && d1Resource.data.status) {
+                  const status = d1Resource.data.status;
                   if (status.database_id) {
                     bindings.push({
                       type: "d1",
@@ -1885,8 +1888,12 @@ class CloudflareController implements Controller {
                   queueResource = null;
                 }
 
-                if (queueResource && queueResource.status) {
-                  const status = queueResource.status;
+                if (
+                  queueResource &&
+                  queueResource.data &&
+                  queueResource.data.status
+                ) {
+                  const status = queueResource.data.status;
                   if (status.queue_id) {
                     const fullQueueName = this.buildFullDatabaseName(
                       queueResource.metadata?.name || queueResource.name,
@@ -2080,8 +2087,8 @@ class CloudflareController implements Controller {
                     d1Resource = null;
                   }
 
-                  if (d1Resource && d1Resource.status) {
-                    const d1Status = d1Resource.status as any;
+                  if (d1Resource && d1Resource.data && d1Resource.data.status) {
+                    const d1Status = d1Resource.data.status;
                     if (d1Status.database_id) {
                       expectedBindings.push({
                         type: "d1",
@@ -2108,8 +2115,12 @@ class CloudflareController implements Controller {
                     queueResource = null;
                   }
 
-                  if (queueResource && queueResource.status) {
-                    const queueStatus = queueResource.status as any;
+                  if (
+                    queueResource &&
+                    queueResource.data &&
+                    queueResource.data.status
+                  ) {
+                    const queueStatus = queueResource.data.status;
                     if (queueStatus.queue_id) {
                       const fullQueueName = this.buildFullDatabaseName(
                         (queueResource as any).metadata?.name ||
@@ -2967,8 +2978,8 @@ class CloudflareController implements Controller {
               d1Resource = null;
             }
 
-            if (d1Resource && d1Resource.status) {
-              const status = d1Resource.status as any;
+            if (d1Resource && d1Resource.data && d1Resource.data.status) {
+              const status = d1Resource.data.status;
               if (status.database_id) {
                 const binding = {
                   type: "d1",
@@ -2994,15 +3005,19 @@ class CloudflareController implements Controller {
               queueResource = null;
             }
 
-            if (queueResource && queueResource.status) {
-              const status = queueResource.status as any;
+            if (
+              queueResource &&
+              queueResource.data &&
+              queueResource.data.status
+            ) {
+              const status = queueResource.data.status;
               if (status.queue_id) {
                 // Build the full queue name that was created in Cloudflare
                 const fullQueueName = this.buildFullDatabaseName(
-                  (queueResource as any).name,
-                  (queueResource as any).group_name,
-                  (queueResource as any).plural,
-                  (queueResource as any).namespace,
+                  queueResource.data.metadata!.name!,
+                  "cf.guber.proc.io",
+                  "qs",
+                  queueResource.data.metadata?.namespace || null,
                   env.GUBER_NAME,
                 );
                 const binding = {
