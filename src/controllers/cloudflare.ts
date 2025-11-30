@@ -1624,6 +1624,10 @@ class CloudflareController implements Controller {
         `Found ${apiWorkerMap.size} Worker resources in API, ${cloudflareWorkerMap.size} workers, and ${cloudflareDomainMap.size} domains in Cloudflare`
       );
 
+      // Debug: Log the worker names we have in our API
+      console.log("API Worker names:", Array.from(apiWorkerMap.values()).map(r => r.metadata?.name || r.name));
+      console.log("Cloudflare domain hostnames:", Array.from(cloudflareDomainMap.keys()));
+
       // Find workers that exist in Cloudflare but not in our API (orphaned workers)
       const orphanedWorkers = [];
       for (const [workerName, cloudflareWorker] of cloudflareWorkerMap) {
@@ -1644,10 +1648,12 @@ class CloudflareController implements Controller {
       for (const [hostname, domain] of cloudflareDomainMap) {
         if (hostname.endsWith(`.${env.GUBER_NAME}.${env.GUBER_DOMAIN}`)) {
           const workerName = hostname.split(".")[0];
+          // Check if we have a worker resource with this name
           const found = Array.from(apiWorkerMap.values()).some(
-            (resource) => resource.name === workerName
+            (resource) => (resource.metadata?.name || resource.name) === workerName
           );
           if (!found) {
+            console.log(`Found orphaned domain: ${hostname} (no matching worker resource found)`);
             orphanedDomains.push(domain);
           }
         }
@@ -1665,9 +1671,20 @@ class CloudflareController implements Controller {
         `Found ${orphanedWorkers.length} orphaned workers, ${orphanedDomains.length} orphaned domains, and ${missingWorkers.length} missing workers`
       );
 
-      // Delete orphaned domains first
+      // Delete orphaned domains first (but be more careful)
       for (const orphanedDomain of orphanedDomains) {
         try {
+          // Double-check that this domain is really orphaned
+          const workerName = orphanedDomain.hostname.split(".")[0];
+          const matchingWorker = Array.from(apiWorkerMap.values()).find(
+            (resource) => (resource.metadata?.name || resource.name) === workerName
+          );
+          
+          if (matchingWorker) {
+            console.log(`Skipping domain deletion for ${orphanedDomain.hostname} - found matching worker ${workerName}`);
+            continue;
+          }
+
           console.log(`Deleting orphaned domain: ${orphanedDomain.hostname}`);
 
           const deleteResponse = await fetch(
