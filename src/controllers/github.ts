@@ -16,6 +16,10 @@ import {
   deleteApisCfGuberProcIoV1WorkersName,
   deleteApisCfGuberProcIoV1WorkerscriptversionsName,
   deleteApisCfGuberProcIoV1WorkerscriptdeploymentsName,
+  getApisCfGuberProcIoV1WorkersName,
+  getApisCfGuberProcIoV1WorkerscriptversionsName,
+  getApisCfGuberProcIoV1D1sName,
+  getApisCfGuberProcIoV1QsName,
 } from "../client/gen/cloudflare/default/default";
 import { patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName } from "../client/gen/github/default/default";
 import type { ReleaseDeploy } from "../client/gen/github/models";
@@ -901,79 +905,83 @@ export class GitHubController implements Controller {
             status = {};
           }
 
-          // For ready deployments, verify they still exist in GitHub
-          if (
-            status.state === "Ready" &&
-            status.deployment_id &&
-            status.endpoint
-          ) {
+          // For ready deployments, check for newer versions and verify they still exist in GitHub
+          if (status.state === "Ready") {
             try {
-              const headers: Record<string, string> = {
-                Accept: "application/vnd.github.v3+json",
-                "User-Agent": "Guber-GitHub-Controller/1.0",
-              };
-
-              if (env.GITHUB_TOKEN) {
-                headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
+              // Check for newer releases if no specific tag was requested
+              if (!spec.tag && spec.repository) {
+                await this.checkForNewerVersion(env, resource, spec, status);
               }
 
-              const deploymentResponse = await fetch(status.endpoint, {
-                method: "GET",
-                headers,
-              });
-
-              if (!deploymentResponse.ok) {
-                console.log(
-                  `GitHub deployment ${resource.name} (ID: ${status.deployment_id}) no longer exists`,
-                );
-
-                // Update status to indicate the deployment is missing
-                const updatedStatus = {
-                  ...status,
-                  state: "Failed",
-                  error: "Deployment no longer exists in GitHub",
-                  lastHealthCheck: new Date().toISOString(),
+              // Verify deployment still exists in GitHub if we have deployment info
+              if (status.deployment_id && status.endpoint) {
+                const headers: Record<string, string> = {
+                  Accept: "application/vnd.github.v3+json",
+                  "User-Agent": "Guber-GitHub-Controller/1.0",
                 };
 
-                // Update status using the generated GitHub client
-                const releaseDeployUpdate: ReleaseDeploy = {
-                  apiVersion: "gh.guber.proc.io/v1",
-                  kind: "ReleaseDeploy",
-                  metadata: {
-                    name: resource.name,
-                    namespace: resource.namespace || undefined,
-                  },
-                  status: updatedStatus,
-                };
+                if (env.GITHUB_TOKEN) {
+                  headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
+                }
 
-                await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
-                  "default",
-                  resource.name,
-                  releaseDeployUpdate,
-                );
-              } else {
-                // Update last health check timestamp
-                const updatedStatus = {
-                  ...status,
-                  lastHealthCheck: new Date().toISOString(),
-                };
+                const deploymentResponse = await fetch(status.endpoint, {
+                  method: "GET",
+                  headers,
+                });
 
-                // Update status using the generated GitHub client
-                const releaseDeployUpdate: ReleaseDeploy = {
-                  apiVersion: "gh.guber.proc.io/v1",
-                  kind: "ReleaseDeploy",
-                  metadata: {
-                    name: resource.name,
-                    namespace: resource.namespace || undefined,
-                  },
-                  status: updatedStatus,
-                };
+                if (!deploymentResponse.ok) {
+                  console.log(
+                    `GitHub deployment ${resource.name} (ID: ${status.deployment_id}) no longer exists`,
+                  );
 
-                await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
-                  "default",
-                  resource.name,
-                  releaseDeployUpdate,
-                );
+                  // Update status to indicate the deployment is missing
+                  const updatedStatus = {
+                    ...status,
+                    state: "Failed",
+                    error: "Deployment no longer exists in GitHub",
+                    lastHealthCheck: new Date().toISOString(),
+                  };
+
+                  // Update status using the generated GitHub client
+                  const releaseDeployUpdate: ReleaseDeploy = {
+                    apiVersion: "gh.guber.proc.io/v1",
+                    kind: "ReleaseDeploy",
+                    metadata: {
+                      name: resource.name,
+                      namespace: resource.namespace || undefined,
+                    },
+                    status: updatedStatus,
+                  };
+
+                  await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+                    "default",
+                    resource.name,
+                    releaseDeployUpdate,
+                  );
+                } else {
+                  // Update last health check timestamp
+                  const updatedStatus = {
+                    ...status,
+                    lastHealthCheck: new Date().toISOString(),
+                  };
+
+                  // Update status using the generated GitHub client
+                  const releaseDeployUpdate: ReleaseDeploy = {
+                    apiVersion: "gh.guber.proc.io/v1",
+                    kind: "ReleaseDeploy",
+                    metadata: {
+                      name: resource.name,
+                      namespace: resource.namespace || undefined,
+                    },
+                    status: updatedStatus,
+                  };
+
+                  await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+                    "default",
+                    resource.name,
+                    releaseDeployUpdate,
+                  );
+                }
               }
             } catch (error) {
               console.error(
@@ -1243,6 +1251,208 @@ export class GitHubController implements Controller {
     );
 
     return workerScriptDeploymentName;
+  }
+
+  private async checkForNewerVersion(env: any, resource: any, spec: any, status: any) {
+    try {
+      console.log(`🔍 Checking for newer version of ${spec.repository} (current: ${status.tag})`);
+
+      const headers: Record<string, string> = {
+        Accept: "application/vnd.github.v3+json",
+        "User-Agent": "Guber-GitHub-Controller/1.0",
+      };
+
+      if (env.GITHUB_TOKEN) {
+        headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
+      }
+
+      // Get latest release
+      const latestReleaseResponse = await fetch(
+        `https://api.github.com/repos/${spec.repository}/releases/latest`,
+        {
+          method: "GET",
+          headers,
+        },
+      );
+
+      if (!latestReleaseResponse.ok) {
+        console.log(`Could not fetch latest release for ${spec.repository}`);
+        return;
+      }
+
+      const latestRelease = await latestReleaseResponse.json();
+      const latestTag = latestRelease.tag_name;
+
+      // Compare versions - if current tag is different from latest, we have a newer version
+      if (status.tag !== latestTag) {
+        console.log(`🆕 Found newer version: ${latestTag} (current: ${status.tag}) for ${resource.name}`);
+
+        // Only create new resources if Cloudflare resources were originally created
+        if (spec.createCloudflareResources && status.workerName) {
+          try {
+            // Create new WorkerScriptVersion for the newer release
+            const newWorkerScriptVersionName = await this.createWorkerScriptVersion(
+              env,
+              spec,
+              latestRelease,
+              latestTag,
+              resource.name,
+              status.workerName,
+            );
+
+            // Create new WorkerScriptDeployment for the newer version
+            const newWorkerScriptDeploymentName = await this.createWorkerScriptDeployment(
+              env,
+              spec,
+              resource.name,
+              latestTag,
+              status.workerName,
+              newWorkerScriptVersionName,
+            );
+
+            // Update the ReleaseDeploy status with new version info
+            const updatedStatus = {
+              ...status,
+              tag: latestTag,
+              latestWorkerScriptVersionName: newWorkerScriptVersionName,
+              latestWorkerScriptDeploymentName: newWorkerScriptDeploymentName,
+              releaseUrl: latestRelease.html_url,
+              lastVersionCheck: new Date().toISOString(),
+              versionHistory: [
+                ...(status.versionHistory || []),
+                {
+                  tag: latestTag,
+                  workerScriptVersionName: newWorkerScriptVersionName,
+                  workerScriptDeploymentName: newWorkerScriptDeploymentName,
+                  createdAt: new Date().toISOString(),
+                  releaseUrl: latestRelease.html_url,
+                }
+              ]
+            };
+
+            // Update status using the generated GitHub client
+            const releaseDeployUpdate: ReleaseDeploy = {
+              apiVersion: "gh.guber.proc.io/v1",
+              kind: "ReleaseDeploy",
+              metadata: {
+                name: resource.name,
+                namespace: resource.namespace || undefined,
+              },
+              status: updatedStatus,
+            };
+
+            await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+              resource.namespace || "default",
+              resource.name,
+              releaseDeployUpdate,
+            );
+
+            console.log(`✅ Successfully created new version ${latestTag} for ReleaseDeploy ${resource.name}`);
+          } catch (error) {
+            console.error(`❌ Failed to create new version ${latestTag} for ReleaseDeploy ${resource.name}:`, error);
+            
+            // Update status to indicate version check failure
+            const updatedStatus = {
+              ...status,
+              lastVersionCheck: new Date().toISOString(),
+              lastVersionCheckError: error.message || String(error),
+            };
+
+            const releaseDeployUpdate: ReleaseDeploy = {
+              apiVersion: "gh.guber.proc.io/v1",
+              kind: "ReleaseDeploy",
+              metadata: {
+                name: resource.name,
+                namespace: resource.namespace || undefined,
+              },
+              status: updatedStatus,
+            };
+
+            await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+              resource.namespace || "default",
+              resource.name,
+              releaseDeployUpdate,
+            );
+          }
+        } else {
+          // Just update the tag info without creating Cloudflare resources
+          const updatedStatus = {
+            ...status,
+            tag: latestTag,
+            releaseUrl: latestRelease.html_url,
+            lastVersionCheck: new Date().toISOString(),
+            note: "Newer version available but Cloudflare resources not configured for auto-update"
+          };
+
+          const releaseDeployUpdate: ReleaseDeploy = {
+            apiVersion: "gh.guber.proc.io/v1",
+            kind: "ReleaseDeploy",
+            metadata: {
+              name: resource.name,
+              namespace: resource.namespace || undefined,
+            },
+            status: updatedStatus,
+          };
+
+          await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+            resource.namespace || "default",
+            resource.name,
+            releaseDeployUpdate,
+          );
+
+          console.log(`📝 Updated ReleaseDeploy ${resource.name} with newer version info: ${latestTag}`);
+        }
+      } else {
+        console.log(`✅ ReleaseDeploy ${resource.name} is already on latest version: ${latestTag}`);
+        
+        // Update last version check timestamp
+        const updatedStatus = {
+          ...status,
+          lastVersionCheck: new Date().toISOString(),
+        };
+
+        const releaseDeployUpdate: ReleaseDeploy = {
+          apiVersion: "gh.guber.proc.io/v1",
+          kind: "ReleaseDeploy",
+          metadata: {
+            name: resource.name,
+            namespace: resource.namespace || undefined,
+          },
+          status: updatedStatus,
+        };
+
+        await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+          resource.namespace || "default",
+          resource.name,
+          releaseDeployUpdate,
+        );
+      }
+    } catch (error) {
+      console.error(`Error checking for newer version of ${resource.name}:`, error);
+      
+      // Update status to indicate version check failure
+      const updatedStatus = {
+        ...status,
+        lastVersionCheck: new Date().toISOString(),
+        lastVersionCheckError: error.message || String(error),
+      };
+
+      const releaseDeployUpdate: ReleaseDeploy = {
+        apiVersion: "gh.guber.proc.io/v1",
+        kind: "ReleaseDeploy",
+        metadata: {
+          name: resource.name,
+          namespace: resource.namespace || undefined,
+        },
+        status: updatedStatus,
+      };
+
+      await patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysName(
+        resource.namespace || "default",
+        resource.name,
+        releaseDeployUpdate,
+      );
+    }
   }
 
   private async reconcilePendingReleaseDeploys(env: any) {
