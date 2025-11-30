@@ -1624,7 +1624,6 @@ app.get("/apis/:group/:version/:plural/:name", async (c) => {
 app.patch("/apis/:group/:version/:plural/:name", async (c) => {
   const { group, version, plural, name } = c.req.param();
   const body = await c.req.json();
-  console.log("POLVI 2:", group, version, plural, name);
   const current = await c.env.DB.prepare(
     "SELECT * FROM resources WHERE group_name=? AND version=? AND plural=? AND name=? AND namespace IS NULL",
   )
@@ -1658,7 +1657,6 @@ app.patch("/apis/:group/:version/:plural/:name", async (c) => {
     updatedResource.metadata.name = name;
     updatedResource.metadata.creationTimestamp = current.created_at;
   }
-
   // Update the database
   await c.env.DB.prepare(
     "UPDATE resources SET spec=?, status=? WHERE name=? AND namespace IS NULL",
