@@ -1,7 +1,7 @@
+/// <reference path="./wrangler-types.d.ts" />
 import { Hono } from "hono";
 import { v4 as uuid } from "uuid";
 import type { GuberConfig, ResourceContext } from "./config";
-import type { Env } from "./wrangler-types";
 
 // Load config
 let config: GuberConfig;
@@ -13,7 +13,7 @@ try {
   config = { controllers: [] };
 }
 
-const app = new Hono<Env>();
+const app = new Hono<{ Bindings: Env }>();
 
 // Helper function to notify controllers of resource events
 async function notifyControllers(
