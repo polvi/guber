@@ -1165,7 +1165,7 @@ class CloudflareController implements Controller {
             return false;
           }
 
-          if (!depResource.status) {
+          if (!depResource.data || !depResource.data.status) {
             console.log(
               `Dependency ${depKind}/${depName} has no status, deferring provisioning`
             );
@@ -1190,7 +1190,7 @@ class CloudflareController implements Controller {
             return false;
           }
 
-          const depStatus = depResource.status;
+          const depStatus = depResource.data.status;
           if (!depStatus || !depStatus.state || depStatus.state !== "Ready") {
             const currentState = depStatus?.state || "unknown";
             console.log(
@@ -2403,13 +2403,13 @@ class CloudflareController implements Controller {
               depResource = null;
             }
 
-            if (!depResource || !depResource.status) {
+            if (!depResource || !depResource.data || !depResource.data.status) {
               allDependenciesReady = false;
               unresolvedDependencies.push(dependency);
               continue;
             }
 
-            const depStatus = depResource.status;
+            const depStatus = depResource.data.status;
             if (depStatus.state !== "Ready") {
               allDependenciesReady = false;
               unresolvedDependencies.push(dependency);
@@ -3017,7 +3017,7 @@ class CloudflareController implements Controller {
       }
 
       // Check if the worker is ready and has an endpoint
-      if (!workerResource.status) {
+      if (!workerResource.data || !workerResource.data.status) {
         console.log(
           `Target worker ${spec.scriptName} has no status, deferring version creation`
         );
@@ -3042,7 +3042,7 @@ class CloudflareController implements Controller {
         return false;
       }
 
-      const workerStatus = workerResource.status;
+      const workerStatus = workerResource.data.status;
       if (!workerStatus || !workerStatus.state || workerStatus.state !== "Ready") {
         const currentState = workerStatus?.state || "unknown";
         console.log(
@@ -3267,8 +3267,8 @@ class CloudflareController implements Controller {
                 targetWorkerResource = null;
               }
 
-              if (targetWorkerResource && targetWorkerResource.status) {
-                const targetWorkerStatus = targetWorkerResource.status;
+              if (targetWorkerResource && targetWorkerResource.data && targetWorkerResource.data.status) {
+                const targetWorkerStatus = targetWorkerResource.data.status;
                 if (targetWorkerStatus.state === "Ready") {
                   console.log(
                     `[Reconcile] Target worker ${status.pendingWorker} is now ready for version ${resource.name}, re-queuing for provisioning`
@@ -3368,13 +3368,13 @@ class CloudflareController implements Controller {
                   depResource = null;
                 }
 
-                if (!depResource || !depResource.status) {
+                if (!depResource || !depResource.data || !depResource.data.status) {
                   allDependenciesReady = false;
                   unresolvedDependencies.push(dependency);
                   continue;
                 }
 
-                const depStatus = depResource.status;
+                const depStatus = depResource.data.status;
                 if (depStatus.state !== "Ready") {
                   allDependenciesReady = false;
                   unresolvedDependencies.push(dependency);
@@ -3589,12 +3589,12 @@ class CloudflareController implements Controller {
             return false;
           }
 
-          if (!depResource.status) {
+          if (!depResource.data || !depResource.data.status) {
             console.log(
               `Dependency ${depKind}/${depName} has no status, deferring provisioning`
             );
             const workerScriptDeploymentUpdate: WorkerScriptDeployment = {
-              apiVersion: "cf.guber.proc.io/v1",
+              apiVersion: "cf.guber.proc.io/1",
               kind: "WorkerScriptDeployment",
               metadata: {
                 name: resourceName,
@@ -3614,7 +3614,7 @@ class CloudflareController implements Controller {
             return false;
           }
 
-          const depStatus = depResource.status;
+          const depStatus = depResource.data.status;
           if (!depStatus || !depStatus.state || depStatus.state !== "Ready") {
             const currentState = depStatus?.state || "unknown";
             console.log(
@@ -3683,7 +3683,7 @@ class CloudflareController implements Controller {
       }
 
       // Check if the worker is ready and has an endpoint
-      if (!workerResource.status) {
+      if (!workerResource.data || !workerResource.data.status) {
         console.log(
           `Target worker ${spec.scriptName} has no status, deferring deployment creation`
         );
@@ -3708,7 +3708,7 @@ class CloudflareController implements Controller {
         return false;
       }
 
-      const workerStatus = workerResource.status;
+      const workerStatus = workerResource.data.status;
       if (!workerStatus || !workerStatus.state || workerStatus.state !== "Ready") {
         const currentState = workerStatus?.state || "unknown";
         console.log(
@@ -4047,8 +4047,8 @@ class CloudflareController implements Controller {
                 targetWorkerResource = null;
               }
 
-              if (targetWorkerResource && targetWorkerResource.status) {
-                const targetWorkerStatus = targetWorkerResource.status;
+              if (targetWorkerResource && targetWorkerResource.data && targetWorkerResource.data.status) {
+                const targetWorkerStatus = targetWorkerResource.data.status;
                 if (targetWorkerStatus.state === "Ready") {
                   console.log(
                     `[Reconcile] Target worker ${status.pendingWorker} is now ready for deployment ${resource.name}, re-queuing for provisioning`
@@ -4143,13 +4143,13 @@ class CloudflareController implements Controller {
                   depResource = null;
                 }
 
-                if (!depResource || !depResource.status) {
+                if (!depResource || !depResource.data || !depResource.data.status) {
                   allDependenciesReady = false;
                   unresolvedDependencies.push(dependency);
                   continue;
                 }
 
-                const depStatus = depResource.status;
+                const depStatus = depResource.data.status;
                 if (depStatus.state !== "Ready") {
                   allDependenciesReady = false;
                   unresolvedDependencies.push(dependency);
