@@ -1451,7 +1451,7 @@ app.patch(
     await c.env.DB.prepare(
       "UPDATE crds SET group_name=?, version=?, kind=?, plural=?, short_names=?, scope=? WHERE name=?",
     )
-      .bind(group, version, kind, plural, shortNames, scope, name as string)
+      .bind(group as string, version as string, kind as string, plural as string, shortNames, scope as string, name as string)
       .run();
 
     return c.json({
@@ -1984,7 +1984,7 @@ app.delete(
     await c.env.DB.prepare(
       "DELETE FROM resources WHERE group_name=? AND version=? AND plural=? AND name=? AND namespace=?",
     )
-      .bind(group, version, plural, name as string, namespace as string)
+      .bind(group as string, version as string, plural as string, name as string, namespace as string)
       .run();
 
     // Return the deleted object
