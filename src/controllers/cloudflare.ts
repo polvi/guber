@@ -312,6 +312,8 @@ class CloudflareController implements Controller {
 
             for (const dependency of spec.dependencies) {
               const depGroup = dependency.group || "cf.guber.proc.io";
+              const depKind = dependency.kind;
+              const depName = dependency.name;
               let depResource = null;
               try {
                 if (depKind === "Worker") {
