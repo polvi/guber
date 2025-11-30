@@ -2114,6 +2114,14 @@ class CloudflareController implements Controller {
                 }
 
                 const currentBindings = workerData.result?.bindings || [];
+              } else {
+                const errorText = await workerResponse.text();
+                console.error(
+                  `Failed to fetch worker settings for ${fullName}: ${workerResponse.status} ${workerResponse.statusText}`,
+                  errorText
+                );
+                continue;
+              }
 
                 // Compare expected vs current bindings
                 if (expectedBindings.length !== currentBindings.length) {
@@ -2233,43 +2241,70 @@ class CloudflareController implements Controller {
             }
 
             // Test the worker endpoint for health check
-            const healthResponse = await fetch(`https://${customDomain}`, {
-              method: "GET",
-              headers: {
-                "User-Agent": "Guber-Health-Check/1.0",
-              },
-            });
+            try {
+              const healthResponse = await fetch(`https://${customDomain}`, {
+                method: "GET",
+                headers: {
+                  "User-Agent": "Guber-Health-Check/1.0",
+                },
+                timeout: 10000, // 10 second timeout
+              });
 
-            const isHealthy = healthResponse.ok;
-            const currentState = status.state;
+              const isHealthy = healthResponse.ok;
+              const currentState = status.state;
 
-            // Update status if health state changed
-            if (
-              (isHealthy && currentState === "Failed") ||
-              (!isHealthy && currentState === "Ready")
-            ) {
+              // Update status if health state changed
+              if (
+                (isHealthy && currentState === "Failed") ||
+                (!isHealthy && currentState === "Ready")
+              ) {
+                const newStatus = {
+                  ...status,
+                  state: isHealthy ? "Ready" : "Failed",
+                  lastHealthCheck: new Date().toISOString(),
+                  healthCheckStatus: healthResponse.status,
+                  healthCheckError: isHealthy
+                    ? undefined
+                    : `HTTP ${healthResponse.status}: ${healthResponse.statusText}`,
+                };
+
+                if (!isHealthy) {
+                  try {
+                    const errorText = await healthResponse.text();
+                    if (errorText) {
+                      newStatus.healthCheckError = `HTTP ${
+                        healthResponse.status
+                      }: ${errorText.substring(0, 500)}`;
+                    }
+                  } catch (e) {
+                    newStatus.healthCheckError = `HTTP ${healthResponse.status}: Failed to read response body - ${e.message}`;
+                  }
+                }
+
+                await patchApisCfGuberProcIoV1WorkersName(apiResource.name, {
+                  apiVersion: "cf.guber.proc.io/v1",
+                  kind: "Worker",
+                  metadata: { name: apiResource.name },
+                  status: newStatus,
+                });
+
+                console.log(
+                  `Updated worker ${fullName} health status: ${currentState} -> ${newStatus.state}`
+                );
+              }
+            } catch (healthError) {
+              console.error(
+                `Health check failed for worker ${fullName}:`,
+                healthError.message || String(healthError)
+              );
+              
+              // Update status to indicate health check failed
               const newStatus = {
                 ...status,
-                state: isHealthy ? "Ready" : "Failed",
+                state: "Failed",
                 lastHealthCheck: new Date().toISOString(),
-                healthCheckStatus: healthResponse.status,
-                healthCheckError: isHealthy
-                  ? undefined
-                  : `HTTP ${healthResponse.status}: ${healthResponse.statusText}`,
+                healthCheckError: `Health check failed: ${healthError.message || String(healthError)}`,
               };
-
-              if (!isHealthy) {
-                try {
-                  const errorText = await healthResponse.text();
-                  if (errorText) {
-                    newStatus.healthCheckError = `HTTP ${
-                      healthResponse.status
-                    }: ${errorText.substring(0, 500)}`;
-                  }
-                } catch (e) {
-                  newStatus.healthCheckError = `HTTP ${healthResponse.status}: Failed to read response body - ${e.message}`;
-                }
-              }
 
               await patchApisCfGuberProcIoV1WorkersName(apiResource.name, {
                 apiVersion: "cf.guber.proc.io/v1",
@@ -2277,10 +2312,6 @@ class CloudflareController implements Controller {
                 metadata: { name: apiResource.name },
                 status: newStatus,
               });
-
-              console.log(
-                `Updated worker ${fullName} health status: ${currentState} -> ${newStatus.state}`
-              );
             }
           } catch (error) {
             console.error(`Error checking worker ${fullName}:`, error);
