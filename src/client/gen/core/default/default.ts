@@ -7,26 +7,24 @@
  */
 import type {
   IoK8sApiCoreV1Namespace,
-  PatchApiV1NamespacesNameParams,
+  PatchNamespaceParams,
 } from ".././models";
 
 import { customFetch } from "../../../custom-fetch";
 
-export type patchApiV1NamespacesNameResponse200 = {
+export type patchNamespaceResponse200 = {
   data: IoK8sApiCoreV1Namespace;
   status: 200;
 };
 
-export type patchApiV1NamespacesNameResponseSuccess =
-  patchApiV1NamespacesNameResponse200 & {
-    headers: Headers;
-  };
-export type patchApiV1NamespacesNameResponse =
-  patchApiV1NamespacesNameResponseSuccess;
+export type patchNamespaceResponseSuccess = patchNamespaceResponse200 & {
+  headers: Headers;
+};
+export type patchNamespaceResponse = patchNamespaceResponseSuccess;
 
-export const getPatchApiV1NamespacesNameUrl = (
+export const getPatchNamespaceUrl = (
   name: string,
-  params?: PatchApiV1NamespacesNameParams,
+  params?: PatchNamespaceParams,
 ) => {
   const normalizedParams = new URLSearchParams();
 
@@ -43,14 +41,14 @@ export const getPatchApiV1NamespacesNameUrl = (
     : `http://fake/api/v1/namespaces/${name}`;
 };
 
-export const patchApiV1NamespacesName = async (
+export const patchNamespace = async (
   name: string,
   ioK8sApiCoreV1Namespace: IoK8sApiCoreV1Namespace,
-  params?: PatchApiV1NamespacesNameParams,
+  params?: PatchNamespaceParams,
   options?: RequestInit,
-): Promise<patchApiV1NamespacesNameResponse> => {
-  return customFetch<patchApiV1NamespacesNameResponse>(
-    getPatchApiV1NamespacesNameUrl(name, params),
+): Promise<patchNamespaceResponse> => {
+  return customFetch<patchNamespaceResponse>(
+    getPatchNamespaceUrl(name, params),
     {
       ...options,
       method: "PATCH",

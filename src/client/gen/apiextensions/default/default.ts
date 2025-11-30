@@ -8,34 +8,33 @@
 import type {
   IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition,
   IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionList,
-  PatchApisApiextensionsK8sIoV1CustomresourcedefinitionsNameParams,
-  PutApisApiextensionsK8sIoV1CustomresourcedefinitionsNameParams,
+  PatchCustomResourceDefinitionParams,
+  ReplaceCustomResourceDefinitionParams,
 } from ".././models";
 
 import { customFetch } from "../../../custom-fetch";
 
-export type getApisApiextensionsK8sIoV1CustomresourcedefinitionsResponse200 = {
+export type listCustomResourceDefinitionsResponse200 = {
   data: IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinitionList;
   status: 200;
 };
 
-export type getApisApiextensionsK8sIoV1CustomresourcedefinitionsResponseSuccess =
-  getApisApiextensionsK8sIoV1CustomresourcedefinitionsResponse200 & {
+export type listCustomResourceDefinitionsResponseSuccess =
+  listCustomResourceDefinitionsResponse200 & {
     headers: Headers;
   };
-export type getApisApiextensionsK8sIoV1CustomresourcedefinitionsResponse =
-  getApisApiextensionsK8sIoV1CustomresourcedefinitionsResponseSuccess;
+export type listCustomResourceDefinitionsResponse =
+  listCustomResourceDefinitionsResponseSuccess;
 
-export const getGetApisApiextensionsK8sIoV1CustomresourcedefinitionsUrl =
-  () => {
-    return `http://fake/apis/apiextensions.k8s.io/v1/customresourcedefinitions`;
-  };
+export const getListCustomResourceDefinitionsUrl = () => {
+  return `http://fake/apis/apiextensions.k8s.io/v1/customresourcedefinitions`;
+};
 
-export const getApisApiextensionsK8sIoV1Customresourcedefinitions = async (
+export const listCustomResourceDefinitions = async (
   options?: RequestInit,
-): Promise<getApisApiextensionsK8sIoV1CustomresourcedefinitionsResponse> => {
-  return customFetch<getApisApiextensionsK8sIoV1CustomresourcedefinitionsResponse>(
-    getGetApisApiextensionsK8sIoV1CustomresourcedefinitionsUrl(),
+): Promise<listCustomResourceDefinitionsResponse> => {
+  return customFetch<listCustomResourceDefinitionsResponse>(
+    getListCustomResourceDefinitionsUrl(),
     {
       ...options,
       method: "GET",
@@ -43,29 +42,28 @@ export const getApisApiextensionsK8sIoV1Customresourcedefinitions = async (
   );
 };
 
-export type postApisApiextensionsK8sIoV1CustomresourcedefinitionsResponse201 = {
+export type createCustomResourceDefinitionResponse201 = {
   data: IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition;
   status: 201;
 };
 
-export type postApisApiextensionsK8sIoV1CustomresourcedefinitionsResponseSuccess =
-  postApisApiextensionsK8sIoV1CustomresourcedefinitionsResponse201 & {
+export type createCustomResourceDefinitionResponseSuccess =
+  createCustomResourceDefinitionResponse201 & {
     headers: Headers;
   };
-export type postApisApiextensionsK8sIoV1CustomresourcedefinitionsResponse =
-  postApisApiextensionsK8sIoV1CustomresourcedefinitionsResponseSuccess;
+export type createCustomResourceDefinitionResponse =
+  createCustomResourceDefinitionResponseSuccess;
 
-export const getPostApisApiextensionsK8sIoV1CustomresourcedefinitionsUrl =
-  () => {
-    return `http://fake/apis/apiextensions.k8s.io/v1/customresourcedefinitions`;
-  };
+export const getCreateCustomResourceDefinitionUrl = () => {
+  return `http://fake/apis/apiextensions.k8s.io/v1/customresourcedefinitions`;
+};
 
-export const postApisApiextensionsK8sIoV1Customresourcedefinitions = async (
+export const createCustomResourceDefinition = async (
   ioK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition: IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition,
   options?: RequestInit,
-): Promise<postApisApiextensionsK8sIoV1CustomresourcedefinitionsResponse> => {
-  return customFetch<postApisApiextensionsK8sIoV1CustomresourcedefinitionsResponse>(
-    getPostApisApiextensionsK8sIoV1CustomresourcedefinitionsUrl(),
+): Promise<createCustomResourceDefinitionResponse> => {
+  return customFetch<createCustomResourceDefinitionResponse>(
+    getCreateCustomResourceDefinitionUrl(),
     {
       ...options,
       method: "POST",
@@ -77,31 +75,28 @@ export const postApisApiextensionsK8sIoV1Customresourcedefinitions = async (
   );
 };
 
-export type getApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponse200 =
-  {
-    data: IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition;
-    status: 200;
-  };
+export type getCustomResourceDefinitionResponse200 = {
+  data: IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition;
+  status: 200;
+};
 
-export type getApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponseSuccess =
-  getApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponse200 & {
+export type getCustomResourceDefinitionResponseSuccess =
+  getCustomResourceDefinitionResponse200 & {
     headers: Headers;
   };
-export type getApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponse =
-  getApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponseSuccess;
+export type getCustomResourceDefinitionResponse =
+  getCustomResourceDefinitionResponseSuccess;
 
-export const getGetApisApiextensionsK8sIoV1CustomresourcedefinitionsNameUrl = (
-  name: string,
-) => {
+export const getGetCustomResourceDefinitionUrl = (name: string) => {
   return `http://fake/apis/apiextensions.k8s.io/v1/customresourcedefinitions/${name}`;
 };
 
-export const getApisApiextensionsK8sIoV1CustomresourcedefinitionsName = async (
+export const getCustomResourceDefinition = async (
   name: string,
   options?: RequestInit,
-): Promise<getApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponse> => {
-  return customFetch<getApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponse>(
-    getGetApisApiextensionsK8sIoV1CustomresourcedefinitionsNameUrl(name),
+): Promise<getCustomResourceDefinitionResponse> => {
+  return customFetch<getCustomResourceDefinitionResponse>(
+    getGetCustomResourceDefinitionUrl(name),
     {
       ...options,
       method: "GET",
@@ -109,22 +104,21 @@ export const getApisApiextensionsK8sIoV1CustomresourcedefinitionsName = async (
   );
 };
 
-export type putApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponse200 =
-  {
-    data: IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition;
-    status: 200;
-  };
+export type replaceCustomResourceDefinitionResponse200 = {
+  data: IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition;
+  status: 200;
+};
 
-export type putApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponseSuccess =
-  putApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponse200 & {
+export type replaceCustomResourceDefinitionResponseSuccess =
+  replaceCustomResourceDefinitionResponse200 & {
     headers: Headers;
   };
-export type putApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponse =
-  putApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponseSuccess;
+export type replaceCustomResourceDefinitionResponse =
+  replaceCustomResourceDefinitionResponseSuccess;
 
-export const getPutApisApiextensionsK8sIoV1CustomresourcedefinitionsNameUrl = (
+export const getReplaceCustomResourceDefinitionUrl = (
   name: string,
-  params?: PutApisApiextensionsK8sIoV1CustomresourcedefinitionsNameParams,
+  params?: ReplaceCustomResourceDefinitionParams,
 ) => {
   const normalizedParams = new URLSearchParams();
 
@@ -141,17 +135,14 @@ export const getPutApisApiextensionsK8sIoV1CustomresourcedefinitionsNameUrl = (
     : `http://fake/apis/apiextensions.k8s.io/v1/customresourcedefinitions/${name}`;
 };
 
-export const putApisApiextensionsK8sIoV1CustomresourcedefinitionsName = async (
+export const replaceCustomResourceDefinition = async (
   name: string,
   ioK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition: IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition,
-  params?: PutApisApiextensionsK8sIoV1CustomresourcedefinitionsNameParams,
+  params?: ReplaceCustomResourceDefinitionParams,
   options?: RequestInit,
-): Promise<putApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponse> => {
-  return customFetch<putApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponse>(
-    getPutApisApiextensionsK8sIoV1CustomresourcedefinitionsNameUrl(
-      name,
-      params,
-    ),
+): Promise<replaceCustomResourceDefinitionResponse> => {
+  return customFetch<replaceCustomResourceDefinitionResponse>(
+    getReplaceCustomResourceDefinitionUrl(name, params),
     {
       ...options,
       method: "PUT",
@@ -163,93 +154,81 @@ export const putApisApiextensionsK8sIoV1CustomresourcedefinitionsName = async (
   );
 };
 
-export type patchApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponse200 =
-  {
-    data: IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition;
-    status: 200;
-  };
+export type patchCustomResourceDefinitionResponse200 = {
+  data: IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition;
+  status: 200;
+};
 
-export type patchApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponseSuccess =
-  patchApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponse200 & {
+export type patchCustomResourceDefinitionResponseSuccess =
+  patchCustomResourceDefinitionResponse200 & {
     headers: Headers;
   };
-export type patchApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponse =
-  patchApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponseSuccess;
+export type patchCustomResourceDefinitionResponse =
+  patchCustomResourceDefinitionResponseSuccess;
 
-export const getPatchApisApiextensionsK8sIoV1CustomresourcedefinitionsNameUrl =
-  (
-    name: string,
-    params?: PatchApisApiextensionsK8sIoV1CustomresourcedefinitionsNameParams,
-  ) => {
-    const normalizedParams = new URLSearchParams();
+export const getPatchCustomResourceDefinitionUrl = (
+  name: string,
+  params?: PatchCustomResourceDefinitionParams,
+) => {
+  const normalizedParams = new URLSearchParams();
 
-    Object.entries(params || {}).forEach(([key, value]) => {
-      if (value !== undefined) {
-        normalizedParams.append(
-          key,
-          value === null ? "null" : value.toString(),
-        );
-      }
-    });
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
 
-    const stringifiedParams = normalizedParams.toString();
+  const stringifiedParams = normalizedParams.toString();
 
-    return stringifiedParams.length > 0
-      ? `http://fake/apis/apiextensions.k8s.io/v1/customresourcedefinitions/${name}?${stringifiedParams}`
-      : `http://fake/apis/apiextensions.k8s.io/v1/customresourcedefinitions/${name}`;
-  };
+  return stringifiedParams.length > 0
+    ? `http://fake/apis/apiextensions.k8s.io/v1/customresourcedefinitions/${name}?${stringifiedParams}`
+    : `http://fake/apis/apiextensions.k8s.io/v1/customresourcedefinitions/${name}`;
+};
 
-export const patchApisApiextensionsK8sIoV1CustomresourcedefinitionsName =
-  async (
-    name: string,
-    ioK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition: IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition,
-    params?: PatchApisApiextensionsK8sIoV1CustomresourcedefinitionsNameParams,
-    options?: RequestInit,
-  ): Promise<patchApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponse> => {
-    return customFetch<patchApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponse>(
-      getPatchApisApiextensionsK8sIoV1CustomresourcedefinitionsNameUrl(
-        name,
-        params,
+export const patchCustomResourceDefinition = async (
+  name: string,
+  ioK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition: IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition,
+  params?: PatchCustomResourceDefinitionParams,
+  options?: RequestInit,
+): Promise<patchCustomResourceDefinitionResponse> => {
+  return customFetch<patchCustomResourceDefinitionResponse>(
+    getPatchCustomResourceDefinitionUrl(name, params),
+    {
+      ...options,
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(
+        ioK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition,
       ),
-      {
-        ...options,
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", ...options?.headers },
-        body: JSON.stringify(
-          ioK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition,
-        ),
-      },
-    );
-  };
+    },
+  );
+};
 
-export type deleteApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponse200 =
-  {
-    data: IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition;
-    status: 200;
-  };
+export type deleteCustomResourceDefinitionResponse200 = {
+  data: IoK8sApiextensionsApiserverPkgApisApiextensionsV1CustomResourceDefinition;
+  status: 200;
+};
 
-export type deleteApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponseSuccess =
-  deleteApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponse200 & {
+export type deleteCustomResourceDefinitionResponseSuccess =
+  deleteCustomResourceDefinitionResponse200 & {
     headers: Headers;
   };
-export type deleteApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponse =
-  deleteApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponseSuccess;
+export type deleteCustomResourceDefinitionResponse =
+  deleteCustomResourceDefinitionResponseSuccess;
 
-export const getDeleteApisApiextensionsK8sIoV1CustomresourcedefinitionsNameUrl =
-  (name: string) => {
-    return `http://fake/apis/apiextensions.k8s.io/v1/customresourcedefinitions/${name}`;
-  };
+export const getDeleteCustomResourceDefinitionUrl = (name: string) => {
+  return `http://fake/apis/apiextensions.k8s.io/v1/customresourcedefinitions/${name}`;
+};
 
-export const deleteApisApiextensionsK8sIoV1CustomresourcedefinitionsName =
-  async (
-    name: string,
-    options?: RequestInit,
-  ): Promise<deleteApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponse> => {
-    return customFetch<deleteApisApiextensionsK8sIoV1CustomresourcedefinitionsNameResponse>(
-      getDeleteApisApiextensionsK8sIoV1CustomresourcedefinitionsNameUrl(name),
-      {
-        ...options,
-        method: "DELETE",
-      },
-    );
-  };
+export const deleteCustomResourceDefinition = async (
+  name: string,
+  options?: RequestInit,
+): Promise<deleteCustomResourceDefinitionResponse> => {
+  return customFetch<deleteCustomResourceDefinitionResponse>(
+    getDeleteCustomResourceDefinitionUrl(name),
+    {
+      ...options,
+      method: "DELETE",
+    },
+  );
+};

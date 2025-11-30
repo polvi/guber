@@ -7,25 +7,25 @@
  */
 import type {
   D1,
-  GetApisCfGuberProcIoV1D1s200,
-  GetApisCfGuberProcIoV1Qs200,
-  GetApisCfGuberProcIoV1Versions200,
-  GetApisCfGuberProcIoV1Workers200,
-  GetApisCfGuberProcIoV1Workerscriptdeployments200,
-  GetApisCfGuberProcIoV1Workerscriptversions200,
-  PatchApisCfGuberProcIoV1D1sNameParams,
-  PatchApisCfGuberProcIoV1QsNameParams,
-  PatchApisCfGuberProcIoV1VersionsNameParams,
-  PatchApisCfGuberProcIoV1WorkersNameParams,
-  PatchApisCfGuberProcIoV1WorkerscriptdeploymentsNameParams,
-  PatchApisCfGuberProcIoV1WorkerscriptversionsNameParams,
-  PutApisCfGuberProcIoV1D1sNameParams,
-  PutApisCfGuberProcIoV1QsNameParams,
-  PutApisCfGuberProcIoV1VersionsNameParams,
-  PutApisCfGuberProcIoV1WorkersNameParams,
-  PutApisCfGuberProcIoV1WorkerscriptdeploymentsNameParams,
-  PutApisCfGuberProcIoV1WorkerscriptversionsNameParams,
+  ListD1200,
+  ListQueue200,
+  ListVersion200,
+  ListWorker200,
+  ListWorkerScriptDeployment200,
+  ListWorkerScriptVersion200,
+  PatchD1Params,
+  PatchQueueParams,
+  PatchVersionParams,
+  PatchWorkerParams,
+  PatchWorkerScriptDeploymentParams,
+  PatchWorkerScriptVersionParams,
   Queue,
+  ReplaceD1Params,
+  ReplaceQueueParams,
+  ReplaceVersionParams,
+  ReplaceWorkerParams,
+  ReplaceWorkerScriptDeploymentParams,
+  ReplaceWorkerScriptVersionParams,
   Version,
   Worker,
   WorkerScriptDeployment,
@@ -34,109 +34,92 @@ import type {
 
 import { customFetch } from "../../../custom-fetch";
 
-export type getApisCfGuberProcIoV1VersionsResponse200 = {
-  data: GetApisCfGuberProcIoV1Versions200;
+export type listVersionResponse200 = {
+  data: ListVersion200;
   status: 200;
 };
 
-export type getApisCfGuberProcIoV1VersionsResponseSuccess =
-  getApisCfGuberProcIoV1VersionsResponse200 & {
-    headers: Headers;
-  };
-export type getApisCfGuberProcIoV1VersionsResponse =
-  getApisCfGuberProcIoV1VersionsResponseSuccess;
+export type listVersionResponseSuccess = listVersionResponse200 & {
+  headers: Headers;
+};
+export type listVersionResponse = listVersionResponseSuccess;
 
-export const getGetApisCfGuberProcIoV1VersionsUrl = () => {
+export const getListVersionUrl = () => {
   return `http://fake/apis/cf.guber.proc.io/v1/versions`;
 };
 
-export const getApisCfGuberProcIoV1Versions = async (
+export const listVersion = async (
   options?: RequestInit,
-): Promise<getApisCfGuberProcIoV1VersionsResponse> => {
-  return customFetch<getApisCfGuberProcIoV1VersionsResponse>(
-    getGetApisCfGuberProcIoV1VersionsUrl(),
-    {
-      ...options,
-      method: "GET",
-    },
-  );
+): Promise<listVersionResponse> => {
+  return customFetch<listVersionResponse>(getListVersionUrl(), {
+    ...options,
+    method: "GET",
+  });
 };
 
-export type postApisCfGuberProcIoV1VersionsResponse201 = {
+export type createVersionResponse201 = {
   data: Version;
   status: 201;
 };
 
-export type postApisCfGuberProcIoV1VersionsResponseSuccess =
-  postApisCfGuberProcIoV1VersionsResponse201 & {
-    headers: Headers;
-  };
-export type postApisCfGuberProcIoV1VersionsResponse =
-  postApisCfGuberProcIoV1VersionsResponseSuccess;
+export type createVersionResponseSuccess = createVersionResponse201 & {
+  headers: Headers;
+};
+export type createVersionResponse = createVersionResponseSuccess;
 
-export const getPostApisCfGuberProcIoV1VersionsUrl = () => {
+export const getCreateVersionUrl = () => {
   return `http://fake/apis/cf.guber.proc.io/v1/versions`;
 };
 
-export const postApisCfGuberProcIoV1Versions = async (
+export const createVersion = async (
   version: Version,
   options?: RequestInit,
-): Promise<postApisCfGuberProcIoV1VersionsResponse> => {
-  return customFetch<postApisCfGuberProcIoV1VersionsResponse>(
-    getPostApisCfGuberProcIoV1VersionsUrl(),
-    {
-      ...options,
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...options?.headers },
-      body: JSON.stringify(version),
-    },
-  );
+): Promise<createVersionResponse> => {
+  return customFetch<createVersionResponse>(getCreateVersionUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(version),
+  });
 };
 
-export type getApisCfGuberProcIoV1VersionsNameResponse200 = {
+export type getVersionResponse200 = {
   data: Version;
   status: 200;
 };
 
-export type getApisCfGuberProcIoV1VersionsNameResponseSuccess =
-  getApisCfGuberProcIoV1VersionsNameResponse200 & {
-    headers: Headers;
-  };
-export type getApisCfGuberProcIoV1VersionsNameResponse =
-  getApisCfGuberProcIoV1VersionsNameResponseSuccess;
+export type getVersionResponseSuccess = getVersionResponse200 & {
+  headers: Headers;
+};
+export type getVersionResponse = getVersionResponseSuccess;
 
-export const getGetApisCfGuberProcIoV1VersionsNameUrl = (name: string) => {
+export const getGetVersionUrl = (name: string) => {
   return `http://fake/apis/cf.guber.proc.io/v1/versions/${name}`;
 };
 
-export const getApisCfGuberProcIoV1VersionsName = async (
+export const getVersion = async (
   name: string,
   options?: RequestInit,
-): Promise<getApisCfGuberProcIoV1VersionsNameResponse> => {
-  return customFetch<getApisCfGuberProcIoV1VersionsNameResponse>(
-    getGetApisCfGuberProcIoV1VersionsNameUrl(name),
-    {
-      ...options,
-      method: "GET",
-    },
-  );
+): Promise<getVersionResponse> => {
+  return customFetch<getVersionResponse>(getGetVersionUrl(name), {
+    ...options,
+    method: "GET",
+  });
 };
 
-export type putApisCfGuberProcIoV1VersionsNameResponse200 = {
+export type replaceVersionResponse200 = {
   data: Version;
   status: 200;
 };
 
-export type putApisCfGuberProcIoV1VersionsNameResponseSuccess =
-  putApisCfGuberProcIoV1VersionsNameResponse200 & {
-    headers: Headers;
-  };
-export type putApisCfGuberProcIoV1VersionsNameResponse =
-  putApisCfGuberProcIoV1VersionsNameResponseSuccess;
+export type replaceVersionResponseSuccess = replaceVersionResponse200 & {
+  headers: Headers;
+};
+export type replaceVersionResponse = replaceVersionResponseSuccess;
 
-export const getPutApisCfGuberProcIoV1VersionsNameUrl = (
+export const getReplaceVersionUrl = (
   name: string,
-  params?: PutApisCfGuberProcIoV1VersionsNameParams,
+  params?: ReplaceVersionParams,
 ) => {
   const normalizedParams = new URLSearchParams();
 
@@ -153,14 +136,14 @@ export const getPutApisCfGuberProcIoV1VersionsNameUrl = (
     : `http://fake/apis/cf.guber.proc.io/v1/versions/${name}`;
 };
 
-export const putApisCfGuberProcIoV1VersionsName = async (
+export const replaceVersion = async (
   name: string,
   version: Version,
-  params?: PutApisCfGuberProcIoV1VersionsNameParams,
+  params?: ReplaceVersionParams,
   options?: RequestInit,
-): Promise<putApisCfGuberProcIoV1VersionsNameResponse> => {
-  return customFetch<putApisCfGuberProcIoV1VersionsNameResponse>(
-    getPutApisCfGuberProcIoV1VersionsNameUrl(name, params),
+): Promise<replaceVersionResponse> => {
+  return customFetch<replaceVersionResponse>(
+    getReplaceVersionUrl(name, params),
     {
       ...options,
       method: "PUT",
@@ -170,21 +153,19 @@ export const putApisCfGuberProcIoV1VersionsName = async (
   );
 };
 
-export type patchApisCfGuberProcIoV1VersionsNameResponse200 = {
+export type patchVersionResponse200 = {
   data: Version;
   status: 200;
 };
 
-export type patchApisCfGuberProcIoV1VersionsNameResponseSuccess =
-  patchApisCfGuberProcIoV1VersionsNameResponse200 & {
-    headers: Headers;
-  };
-export type patchApisCfGuberProcIoV1VersionsNameResponse =
-  patchApisCfGuberProcIoV1VersionsNameResponseSuccess;
+export type patchVersionResponseSuccess = patchVersionResponse200 & {
+  headers: Headers;
+};
+export type patchVersionResponse = patchVersionResponseSuccess;
 
-export const getPatchApisCfGuberProcIoV1VersionsNameUrl = (
+export const getPatchVersionUrl = (
   name: string,
-  params?: PatchApisCfGuberProcIoV1VersionsNameParams,
+  params?: PatchVersionParams,
 ) => {
   const normalizedParams = new URLSearchParams();
 
@@ -201,156 +182,128 @@ export const getPatchApisCfGuberProcIoV1VersionsNameUrl = (
     : `http://fake/apis/cf.guber.proc.io/v1/versions/${name}`;
 };
 
-export const patchApisCfGuberProcIoV1VersionsName = async (
+export const patchVersion = async (
   name: string,
   version: Version,
-  params?: PatchApisCfGuberProcIoV1VersionsNameParams,
+  params?: PatchVersionParams,
   options?: RequestInit,
-): Promise<patchApisCfGuberProcIoV1VersionsNameResponse> => {
-  return customFetch<patchApisCfGuberProcIoV1VersionsNameResponse>(
-    getPatchApisCfGuberProcIoV1VersionsNameUrl(name, params),
-    {
-      ...options,
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", ...options?.headers },
-      body: JSON.stringify(version),
-    },
-  );
+): Promise<patchVersionResponse> => {
+  return customFetch<patchVersionResponse>(getPatchVersionUrl(name, params), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(version),
+  });
 };
 
-export type deleteApisCfGuberProcIoV1VersionsNameResponse200 = {
+export type deleteVersionResponse200 = {
   data: Version;
   status: 200;
 };
 
-export type deleteApisCfGuberProcIoV1VersionsNameResponseSuccess =
-  deleteApisCfGuberProcIoV1VersionsNameResponse200 & {
-    headers: Headers;
-  };
-export type deleteApisCfGuberProcIoV1VersionsNameResponse =
-  deleteApisCfGuberProcIoV1VersionsNameResponseSuccess;
+export type deleteVersionResponseSuccess = deleteVersionResponse200 & {
+  headers: Headers;
+};
+export type deleteVersionResponse = deleteVersionResponseSuccess;
 
-export const getDeleteApisCfGuberProcIoV1VersionsNameUrl = (name: string) => {
+export const getDeleteVersionUrl = (name: string) => {
   return `http://fake/apis/cf.guber.proc.io/v1/versions/${name}`;
 };
 
-export const deleteApisCfGuberProcIoV1VersionsName = async (
+export const deleteVersion = async (
   name: string,
   options?: RequestInit,
-): Promise<deleteApisCfGuberProcIoV1VersionsNameResponse> => {
-  return customFetch<deleteApisCfGuberProcIoV1VersionsNameResponse>(
-    getDeleteApisCfGuberProcIoV1VersionsNameUrl(name),
-    {
-      ...options,
-      method: "DELETE",
-    },
-  );
+): Promise<deleteVersionResponse> => {
+  return customFetch<deleteVersionResponse>(getDeleteVersionUrl(name), {
+    ...options,
+    method: "DELETE",
+  });
 };
 
-export type getApisCfGuberProcIoV1D1sResponse200 = {
-  data: GetApisCfGuberProcIoV1D1s200;
+export type listD1Response200 = {
+  data: ListD1200;
   status: 200;
 };
 
-export type getApisCfGuberProcIoV1D1sResponseSuccess =
-  getApisCfGuberProcIoV1D1sResponse200 & {
-    headers: Headers;
-  };
-export type getApisCfGuberProcIoV1D1sResponse =
-  getApisCfGuberProcIoV1D1sResponseSuccess;
+export type listD1ResponseSuccess = listD1Response200 & {
+  headers: Headers;
+};
+export type listD1Response = listD1ResponseSuccess;
 
-export const getGetApisCfGuberProcIoV1D1sUrl = () => {
+export const getListD1Url = () => {
   return `http://fake/apis/cf.guber.proc.io/v1/d1s`;
 };
 
-export const getApisCfGuberProcIoV1D1s = async (
+export const listD1 = async (
   options?: RequestInit,
-): Promise<getApisCfGuberProcIoV1D1sResponse> => {
-  return customFetch<getApisCfGuberProcIoV1D1sResponse>(
-    getGetApisCfGuberProcIoV1D1sUrl(),
-    {
-      ...options,
-      method: "GET",
-    },
-  );
+): Promise<listD1Response> => {
+  return customFetch<listD1Response>(getListD1Url(), {
+    ...options,
+    method: "GET",
+  });
 };
 
-export type postApisCfGuberProcIoV1D1sResponse201 = {
+export type createD1Response201 = {
   data: D1;
   status: 201;
 };
 
-export type postApisCfGuberProcIoV1D1sResponseSuccess =
-  postApisCfGuberProcIoV1D1sResponse201 & {
-    headers: Headers;
-  };
-export type postApisCfGuberProcIoV1D1sResponse =
-  postApisCfGuberProcIoV1D1sResponseSuccess;
+export type createD1ResponseSuccess = createD1Response201 & {
+  headers: Headers;
+};
+export type createD1Response = createD1ResponseSuccess;
 
-export const getPostApisCfGuberProcIoV1D1sUrl = () => {
+export const getCreateD1Url = () => {
   return `http://fake/apis/cf.guber.proc.io/v1/d1s`;
 };
 
-export const postApisCfGuberProcIoV1D1s = async (
+export const createD1 = async (
   d1: D1,
   options?: RequestInit,
-): Promise<postApisCfGuberProcIoV1D1sResponse> => {
-  return customFetch<postApisCfGuberProcIoV1D1sResponse>(
-    getPostApisCfGuberProcIoV1D1sUrl(),
-    {
-      ...options,
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...options?.headers },
-      body: JSON.stringify(d1),
-    },
-  );
+): Promise<createD1Response> => {
+  return customFetch<createD1Response>(getCreateD1Url(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(d1),
+  });
 };
 
-export type getApisCfGuberProcIoV1D1sNameResponse200 = {
+export type getD1Response200 = {
   data: D1;
   status: 200;
 };
 
-export type getApisCfGuberProcIoV1D1sNameResponseSuccess =
-  getApisCfGuberProcIoV1D1sNameResponse200 & {
-    headers: Headers;
-  };
-export type getApisCfGuberProcIoV1D1sNameResponse =
-  getApisCfGuberProcIoV1D1sNameResponseSuccess;
+export type getD1ResponseSuccess = getD1Response200 & {
+  headers: Headers;
+};
+export type getD1Response = getD1ResponseSuccess;
 
-export const getGetApisCfGuberProcIoV1D1sNameUrl = (name: string) => {
+export const getGetD1Url = (name: string) => {
   return `http://fake/apis/cf.guber.proc.io/v1/d1s/${name}`;
 };
 
-export const getApisCfGuberProcIoV1D1sName = async (
+export const getD1 = async (
   name: string,
   options?: RequestInit,
-): Promise<getApisCfGuberProcIoV1D1sNameResponse> => {
-  return customFetch<getApisCfGuberProcIoV1D1sNameResponse>(
-    getGetApisCfGuberProcIoV1D1sNameUrl(name),
-    {
-      ...options,
-      method: "GET",
-    },
-  );
+): Promise<getD1Response> => {
+  return customFetch<getD1Response>(getGetD1Url(name), {
+    ...options,
+    method: "GET",
+  });
 };
 
-export type putApisCfGuberProcIoV1D1sNameResponse200 = {
+export type replaceD1Response200 = {
   data: D1;
   status: 200;
 };
 
-export type putApisCfGuberProcIoV1D1sNameResponseSuccess =
-  putApisCfGuberProcIoV1D1sNameResponse200 & {
-    headers: Headers;
-  };
-export type putApisCfGuberProcIoV1D1sNameResponse =
-  putApisCfGuberProcIoV1D1sNameResponseSuccess;
+export type replaceD1ResponseSuccess = replaceD1Response200 & {
+  headers: Headers;
+};
+export type replaceD1Response = replaceD1ResponseSuccess;
 
-export const getPutApisCfGuberProcIoV1D1sNameUrl = (
-  name: string,
-  params?: PutApisCfGuberProcIoV1D1sNameParams,
-) => {
+export const getReplaceD1Url = (name: string, params?: ReplaceD1Params) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -366,39 +319,31 @@ export const getPutApisCfGuberProcIoV1D1sNameUrl = (
     : `http://fake/apis/cf.guber.proc.io/v1/d1s/${name}`;
 };
 
-export const putApisCfGuberProcIoV1D1sName = async (
+export const replaceD1 = async (
   name: string,
   d1: D1,
-  params?: PutApisCfGuberProcIoV1D1sNameParams,
+  params?: ReplaceD1Params,
   options?: RequestInit,
-): Promise<putApisCfGuberProcIoV1D1sNameResponse> => {
-  return customFetch<putApisCfGuberProcIoV1D1sNameResponse>(
-    getPutApisCfGuberProcIoV1D1sNameUrl(name, params),
-    {
-      ...options,
-      method: "PUT",
-      headers: { "Content-Type": "application/json", ...options?.headers },
-      body: JSON.stringify(d1),
-    },
-  );
+): Promise<replaceD1Response> => {
+  return customFetch<replaceD1Response>(getReplaceD1Url(name, params), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(d1),
+  });
 };
 
-export type patchApisCfGuberProcIoV1D1sNameResponse200 = {
+export type patchD1Response200 = {
   data: D1;
   status: 200;
 };
 
-export type patchApisCfGuberProcIoV1D1sNameResponseSuccess =
-  patchApisCfGuberProcIoV1D1sNameResponse200 & {
-    headers: Headers;
-  };
-export type patchApisCfGuberProcIoV1D1sNameResponse =
-  patchApisCfGuberProcIoV1D1sNameResponseSuccess;
+export type patchD1ResponseSuccess = patchD1Response200 & {
+  headers: Headers;
+};
+export type patchD1Response = patchD1ResponseSuccess;
 
-export const getPatchApisCfGuberProcIoV1D1sNameUrl = (
-  name: string,
-  params?: PatchApisCfGuberProcIoV1D1sNameParams,
-) => {
+export const getPatchD1Url = (name: string, params?: PatchD1Params) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -414,155 +359,130 @@ export const getPatchApisCfGuberProcIoV1D1sNameUrl = (
     : `http://fake/apis/cf.guber.proc.io/v1/d1s/${name}`;
 };
 
-export const patchApisCfGuberProcIoV1D1sName = async (
+export const patchD1 = async (
   name: string,
   d1: D1,
-  params?: PatchApisCfGuberProcIoV1D1sNameParams,
+  params?: PatchD1Params,
   options?: RequestInit,
-): Promise<patchApisCfGuberProcIoV1D1sNameResponse> => {
-  return customFetch<patchApisCfGuberProcIoV1D1sNameResponse>(
-    getPatchApisCfGuberProcIoV1D1sNameUrl(name, params),
-    {
-      ...options,
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", ...options?.headers },
-      body: JSON.stringify(d1),
-    },
-  );
+): Promise<patchD1Response> => {
+  return customFetch<patchD1Response>(getPatchD1Url(name, params), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(d1),
+  });
 };
 
-export type deleteApisCfGuberProcIoV1D1sNameResponse200 = {
+export type deleteD1Response200 = {
   data: D1;
   status: 200;
 };
 
-export type deleteApisCfGuberProcIoV1D1sNameResponseSuccess =
-  deleteApisCfGuberProcIoV1D1sNameResponse200 & {
-    headers: Headers;
-  };
-export type deleteApisCfGuberProcIoV1D1sNameResponse =
-  deleteApisCfGuberProcIoV1D1sNameResponseSuccess;
+export type deleteD1ResponseSuccess = deleteD1Response200 & {
+  headers: Headers;
+};
+export type deleteD1Response = deleteD1ResponseSuccess;
 
-export const getDeleteApisCfGuberProcIoV1D1sNameUrl = (name: string) => {
+export const getDeleteD1Url = (name: string) => {
   return `http://fake/apis/cf.guber.proc.io/v1/d1s/${name}`;
 };
 
-export const deleteApisCfGuberProcIoV1D1sName = async (
+export const deleteD1 = async (
   name: string,
   options?: RequestInit,
-): Promise<deleteApisCfGuberProcIoV1D1sNameResponse> => {
-  return customFetch<deleteApisCfGuberProcIoV1D1sNameResponse>(
-    getDeleteApisCfGuberProcIoV1D1sNameUrl(name),
-    {
-      ...options,
-      method: "DELETE",
-    },
-  );
+): Promise<deleteD1Response> => {
+  return customFetch<deleteD1Response>(getDeleteD1Url(name), {
+    ...options,
+    method: "DELETE",
+  });
 };
 
-export type getApisCfGuberProcIoV1QsResponse200 = {
-  data: GetApisCfGuberProcIoV1Qs200;
+export type listQueueResponse200 = {
+  data: ListQueue200;
   status: 200;
 };
 
-export type getApisCfGuberProcIoV1QsResponseSuccess =
-  getApisCfGuberProcIoV1QsResponse200 & {
-    headers: Headers;
-  };
-export type getApisCfGuberProcIoV1QsResponse =
-  getApisCfGuberProcIoV1QsResponseSuccess;
+export type listQueueResponseSuccess = listQueueResponse200 & {
+  headers: Headers;
+};
+export type listQueueResponse = listQueueResponseSuccess;
 
-export const getGetApisCfGuberProcIoV1QsUrl = () => {
+export const getListQueueUrl = () => {
   return `http://fake/apis/cf.guber.proc.io/v1/qs`;
 };
 
-export const getApisCfGuberProcIoV1Qs = async (
+export const listQueue = async (
   options?: RequestInit,
-): Promise<getApisCfGuberProcIoV1QsResponse> => {
-  return customFetch<getApisCfGuberProcIoV1QsResponse>(
-    getGetApisCfGuberProcIoV1QsUrl(),
-    {
-      ...options,
-      method: "GET",
-    },
-  );
+): Promise<listQueueResponse> => {
+  return customFetch<listQueueResponse>(getListQueueUrl(), {
+    ...options,
+    method: "GET",
+  });
 };
 
-export type postApisCfGuberProcIoV1QsResponse201 = {
+export type createQueueResponse201 = {
   data: Queue;
   status: 201;
 };
 
-export type postApisCfGuberProcIoV1QsResponseSuccess =
-  postApisCfGuberProcIoV1QsResponse201 & {
-    headers: Headers;
-  };
-export type postApisCfGuberProcIoV1QsResponse =
-  postApisCfGuberProcIoV1QsResponseSuccess;
+export type createQueueResponseSuccess = createQueueResponse201 & {
+  headers: Headers;
+};
+export type createQueueResponse = createQueueResponseSuccess;
 
-export const getPostApisCfGuberProcIoV1QsUrl = () => {
+export const getCreateQueueUrl = () => {
   return `http://fake/apis/cf.guber.proc.io/v1/qs`;
 };
 
-export const postApisCfGuberProcIoV1Qs = async (
+export const createQueue = async (
   queue: Queue,
   options?: RequestInit,
-): Promise<postApisCfGuberProcIoV1QsResponse> => {
-  return customFetch<postApisCfGuberProcIoV1QsResponse>(
-    getPostApisCfGuberProcIoV1QsUrl(),
-    {
-      ...options,
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...options?.headers },
-      body: JSON.stringify(queue),
-    },
-  );
+): Promise<createQueueResponse> => {
+  return customFetch<createQueueResponse>(getCreateQueueUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(queue),
+  });
 };
 
-export type getApisCfGuberProcIoV1QsNameResponse200 = {
+export type getQueueResponse200 = {
   data: Queue;
   status: 200;
 };
 
-export type getApisCfGuberProcIoV1QsNameResponseSuccess =
-  getApisCfGuberProcIoV1QsNameResponse200 & {
-    headers: Headers;
-  };
-export type getApisCfGuberProcIoV1QsNameResponse =
-  getApisCfGuberProcIoV1QsNameResponseSuccess;
+export type getQueueResponseSuccess = getQueueResponse200 & {
+  headers: Headers;
+};
+export type getQueueResponse = getQueueResponseSuccess;
 
-export const getGetApisCfGuberProcIoV1QsNameUrl = (name: string) => {
+export const getGetQueueUrl = (name: string) => {
   return `http://fake/apis/cf.guber.proc.io/v1/qs/${name}`;
 };
 
-export const getApisCfGuberProcIoV1QsName = async (
+export const getQueue = async (
   name: string,
   options?: RequestInit,
-): Promise<getApisCfGuberProcIoV1QsNameResponse> => {
-  return customFetch<getApisCfGuberProcIoV1QsNameResponse>(
-    getGetApisCfGuberProcIoV1QsNameUrl(name),
-    {
-      ...options,
-      method: "GET",
-    },
-  );
+): Promise<getQueueResponse> => {
+  return customFetch<getQueueResponse>(getGetQueueUrl(name), {
+    ...options,
+    method: "GET",
+  });
 };
 
-export type putApisCfGuberProcIoV1QsNameResponse200 = {
+export type replaceQueueResponse200 = {
   data: Queue;
   status: 200;
 };
 
-export type putApisCfGuberProcIoV1QsNameResponseSuccess =
-  putApisCfGuberProcIoV1QsNameResponse200 & {
-    headers: Headers;
-  };
-export type putApisCfGuberProcIoV1QsNameResponse =
-  putApisCfGuberProcIoV1QsNameResponseSuccess;
+export type replaceQueueResponseSuccess = replaceQueueResponse200 & {
+  headers: Headers;
+};
+export type replaceQueueResponse = replaceQueueResponseSuccess;
 
-export const getPutApisCfGuberProcIoV1QsNameUrl = (
+export const getReplaceQueueUrl = (
   name: string,
-  params?: PutApisCfGuberProcIoV1QsNameParams,
+  params?: ReplaceQueueParams,
 ) => {
   const normalizedParams = new URLSearchParams();
 
@@ -579,39 +499,31 @@ export const getPutApisCfGuberProcIoV1QsNameUrl = (
     : `http://fake/apis/cf.guber.proc.io/v1/qs/${name}`;
 };
 
-export const putApisCfGuberProcIoV1QsName = async (
+export const replaceQueue = async (
   name: string,
   queue: Queue,
-  params?: PutApisCfGuberProcIoV1QsNameParams,
+  params?: ReplaceQueueParams,
   options?: RequestInit,
-): Promise<putApisCfGuberProcIoV1QsNameResponse> => {
-  return customFetch<putApisCfGuberProcIoV1QsNameResponse>(
-    getPutApisCfGuberProcIoV1QsNameUrl(name, params),
-    {
-      ...options,
-      method: "PUT",
-      headers: { "Content-Type": "application/json", ...options?.headers },
-      body: JSON.stringify(queue),
-    },
-  );
+): Promise<replaceQueueResponse> => {
+  return customFetch<replaceQueueResponse>(getReplaceQueueUrl(name, params), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(queue),
+  });
 };
 
-export type patchApisCfGuberProcIoV1QsNameResponse200 = {
+export type patchQueueResponse200 = {
   data: Queue;
   status: 200;
 };
 
-export type patchApisCfGuberProcIoV1QsNameResponseSuccess =
-  patchApisCfGuberProcIoV1QsNameResponse200 & {
-    headers: Headers;
-  };
-export type patchApisCfGuberProcIoV1QsNameResponse =
-  patchApisCfGuberProcIoV1QsNameResponseSuccess;
+export type patchQueueResponseSuccess = patchQueueResponse200 & {
+  headers: Headers;
+};
+export type patchQueueResponse = patchQueueResponseSuccess;
 
-export const getPatchApisCfGuberProcIoV1QsNameUrl = (
-  name: string,
-  params?: PatchApisCfGuberProcIoV1QsNameParams,
-) => {
+export const getPatchQueueUrl = (name: string, params?: PatchQueueParams) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -627,155 +539,130 @@ export const getPatchApisCfGuberProcIoV1QsNameUrl = (
     : `http://fake/apis/cf.guber.proc.io/v1/qs/${name}`;
 };
 
-export const patchApisCfGuberProcIoV1QsName = async (
+export const patchQueue = async (
   name: string,
   queue: Queue,
-  params?: PatchApisCfGuberProcIoV1QsNameParams,
+  params?: PatchQueueParams,
   options?: RequestInit,
-): Promise<patchApisCfGuberProcIoV1QsNameResponse> => {
-  return customFetch<patchApisCfGuberProcIoV1QsNameResponse>(
-    getPatchApisCfGuberProcIoV1QsNameUrl(name, params),
-    {
-      ...options,
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", ...options?.headers },
-      body: JSON.stringify(queue),
-    },
-  );
+): Promise<patchQueueResponse> => {
+  return customFetch<patchQueueResponse>(getPatchQueueUrl(name, params), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(queue),
+  });
 };
 
-export type deleteApisCfGuberProcIoV1QsNameResponse200 = {
+export type deleteQueueResponse200 = {
   data: Queue;
   status: 200;
 };
 
-export type deleteApisCfGuberProcIoV1QsNameResponseSuccess =
-  deleteApisCfGuberProcIoV1QsNameResponse200 & {
-    headers: Headers;
-  };
-export type deleteApisCfGuberProcIoV1QsNameResponse =
-  deleteApisCfGuberProcIoV1QsNameResponseSuccess;
+export type deleteQueueResponseSuccess = deleteQueueResponse200 & {
+  headers: Headers;
+};
+export type deleteQueueResponse = deleteQueueResponseSuccess;
 
-export const getDeleteApisCfGuberProcIoV1QsNameUrl = (name: string) => {
+export const getDeleteQueueUrl = (name: string) => {
   return `http://fake/apis/cf.guber.proc.io/v1/qs/${name}`;
 };
 
-export const deleteApisCfGuberProcIoV1QsName = async (
+export const deleteQueue = async (
   name: string,
   options?: RequestInit,
-): Promise<deleteApisCfGuberProcIoV1QsNameResponse> => {
-  return customFetch<deleteApisCfGuberProcIoV1QsNameResponse>(
-    getDeleteApisCfGuberProcIoV1QsNameUrl(name),
-    {
-      ...options,
-      method: "DELETE",
-    },
-  );
+): Promise<deleteQueueResponse> => {
+  return customFetch<deleteQueueResponse>(getDeleteQueueUrl(name), {
+    ...options,
+    method: "DELETE",
+  });
 };
 
-export type getApisCfGuberProcIoV1WorkersResponse200 = {
-  data: GetApisCfGuberProcIoV1Workers200;
+export type listWorkerResponse200 = {
+  data: ListWorker200;
   status: 200;
 };
 
-export type getApisCfGuberProcIoV1WorkersResponseSuccess =
-  getApisCfGuberProcIoV1WorkersResponse200 & {
-    headers: Headers;
-  };
-export type getApisCfGuberProcIoV1WorkersResponse =
-  getApisCfGuberProcIoV1WorkersResponseSuccess;
+export type listWorkerResponseSuccess = listWorkerResponse200 & {
+  headers: Headers;
+};
+export type listWorkerResponse = listWorkerResponseSuccess;
 
-export const getGetApisCfGuberProcIoV1WorkersUrl = () => {
+export const getListWorkerUrl = () => {
   return `http://fake/apis/cf.guber.proc.io/v1/workers`;
 };
 
-export const getApisCfGuberProcIoV1Workers = async (
+export const listWorker = async (
   options?: RequestInit,
-): Promise<getApisCfGuberProcIoV1WorkersResponse> => {
-  return customFetch<getApisCfGuberProcIoV1WorkersResponse>(
-    getGetApisCfGuberProcIoV1WorkersUrl(),
-    {
-      ...options,
-      method: "GET",
-    },
-  );
+): Promise<listWorkerResponse> => {
+  return customFetch<listWorkerResponse>(getListWorkerUrl(), {
+    ...options,
+    method: "GET",
+  });
 };
 
-export type postApisCfGuberProcIoV1WorkersResponse201 = {
+export type createWorkerResponse201 = {
   data: Worker;
   status: 201;
 };
 
-export type postApisCfGuberProcIoV1WorkersResponseSuccess =
-  postApisCfGuberProcIoV1WorkersResponse201 & {
-    headers: Headers;
-  };
-export type postApisCfGuberProcIoV1WorkersResponse =
-  postApisCfGuberProcIoV1WorkersResponseSuccess;
+export type createWorkerResponseSuccess = createWorkerResponse201 & {
+  headers: Headers;
+};
+export type createWorkerResponse = createWorkerResponseSuccess;
 
-export const getPostApisCfGuberProcIoV1WorkersUrl = () => {
+export const getCreateWorkerUrl = () => {
   return `http://fake/apis/cf.guber.proc.io/v1/workers`;
 };
 
-export const postApisCfGuberProcIoV1Workers = async (
+export const createWorker = async (
   worker: Worker,
   options?: RequestInit,
-): Promise<postApisCfGuberProcIoV1WorkersResponse> => {
-  return customFetch<postApisCfGuberProcIoV1WorkersResponse>(
-    getPostApisCfGuberProcIoV1WorkersUrl(),
-    {
-      ...options,
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...options?.headers },
-      body: JSON.stringify(worker),
-    },
-  );
+): Promise<createWorkerResponse> => {
+  return customFetch<createWorkerResponse>(getCreateWorkerUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(worker),
+  });
 };
 
-export type getApisCfGuberProcIoV1WorkersNameResponse200 = {
+export type getWorkerResponse200 = {
   data: Worker;
   status: 200;
 };
 
-export type getApisCfGuberProcIoV1WorkersNameResponseSuccess =
-  getApisCfGuberProcIoV1WorkersNameResponse200 & {
-    headers: Headers;
-  };
-export type getApisCfGuberProcIoV1WorkersNameResponse =
-  getApisCfGuberProcIoV1WorkersNameResponseSuccess;
+export type getWorkerResponseSuccess = getWorkerResponse200 & {
+  headers: Headers;
+};
+export type getWorkerResponse = getWorkerResponseSuccess;
 
-export const getGetApisCfGuberProcIoV1WorkersNameUrl = (name: string) => {
+export const getGetWorkerUrl = (name: string) => {
   return `http://fake/apis/cf.guber.proc.io/v1/workers/${name}`;
 };
 
-export const getApisCfGuberProcIoV1WorkersName = async (
+export const getWorker = async (
   name: string,
   options?: RequestInit,
-): Promise<getApisCfGuberProcIoV1WorkersNameResponse> => {
-  return customFetch<getApisCfGuberProcIoV1WorkersNameResponse>(
-    getGetApisCfGuberProcIoV1WorkersNameUrl(name),
-    {
-      ...options,
-      method: "GET",
-    },
-  );
+): Promise<getWorkerResponse> => {
+  return customFetch<getWorkerResponse>(getGetWorkerUrl(name), {
+    ...options,
+    method: "GET",
+  });
 };
 
-export type putApisCfGuberProcIoV1WorkersNameResponse200 = {
+export type replaceWorkerResponse200 = {
   data: Worker;
   status: 200;
 };
 
-export type putApisCfGuberProcIoV1WorkersNameResponseSuccess =
-  putApisCfGuberProcIoV1WorkersNameResponse200 & {
-    headers: Headers;
-  };
-export type putApisCfGuberProcIoV1WorkersNameResponse =
-  putApisCfGuberProcIoV1WorkersNameResponseSuccess;
+export type replaceWorkerResponseSuccess = replaceWorkerResponse200 & {
+  headers: Headers;
+};
+export type replaceWorkerResponse = replaceWorkerResponseSuccess;
 
-export const getPutApisCfGuberProcIoV1WorkersNameUrl = (
+export const getReplaceWorkerUrl = (
   name: string,
-  params?: PutApisCfGuberProcIoV1WorkersNameParams,
+  params?: ReplaceWorkerParams,
 ) => {
   const normalizedParams = new URLSearchParams();
 
@@ -792,39 +679,31 @@ export const getPutApisCfGuberProcIoV1WorkersNameUrl = (
     : `http://fake/apis/cf.guber.proc.io/v1/workers/${name}`;
 };
 
-export const putApisCfGuberProcIoV1WorkersName = async (
+export const replaceWorker = async (
   name: string,
   worker: Worker,
-  params?: PutApisCfGuberProcIoV1WorkersNameParams,
+  params?: ReplaceWorkerParams,
   options?: RequestInit,
-): Promise<putApisCfGuberProcIoV1WorkersNameResponse> => {
-  return customFetch<putApisCfGuberProcIoV1WorkersNameResponse>(
-    getPutApisCfGuberProcIoV1WorkersNameUrl(name, params),
-    {
-      ...options,
-      method: "PUT",
-      headers: { "Content-Type": "application/json", ...options?.headers },
-      body: JSON.stringify(worker),
-    },
-  );
+): Promise<replaceWorkerResponse> => {
+  return customFetch<replaceWorkerResponse>(getReplaceWorkerUrl(name, params), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(worker),
+  });
 };
 
-export type patchApisCfGuberProcIoV1WorkersNameResponse200 = {
+export type patchWorkerResponse200 = {
   data: Worker;
   status: 200;
 };
 
-export type patchApisCfGuberProcIoV1WorkersNameResponseSuccess =
-  patchApisCfGuberProcIoV1WorkersNameResponse200 & {
-    headers: Headers;
-  };
-export type patchApisCfGuberProcIoV1WorkersNameResponse =
-  patchApisCfGuberProcIoV1WorkersNameResponseSuccess;
+export type patchWorkerResponseSuccess = patchWorkerResponse200 & {
+  headers: Headers;
+};
+export type patchWorkerResponse = patchWorkerResponseSuccess;
 
-export const getPatchApisCfGuberProcIoV1WorkersNameUrl = (
-  name: string,
-  params?: PatchApisCfGuberProcIoV1WorkersNameParams,
-) => {
+export const getPatchWorkerUrl = (name: string, params?: PatchWorkerParams) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -840,73 +719,65 @@ export const getPatchApisCfGuberProcIoV1WorkersNameUrl = (
     : `http://fake/apis/cf.guber.proc.io/v1/workers/${name}`;
 };
 
-export const patchApisCfGuberProcIoV1WorkersName = async (
+export const patchWorker = async (
   name: string,
   worker: Worker,
-  params?: PatchApisCfGuberProcIoV1WorkersNameParams,
+  params?: PatchWorkerParams,
   options?: RequestInit,
-): Promise<patchApisCfGuberProcIoV1WorkersNameResponse> => {
-  return customFetch<patchApisCfGuberProcIoV1WorkersNameResponse>(
-    getPatchApisCfGuberProcIoV1WorkersNameUrl(name, params),
-    {
-      ...options,
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", ...options?.headers },
-      body: JSON.stringify(worker),
-    },
-  );
+): Promise<patchWorkerResponse> => {
+  return customFetch<patchWorkerResponse>(getPatchWorkerUrl(name, params), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(worker),
+  });
 };
 
-export type deleteApisCfGuberProcIoV1WorkersNameResponse200 = {
+export type deleteWorkerResponse200 = {
   data: Worker;
   status: 200;
 };
 
-export type deleteApisCfGuberProcIoV1WorkersNameResponseSuccess =
-  deleteApisCfGuberProcIoV1WorkersNameResponse200 & {
-    headers: Headers;
-  };
-export type deleteApisCfGuberProcIoV1WorkersNameResponse =
-  deleteApisCfGuberProcIoV1WorkersNameResponseSuccess;
+export type deleteWorkerResponseSuccess = deleteWorkerResponse200 & {
+  headers: Headers;
+};
+export type deleteWorkerResponse = deleteWorkerResponseSuccess;
 
-export const getDeleteApisCfGuberProcIoV1WorkersNameUrl = (name: string) => {
+export const getDeleteWorkerUrl = (name: string) => {
   return `http://fake/apis/cf.guber.proc.io/v1/workers/${name}`;
 };
 
-export const deleteApisCfGuberProcIoV1WorkersName = async (
+export const deleteWorker = async (
   name: string,
   options?: RequestInit,
-): Promise<deleteApisCfGuberProcIoV1WorkersNameResponse> => {
-  return customFetch<deleteApisCfGuberProcIoV1WorkersNameResponse>(
-    getDeleteApisCfGuberProcIoV1WorkersNameUrl(name),
-    {
-      ...options,
-      method: "DELETE",
-    },
-  );
+): Promise<deleteWorkerResponse> => {
+  return customFetch<deleteWorkerResponse>(getDeleteWorkerUrl(name), {
+    ...options,
+    method: "DELETE",
+  });
 };
 
-export type getApisCfGuberProcIoV1WorkerscriptdeploymentsResponse200 = {
-  data: GetApisCfGuberProcIoV1Workerscriptdeployments200;
+export type listWorkerScriptDeploymentResponse200 = {
+  data: ListWorkerScriptDeployment200;
   status: 200;
 };
 
-export type getApisCfGuberProcIoV1WorkerscriptdeploymentsResponseSuccess =
-  getApisCfGuberProcIoV1WorkerscriptdeploymentsResponse200 & {
+export type listWorkerScriptDeploymentResponseSuccess =
+  listWorkerScriptDeploymentResponse200 & {
     headers: Headers;
   };
-export type getApisCfGuberProcIoV1WorkerscriptdeploymentsResponse =
-  getApisCfGuberProcIoV1WorkerscriptdeploymentsResponseSuccess;
+export type listWorkerScriptDeploymentResponse =
+  listWorkerScriptDeploymentResponseSuccess;
 
-export const getGetApisCfGuberProcIoV1WorkerscriptdeploymentsUrl = () => {
+export const getListWorkerScriptDeploymentUrl = () => {
   return `http://fake/apis/cf.guber.proc.io/v1/workerscriptdeployments`;
 };
 
-export const getApisCfGuberProcIoV1Workerscriptdeployments = async (
+export const listWorkerScriptDeployment = async (
   options?: RequestInit,
-): Promise<getApisCfGuberProcIoV1WorkerscriptdeploymentsResponse> => {
-  return customFetch<getApisCfGuberProcIoV1WorkerscriptdeploymentsResponse>(
-    getGetApisCfGuberProcIoV1WorkerscriptdeploymentsUrl(),
+): Promise<listWorkerScriptDeploymentResponse> => {
+  return customFetch<listWorkerScriptDeploymentResponse>(
+    getListWorkerScriptDeploymentUrl(),
     {
       ...options,
       method: "GET",
@@ -914,28 +785,28 @@ export const getApisCfGuberProcIoV1Workerscriptdeployments = async (
   );
 };
 
-export type postApisCfGuberProcIoV1WorkerscriptdeploymentsResponse201 = {
+export type createWorkerScriptDeploymentResponse201 = {
   data: WorkerScriptDeployment;
   status: 201;
 };
 
-export type postApisCfGuberProcIoV1WorkerscriptdeploymentsResponseSuccess =
-  postApisCfGuberProcIoV1WorkerscriptdeploymentsResponse201 & {
+export type createWorkerScriptDeploymentResponseSuccess =
+  createWorkerScriptDeploymentResponse201 & {
     headers: Headers;
   };
-export type postApisCfGuberProcIoV1WorkerscriptdeploymentsResponse =
-  postApisCfGuberProcIoV1WorkerscriptdeploymentsResponseSuccess;
+export type createWorkerScriptDeploymentResponse =
+  createWorkerScriptDeploymentResponseSuccess;
 
-export const getPostApisCfGuberProcIoV1WorkerscriptdeploymentsUrl = () => {
+export const getCreateWorkerScriptDeploymentUrl = () => {
   return `http://fake/apis/cf.guber.proc.io/v1/workerscriptdeployments`;
 };
 
-export const postApisCfGuberProcIoV1Workerscriptdeployments = async (
+export const createWorkerScriptDeployment = async (
   workerScriptDeployment: WorkerScriptDeployment,
   options?: RequestInit,
-): Promise<postApisCfGuberProcIoV1WorkerscriptdeploymentsResponse> => {
-  return customFetch<postApisCfGuberProcIoV1WorkerscriptdeploymentsResponse>(
-    getPostApisCfGuberProcIoV1WorkerscriptdeploymentsUrl(),
+): Promise<createWorkerScriptDeploymentResponse> => {
+  return customFetch<createWorkerScriptDeploymentResponse>(
+    getCreateWorkerScriptDeploymentUrl(),
     {
       ...options,
       method: "POST",
@@ -945,30 +816,28 @@ export const postApisCfGuberProcIoV1Workerscriptdeployments = async (
   );
 };
 
-export type getApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse200 = {
+export type getWorkerScriptDeploymentResponse200 = {
   data: WorkerScriptDeployment;
   status: 200;
 };
 
-export type getApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponseSuccess =
-  getApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse200 & {
+export type getWorkerScriptDeploymentResponseSuccess =
+  getWorkerScriptDeploymentResponse200 & {
     headers: Headers;
   };
-export type getApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse =
-  getApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponseSuccess;
+export type getWorkerScriptDeploymentResponse =
+  getWorkerScriptDeploymentResponseSuccess;
 
-export const getGetApisCfGuberProcIoV1WorkerscriptdeploymentsNameUrl = (
-  name: string,
-) => {
+export const getGetWorkerScriptDeploymentUrl = (name: string) => {
   return `http://fake/apis/cf.guber.proc.io/v1/workerscriptdeployments/${name}`;
 };
 
-export const getApisCfGuberProcIoV1WorkerscriptdeploymentsName = async (
+export const getWorkerScriptDeployment = async (
   name: string,
   options?: RequestInit,
-): Promise<getApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse> => {
-  return customFetch<getApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse>(
-    getGetApisCfGuberProcIoV1WorkerscriptdeploymentsNameUrl(name),
+): Promise<getWorkerScriptDeploymentResponse> => {
+  return customFetch<getWorkerScriptDeploymentResponse>(
+    getGetWorkerScriptDeploymentUrl(name),
     {
       ...options,
       method: "GET",
@@ -976,21 +845,21 @@ export const getApisCfGuberProcIoV1WorkerscriptdeploymentsName = async (
   );
 };
 
-export type putApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse200 = {
+export type replaceWorkerScriptDeploymentResponse200 = {
   data: WorkerScriptDeployment;
   status: 200;
 };
 
-export type putApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponseSuccess =
-  putApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse200 & {
+export type replaceWorkerScriptDeploymentResponseSuccess =
+  replaceWorkerScriptDeploymentResponse200 & {
     headers: Headers;
   };
-export type putApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse =
-  putApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponseSuccess;
+export type replaceWorkerScriptDeploymentResponse =
+  replaceWorkerScriptDeploymentResponseSuccess;
 
-export const getPutApisCfGuberProcIoV1WorkerscriptdeploymentsNameUrl = (
+export const getReplaceWorkerScriptDeploymentUrl = (
   name: string,
-  params?: PutApisCfGuberProcIoV1WorkerscriptdeploymentsNameParams,
+  params?: ReplaceWorkerScriptDeploymentParams,
 ) => {
   const normalizedParams = new URLSearchParams();
 
@@ -1007,14 +876,14 @@ export const getPutApisCfGuberProcIoV1WorkerscriptdeploymentsNameUrl = (
     : `http://fake/apis/cf.guber.proc.io/v1/workerscriptdeployments/${name}`;
 };
 
-export const putApisCfGuberProcIoV1WorkerscriptdeploymentsName = async (
+export const replaceWorkerScriptDeployment = async (
   name: string,
   workerScriptDeployment: WorkerScriptDeployment,
-  params?: PutApisCfGuberProcIoV1WorkerscriptdeploymentsNameParams,
+  params?: ReplaceWorkerScriptDeploymentParams,
   options?: RequestInit,
-): Promise<putApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse> => {
-  return customFetch<putApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse>(
-    getPutApisCfGuberProcIoV1WorkerscriptdeploymentsNameUrl(name, params),
+): Promise<replaceWorkerScriptDeploymentResponse> => {
+  return customFetch<replaceWorkerScriptDeploymentResponse>(
+    getReplaceWorkerScriptDeploymentUrl(name, params),
     {
       ...options,
       method: "PUT",
@@ -1024,21 +893,21 @@ export const putApisCfGuberProcIoV1WorkerscriptdeploymentsName = async (
   );
 };
 
-export type patchApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse200 = {
+export type patchWorkerScriptDeploymentResponse200 = {
   data: WorkerScriptDeployment;
   status: 200;
 };
 
-export type patchApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponseSuccess =
-  patchApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse200 & {
+export type patchWorkerScriptDeploymentResponseSuccess =
+  patchWorkerScriptDeploymentResponse200 & {
     headers: Headers;
   };
-export type patchApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse =
-  patchApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponseSuccess;
+export type patchWorkerScriptDeploymentResponse =
+  patchWorkerScriptDeploymentResponseSuccess;
 
-export const getPatchApisCfGuberProcIoV1WorkerscriptdeploymentsNameUrl = (
+export const getPatchWorkerScriptDeploymentUrl = (
   name: string,
-  params?: PatchApisCfGuberProcIoV1WorkerscriptdeploymentsNameParams,
+  params?: PatchWorkerScriptDeploymentParams,
 ) => {
   const normalizedParams = new URLSearchParams();
 
@@ -1055,14 +924,14 @@ export const getPatchApisCfGuberProcIoV1WorkerscriptdeploymentsNameUrl = (
     : `http://fake/apis/cf.guber.proc.io/v1/workerscriptdeployments/${name}`;
 };
 
-export const patchApisCfGuberProcIoV1WorkerscriptdeploymentsName = async (
+export const patchWorkerScriptDeployment = async (
   name: string,
   workerScriptDeployment: WorkerScriptDeployment,
-  params?: PatchApisCfGuberProcIoV1WorkerscriptdeploymentsNameParams,
+  params?: PatchWorkerScriptDeploymentParams,
   options?: RequestInit,
-): Promise<patchApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse> => {
-  return customFetch<patchApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse>(
-    getPatchApisCfGuberProcIoV1WorkerscriptdeploymentsNameUrl(name, params),
+): Promise<patchWorkerScriptDeploymentResponse> => {
+  return customFetch<patchWorkerScriptDeploymentResponse>(
+    getPatchWorkerScriptDeploymentUrl(name, params),
     {
       ...options,
       method: "PATCH",
@@ -1072,30 +941,28 @@ export const patchApisCfGuberProcIoV1WorkerscriptdeploymentsName = async (
   );
 };
 
-export type deleteApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse200 = {
+export type deleteWorkerScriptDeploymentResponse200 = {
   data: WorkerScriptDeployment;
   status: 200;
 };
 
-export type deleteApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponseSuccess =
-  deleteApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse200 & {
+export type deleteWorkerScriptDeploymentResponseSuccess =
+  deleteWorkerScriptDeploymentResponse200 & {
     headers: Headers;
   };
-export type deleteApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse =
-  deleteApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponseSuccess;
+export type deleteWorkerScriptDeploymentResponse =
+  deleteWorkerScriptDeploymentResponseSuccess;
 
-export const getDeleteApisCfGuberProcIoV1WorkerscriptdeploymentsNameUrl = (
-  name: string,
-) => {
+export const getDeleteWorkerScriptDeploymentUrl = (name: string) => {
   return `http://fake/apis/cf.guber.proc.io/v1/workerscriptdeployments/${name}`;
 };
 
-export const deleteApisCfGuberProcIoV1WorkerscriptdeploymentsName = async (
+export const deleteWorkerScriptDeployment = async (
   name: string,
   options?: RequestInit,
-): Promise<deleteApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse> => {
-  return customFetch<deleteApisCfGuberProcIoV1WorkerscriptdeploymentsNameResponse>(
-    getDeleteApisCfGuberProcIoV1WorkerscriptdeploymentsNameUrl(name),
+): Promise<deleteWorkerScriptDeploymentResponse> => {
+  return customFetch<deleteWorkerScriptDeploymentResponse>(
+    getDeleteWorkerScriptDeploymentUrl(name),
     {
       ...options,
       method: "DELETE",
@@ -1103,27 +970,27 @@ export const deleteApisCfGuberProcIoV1WorkerscriptdeploymentsName = async (
   );
 };
 
-export type getApisCfGuberProcIoV1WorkerscriptversionsResponse200 = {
-  data: GetApisCfGuberProcIoV1Workerscriptversions200;
+export type listWorkerScriptVersionResponse200 = {
+  data: ListWorkerScriptVersion200;
   status: 200;
 };
 
-export type getApisCfGuberProcIoV1WorkerscriptversionsResponseSuccess =
-  getApisCfGuberProcIoV1WorkerscriptversionsResponse200 & {
+export type listWorkerScriptVersionResponseSuccess =
+  listWorkerScriptVersionResponse200 & {
     headers: Headers;
   };
-export type getApisCfGuberProcIoV1WorkerscriptversionsResponse =
-  getApisCfGuberProcIoV1WorkerscriptversionsResponseSuccess;
+export type listWorkerScriptVersionResponse =
+  listWorkerScriptVersionResponseSuccess;
 
-export const getGetApisCfGuberProcIoV1WorkerscriptversionsUrl = () => {
+export const getListWorkerScriptVersionUrl = () => {
   return `http://fake/apis/cf.guber.proc.io/v1/workerscriptversions`;
 };
 
-export const getApisCfGuberProcIoV1Workerscriptversions = async (
+export const listWorkerScriptVersion = async (
   options?: RequestInit,
-): Promise<getApisCfGuberProcIoV1WorkerscriptversionsResponse> => {
-  return customFetch<getApisCfGuberProcIoV1WorkerscriptversionsResponse>(
-    getGetApisCfGuberProcIoV1WorkerscriptversionsUrl(),
+): Promise<listWorkerScriptVersionResponse> => {
+  return customFetch<listWorkerScriptVersionResponse>(
+    getListWorkerScriptVersionUrl(),
     {
       ...options,
       method: "GET",
@@ -1131,28 +998,28 @@ export const getApisCfGuberProcIoV1Workerscriptversions = async (
   );
 };
 
-export type postApisCfGuberProcIoV1WorkerscriptversionsResponse201 = {
+export type createWorkerScriptVersionResponse201 = {
   data: WorkerScriptVersion;
   status: 201;
 };
 
-export type postApisCfGuberProcIoV1WorkerscriptversionsResponseSuccess =
-  postApisCfGuberProcIoV1WorkerscriptversionsResponse201 & {
+export type createWorkerScriptVersionResponseSuccess =
+  createWorkerScriptVersionResponse201 & {
     headers: Headers;
   };
-export type postApisCfGuberProcIoV1WorkerscriptversionsResponse =
-  postApisCfGuberProcIoV1WorkerscriptversionsResponseSuccess;
+export type createWorkerScriptVersionResponse =
+  createWorkerScriptVersionResponseSuccess;
 
-export const getPostApisCfGuberProcIoV1WorkerscriptversionsUrl = () => {
+export const getCreateWorkerScriptVersionUrl = () => {
   return `http://fake/apis/cf.guber.proc.io/v1/workerscriptversions`;
 };
 
-export const postApisCfGuberProcIoV1Workerscriptversions = async (
+export const createWorkerScriptVersion = async (
   workerScriptVersion: WorkerScriptVersion,
   options?: RequestInit,
-): Promise<postApisCfGuberProcIoV1WorkerscriptversionsResponse> => {
-  return customFetch<postApisCfGuberProcIoV1WorkerscriptversionsResponse>(
-    getPostApisCfGuberProcIoV1WorkerscriptversionsUrl(),
+): Promise<createWorkerScriptVersionResponse> => {
+  return customFetch<createWorkerScriptVersionResponse>(
+    getCreateWorkerScriptVersionUrl(),
     {
       ...options,
       method: "POST",
@@ -1162,30 +1029,28 @@ export const postApisCfGuberProcIoV1Workerscriptversions = async (
   );
 };
 
-export type getApisCfGuberProcIoV1WorkerscriptversionsNameResponse200 = {
+export type getWorkerScriptVersionResponse200 = {
   data: WorkerScriptVersion;
   status: 200;
 };
 
-export type getApisCfGuberProcIoV1WorkerscriptversionsNameResponseSuccess =
-  getApisCfGuberProcIoV1WorkerscriptversionsNameResponse200 & {
+export type getWorkerScriptVersionResponseSuccess =
+  getWorkerScriptVersionResponse200 & {
     headers: Headers;
   };
-export type getApisCfGuberProcIoV1WorkerscriptversionsNameResponse =
-  getApisCfGuberProcIoV1WorkerscriptversionsNameResponseSuccess;
+export type getWorkerScriptVersionResponse =
+  getWorkerScriptVersionResponseSuccess;
 
-export const getGetApisCfGuberProcIoV1WorkerscriptversionsNameUrl = (
-  name: string,
-) => {
+export const getGetWorkerScriptVersionUrl = (name: string) => {
   return `http://fake/apis/cf.guber.proc.io/v1/workerscriptversions/${name}`;
 };
 
-export const getApisCfGuberProcIoV1WorkerscriptversionsName = async (
+export const getWorkerScriptVersion = async (
   name: string,
   options?: RequestInit,
-): Promise<getApisCfGuberProcIoV1WorkerscriptversionsNameResponse> => {
-  return customFetch<getApisCfGuberProcIoV1WorkerscriptversionsNameResponse>(
-    getGetApisCfGuberProcIoV1WorkerscriptversionsNameUrl(name),
+): Promise<getWorkerScriptVersionResponse> => {
+  return customFetch<getWorkerScriptVersionResponse>(
+    getGetWorkerScriptVersionUrl(name),
     {
       ...options,
       method: "GET",
@@ -1193,21 +1058,21 @@ export const getApisCfGuberProcIoV1WorkerscriptversionsName = async (
   );
 };
 
-export type putApisCfGuberProcIoV1WorkerscriptversionsNameResponse200 = {
+export type replaceWorkerScriptVersionResponse200 = {
   data: WorkerScriptVersion;
   status: 200;
 };
 
-export type putApisCfGuberProcIoV1WorkerscriptversionsNameResponseSuccess =
-  putApisCfGuberProcIoV1WorkerscriptversionsNameResponse200 & {
+export type replaceWorkerScriptVersionResponseSuccess =
+  replaceWorkerScriptVersionResponse200 & {
     headers: Headers;
   };
-export type putApisCfGuberProcIoV1WorkerscriptversionsNameResponse =
-  putApisCfGuberProcIoV1WorkerscriptversionsNameResponseSuccess;
+export type replaceWorkerScriptVersionResponse =
+  replaceWorkerScriptVersionResponseSuccess;
 
-export const getPutApisCfGuberProcIoV1WorkerscriptversionsNameUrl = (
+export const getReplaceWorkerScriptVersionUrl = (
   name: string,
-  params?: PutApisCfGuberProcIoV1WorkerscriptversionsNameParams,
+  params?: ReplaceWorkerScriptVersionParams,
 ) => {
   const normalizedParams = new URLSearchParams();
 
@@ -1224,14 +1089,14 @@ export const getPutApisCfGuberProcIoV1WorkerscriptversionsNameUrl = (
     : `http://fake/apis/cf.guber.proc.io/v1/workerscriptversions/${name}`;
 };
 
-export const putApisCfGuberProcIoV1WorkerscriptversionsName = async (
+export const replaceWorkerScriptVersion = async (
   name: string,
   workerScriptVersion: WorkerScriptVersion,
-  params?: PutApisCfGuberProcIoV1WorkerscriptversionsNameParams,
+  params?: ReplaceWorkerScriptVersionParams,
   options?: RequestInit,
-): Promise<putApisCfGuberProcIoV1WorkerscriptversionsNameResponse> => {
-  return customFetch<putApisCfGuberProcIoV1WorkerscriptversionsNameResponse>(
-    getPutApisCfGuberProcIoV1WorkerscriptversionsNameUrl(name, params),
+): Promise<replaceWorkerScriptVersionResponse> => {
+  return customFetch<replaceWorkerScriptVersionResponse>(
+    getReplaceWorkerScriptVersionUrl(name, params),
     {
       ...options,
       method: "PUT",
@@ -1241,21 +1106,21 @@ export const putApisCfGuberProcIoV1WorkerscriptversionsName = async (
   );
 };
 
-export type patchApisCfGuberProcIoV1WorkerscriptversionsNameResponse200 = {
+export type patchWorkerScriptVersionResponse200 = {
   data: WorkerScriptVersion;
   status: 200;
 };
 
-export type patchApisCfGuberProcIoV1WorkerscriptversionsNameResponseSuccess =
-  patchApisCfGuberProcIoV1WorkerscriptversionsNameResponse200 & {
+export type patchWorkerScriptVersionResponseSuccess =
+  patchWorkerScriptVersionResponse200 & {
     headers: Headers;
   };
-export type patchApisCfGuberProcIoV1WorkerscriptversionsNameResponse =
-  patchApisCfGuberProcIoV1WorkerscriptversionsNameResponseSuccess;
+export type patchWorkerScriptVersionResponse =
+  patchWorkerScriptVersionResponseSuccess;
 
-export const getPatchApisCfGuberProcIoV1WorkerscriptversionsNameUrl = (
+export const getPatchWorkerScriptVersionUrl = (
   name: string,
-  params?: PatchApisCfGuberProcIoV1WorkerscriptversionsNameParams,
+  params?: PatchWorkerScriptVersionParams,
 ) => {
   const normalizedParams = new URLSearchParams();
 
@@ -1272,14 +1137,14 @@ export const getPatchApisCfGuberProcIoV1WorkerscriptversionsNameUrl = (
     : `http://fake/apis/cf.guber.proc.io/v1/workerscriptversions/${name}`;
 };
 
-export const patchApisCfGuberProcIoV1WorkerscriptversionsName = async (
+export const patchWorkerScriptVersion = async (
   name: string,
   workerScriptVersion: WorkerScriptVersion,
-  params?: PatchApisCfGuberProcIoV1WorkerscriptversionsNameParams,
+  params?: PatchWorkerScriptVersionParams,
   options?: RequestInit,
-): Promise<patchApisCfGuberProcIoV1WorkerscriptversionsNameResponse> => {
-  return customFetch<patchApisCfGuberProcIoV1WorkerscriptversionsNameResponse>(
-    getPatchApisCfGuberProcIoV1WorkerscriptversionsNameUrl(name, params),
+): Promise<patchWorkerScriptVersionResponse> => {
+  return customFetch<patchWorkerScriptVersionResponse>(
+    getPatchWorkerScriptVersionUrl(name, params),
     {
       ...options,
       method: "PATCH",
@@ -1289,30 +1154,28 @@ export const patchApisCfGuberProcIoV1WorkerscriptversionsName = async (
   );
 };
 
-export type deleteApisCfGuberProcIoV1WorkerscriptversionsNameResponse200 = {
+export type deleteWorkerScriptVersionResponse200 = {
   data: WorkerScriptVersion;
   status: 200;
 };
 
-export type deleteApisCfGuberProcIoV1WorkerscriptversionsNameResponseSuccess =
-  deleteApisCfGuberProcIoV1WorkerscriptversionsNameResponse200 & {
+export type deleteWorkerScriptVersionResponseSuccess =
+  deleteWorkerScriptVersionResponse200 & {
     headers: Headers;
   };
-export type deleteApisCfGuberProcIoV1WorkerscriptversionsNameResponse =
-  deleteApisCfGuberProcIoV1WorkerscriptversionsNameResponseSuccess;
+export type deleteWorkerScriptVersionResponse =
+  deleteWorkerScriptVersionResponseSuccess;
 
-export const getDeleteApisCfGuberProcIoV1WorkerscriptversionsNameUrl = (
-  name: string,
-) => {
+export const getDeleteWorkerScriptVersionUrl = (name: string) => {
   return `http://fake/apis/cf.guber.proc.io/v1/workerscriptversions/${name}`;
 };
 
-export const deleteApisCfGuberProcIoV1WorkerscriptversionsName = async (
+export const deleteWorkerScriptVersion = async (
   name: string,
   options?: RequestInit,
-): Promise<deleteApisCfGuberProcIoV1WorkerscriptversionsNameResponse> => {
-  return customFetch<deleteApisCfGuberProcIoV1WorkerscriptversionsNameResponse>(
-    getDeleteApisCfGuberProcIoV1WorkerscriptversionsNameUrl(name),
+): Promise<deleteWorkerScriptVersionResponse> => {
+  return customFetch<deleteWorkerScriptVersionResponse>(
+    getDeleteWorkerScriptVersionUrl(name),
     {
       ...options,
       method: "DELETE",

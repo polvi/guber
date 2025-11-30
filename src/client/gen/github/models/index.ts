@@ -6,16 +6,16 @@
  * OpenAPI spec version: v1
  */
 
-export * from "./getApisGhGuberProcIoV1NamespacesNamespaceReleasedeploys200";
 export * from "./ioK8sApimachineryPkgApisMetaV1ObjectMeta";
 export * from "./ioK8sApimachineryPkgApisMetaV1ObjectMetaAnnotations";
 export * from "./ioK8sApimachineryPkgApisMetaV1ObjectMetaLabels";
-export * from "./patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameFieldValidation";
-export * from "./patchApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameParams";
-export * from "./putApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameFieldValidation";
-export * from "./putApisGhGuberProcIoV1NamespacesNamespaceReleasedeploysNameParams";
+export * from "./listNamespacedReleaseDeploy200";
+export * from "./patchNamespacedReleaseDeployFieldValidation";
+export * from "./patchNamespacedReleaseDeployParams";
 export * from "./releaseDeploy";
 export * from "./releaseDeployApiVersion";
 export * from "./releaseDeployKind";
 export * from "./releaseDeploySpec";
 export * from "./releaseDeployStatus";
+export * from "./replaceNamespacedReleaseDeployFieldValidation";
+export * from "./replaceNamespacedReleaseDeployParams";

@@ -15,5 +15,5 @@ export * from "./ioK8sApiCoreV1NamespaceStatusPhase";
 export * from "./ioK8sApimachineryPkgApisMetaV1ObjectMeta";
 export * from "./ioK8sApimachineryPkgApisMetaV1ObjectMetaAnnotations";
 export * from "./ioK8sApimachineryPkgApisMetaV1ObjectMetaLabels";
-export * from "./patchApiV1NamespacesNameFieldValidation";
-export * from "./patchApiV1NamespacesNameParams";
+export * from "./patchNamespaceFieldValidation";
+export * from "./patchNamespaceParams";
