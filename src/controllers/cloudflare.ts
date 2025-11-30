@@ -1433,22 +1433,20 @@ class CloudflareController implements Controller {
       const domainResult = await domainResponse.json();
 
       // Step 3: Update the resource status in the database
-      await env.DB.prepare(
-        "UPDATE resources SET status=? WHERE name=? AND namespace IS NULL"
-      )
-        .bind(
-          JSON.stringify({
-            state: "Ready",
-            worker_id: fullWorkerName,
-            createdAt: new Date().toISOString(),
-            endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullWorkerName}`,
-            customDomain: customDomain,
-            domainId: domainResult.result?.id,
-            url: `https://${customDomain}`,
-          }),
-          resourceName
-        )
-        .run();
+      await patchApisCfGuberProcIoV1WorkersName(resourceName, {
+        apiVersion: "cf.guber.proc.io/v1",
+        kind: "Worker",
+        metadata: { name: resourceName },
+        status: {
+          state: "Ready",
+          worker_id: fullWorkerName,
+          createdAt: new Date().toISOString(),
+          endpoint: `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${fullWorkerName}`,
+          customDomain: customDomain,
+          domainId: domainResult.result?.id,
+          url: `https://${customDomain}`,
+        },
+      });
 
       console.log(
         `Worker ${fullWorkerName} provisioned successfully at ${customDomain}`
