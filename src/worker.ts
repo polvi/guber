@@ -1404,7 +1404,22 @@ app.patch(
       },
     };
 
-    const updatedSpec = { ...existingSpec, ...body.spec };
+    // Deep merge the spec, handling nested objects properly
+    const updatedSpec = { ...existingSpec };
+    
+    if (body.spec) {
+      if (body.spec.group) updatedSpec.group = body.spec.group;
+      if (body.spec.scope) updatedSpec.scope = body.spec.scope;
+      
+      if (body.spec.versions) {
+        updatedSpec.versions = body.spec.versions;
+      }
+      
+      if (body.spec.names) {
+        updatedSpec.names = { ...existingSpec.names, ...body.spec.names };
+      }
+    }
+
     const group = updatedSpec.group;
     const version = updatedSpec.versions[0].name;
     const kind = updatedSpec.names.kind;
