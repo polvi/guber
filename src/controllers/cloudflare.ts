@@ -2,21 +2,21 @@ import { Hono } from "hono";
 import { v4 as uuid } from "uuid";
 import type { Controller, ResourceContext } from "../config";
 import {
-  patchApisCfGuberProcIoV1WorkerscriptversionsName,
-  patchApisCfGuberProcIoV1WorkerscriptdeploymentsName,
-  patchApisCfGuberProcIoV1WorkersName,
-  patchApisCfGuberProcIoV1D1sName,
-  patchApisCfGuberProcIoV1QsName,
-  getApisCfGuberProcIoV1Workers,
-  getApisCfGuberProcIoV1WorkersName,
-  getApisCfGuberProcIoV1Workerscriptversions,
-  getApisCfGuberProcIoV1WorkerscriptversionsName,
-  getApisCfGuberProcIoV1Workerscriptdeployments,
-  getApisCfGuberProcIoV1WorkerscriptdeploymentsName,
-  getApisCfGuberProcIoV1D1s,
-  getApisCfGuberProcIoV1D1sName,
-  getApisCfGuberProcIoV1Qs,
-  getApisCfGuberProcIoV1QsName,
+  patchWorkerScriptVersion,
+  patchWorkerScriptDeployment,
+  patchWorker,
+  patchD1,
+  patchQueue,
+  listWorker,
+  getWorker,
+  listWorkerScriptVersion,
+  getWorkerScriptVersion,
+  listWorkerScriptDeployment,
+  getWorkerScriptDeployment,
+  listD1,
+  getD1,
+  listQueue,
+  getQueue,
 } from "../client/gen/cloudflare/default/default";
 import type {
   WorkerScriptVersion,
@@ -271,9 +271,9 @@ class CloudflareController implements Controller {
     // Get pending resources using the generated client
     const [workersResponse, versionsResponse, deploymentsResponse] =
       await Promise.all([
-        getApisCfGuberProcIoV1Workers(),
-        getApisCfGuberProcIoV1Workerscriptversions(),
-        getApisCfGuberProcIoV1Workerscriptdeployments(),
+        listWorker(),
+        listWorkerScriptVersion(),
+        listWorkerScriptDeployment(),
       ]);
 
     const results = [
@@ -322,12 +322,11 @@ class CloudflareController implements Controller {
               let depResource = null;
               try {
                 if (depKind === "Worker") {
-                  depResource =
-                    await getApisCfGuberProcIoV1WorkersName(depName);
+                  depResource = await getWorker(depName);
                 } else if (depKind === "D1") {
-                  depResource = await getApisCfGuberProcIoV1D1sName(depName);
+                  depResource = await getD1(depName);
                 } else if (depKind === "Queue") {
-                  depResource = await getApisCfGuberProcIoV1QsName(depName);
+                  depResource = await getQueue(depName);
                 }
               } catch (error) {
                 depResource = null;
@@ -393,7 +392,7 @@ class CloudflareController implements Controller {
 
               // Update status using the appropriate client based on resource kind
               if (resource.kind === "Worker") {
-                await patchApisCfGuberProcIoV1WorkersName(
+                await patchWorker(
                   resource.metadata.name!,
                   {
                     apiVersion: "cf.guber.proc.io/v1",
@@ -403,7 +402,7 @@ class CloudflareController implements Controller {
                   },
                 );
               } else if (resource.kind === "WorkerScriptVersion") {
-                await patchApisCfGuberProcIoV1WorkerscriptversionsName(
+                await patchWorkerScriptVersion(
                   resource.metadata.name!,
                   {
                     apiVersion: "cf.guber.proc.io/v1",
@@ -413,7 +412,7 @@ class CloudflareController implements Controller {
                   },
                 );
               } else if (resource.kind === "WorkerScriptDeployment") {
-                await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
+                await patchWorkerScriptDeployment(
                   resource.metadata.name!,
                   {
                     apiVersion: "cf.guber.proc.io/v1",
@@ -491,7 +490,7 @@ class CloudflareController implements Controller {
       const databaseId = result.result.uuid;
 
       // Update the resource status in the database
-      await patchApisCfGuberProcIoV1D1sName(resourceName, {
+      await patchD1(resourceName, {
         apiVersion: "cf.guber.proc.io/v1",
         kind: "D1",
         metadata: { name: resourceName },
@@ -540,7 +539,7 @@ class CloudflareController implements Controller {
             const databaseId = existingDb.uuid;
 
             // Update the resource status to match the existing database
-            await patchApisCfGuberProcIoV1D1sName(resourceName, {
+            await patchD1(resourceName, {
               apiVersion: "cf.guber.proc.io/v1",
               kind: "D1",
               metadata: { name: resourceName },
@@ -559,7 +558,7 @@ class CloudflareController implements Controller {
             console.error(
               `Could not find existing database ${fullDatabaseName} in account`,
             );
-            await patchApisCfGuberProcIoV1D1sName(resourceName, {
+            await patchD1(resourceName, {
               apiVersion: "cf.guber.proc.io/v1",
               kind: "D1",
               metadata: { name: resourceName },
@@ -573,7 +572,7 @@ class CloudflareController implements Controller {
           console.error(
             `Failed to list databases to find existing ${fullDatabaseName}`,
           );
-          await patchApisCfGuberProcIoV1QsName(resourceName, {
+          await patchQueue(resourceName, {
             apiVersion: "cf.guber.proc.io/v1",
             kind: "Queue",
             metadata: { name: resourceName },
@@ -590,7 +589,7 @@ class CloudflareController implements Controller {
         );
 
         // Update status to failed
-        await patchApisCfGuberProcIoV1D1sName(resourceName, {
+        await patchD1(resourceName, {
           apiVersion: "cf.guber.proc.io/v1",
           kind: "D1",
           metadata: { name: resourceName },
@@ -701,7 +700,7 @@ class CloudflareController implements Controller {
       const queueId = result.result.queue_id;
 
       // Update the resource status in the database
-      await patchApisCfGuberProcIoV1QsName(resourceName, {
+      await patchQueue(resourceName, {
         apiVersion: "cf.guber.proc.io/v1",
         kind: "Queue",
         metadata: { name: resourceName },
@@ -750,7 +749,7 @@ class CloudflareController implements Controller {
             const queueId = existingQueue.queue_id;
 
             // Update the resource status to match the existing queue
-            await patchApisCfGuberProcIoV1QsName(resourceName, {
+            await patchQueue(resourceName, {
               apiVersion: "cf.guber.proc.io/v1",
               kind: "Queue",
               metadata: { name: resourceName },
@@ -769,7 +768,7 @@ class CloudflareController implements Controller {
             console.error(
               `Could not find existing queue ${fullQueueName} in account`,
             );
-            await patchApisCfGuberProcIoV1QsName(resourceName, {
+            await patchQueue(resourceName, {
               apiVersion: "cf.guber.proc.io/v1",
               kind: "Queue",
               metadata: { name: resourceName },
@@ -783,7 +782,7 @@ class CloudflareController implements Controller {
           console.error(
             `Failed to list queues to find existing ${fullQueueName}`,
           );
-          await patchApisCfGuberProcIoV1QsName(resourceName, {
+          await patchQueue(resourceName, {
             apiVersion: "cf.guber.proc.io/v1",
             kind: "Queue",
             metadata: { name: resourceName },
@@ -800,9 +799,9 @@ class CloudflareController implements Controller {
         );
 
         // Update status to failed
-        await patchApisCfGuberProcIoV1D1sName(resourceName, {
+        await patchQueue(resourceName, {
           apiVersion: "cf.guber.proc.io/v1",
-          kind: "D1",
+          kind: "Queue",
           metadata: { name: resourceName },
           status: {
             state: "Failed",
@@ -873,7 +872,7 @@ class CloudflareController implements Controller {
       console.log("Starting Queue reconciliation...");
 
       // Get all Queue resources from our API
-      const apiResourcesResponse = await getApisCfGuberProcIoV1Qs();
+      const apiResourcesResponse = await listQueue();
       const apiResources = apiResourcesResponse.data.items || [];
 
       // Get all Queues from Cloudflare
@@ -1042,7 +1041,7 @@ class CloudflareController implements Controller {
                   resource.name,
                 ];
 
-            await patchApisCfGuberProcIoV1QsName(resource.name, {
+            await patchQueue(resource.name, {
               apiVersion: "cf.guber.proc.io/v1",
               kind: "Queue",
               metadata: { name: resource.name },
@@ -1086,7 +1085,7 @@ class CloudflareController implements Controller {
                   resource.name,
                 ];
 
-            await patchApisCfGuberProcIoV1QsName(resource.name, {
+            await patchQueue(resource.name, {
               apiVersion: "cf.guber.proc.io/v1",
               kind: "Queue",
               metadata: { name: resource.name },
@@ -1137,15 +1136,11 @@ class CloudflareController implements Controller {
           let depResource = null;
           try {
             if (dependency.kind === "Worker") {
-              depResource = await getApisCfGuberProcIoV1WorkersName(
-                dependency.name,
-              );
+              depResource = await getWorker(dependency.name);
             } else if (dependency.kind === "D1") {
-              depResource = await getApisCfGuberProcIoV1D1sName(
-                dependency.name,
-              );
+              depResource = await getD1(dependency.name);
             } else if (dependency.kind === "Queue") {
-              depResource = await getApisCfGuberProcIoV1QsName(dependency.name);
+              depResource = await getQueue(dependency.name);
             }
           } catch (error) {
             depResource = null;
@@ -1169,10 +1164,7 @@ class CloudflareController implements Controller {
               },
             };
 
-            await patchApisCfGuberProcIoV1WorkerscriptversionsName(
-              resourceName,
-              workerScriptVersionUpdate,
-            );
+            await patchWorkerScriptVersion(resourceName, workerScriptVersionUpdate);
             return false;
           }
 
@@ -1194,10 +1186,7 @@ class CloudflareController implements Controller {
               },
             };
 
-            await patchApisCfGuberProcIoV1WorkerscriptversionsName(
-              resourceName,
-              workerScriptVersionUpdate,
-            );
+            await patchWorkerScriptVersion(resourceName, workerScriptVersionUpdate);
             return false;
           }
 
@@ -1221,10 +1210,7 @@ class CloudflareController implements Controller {
               },
             };
 
-            await patchApisCfGuberProcIoV1WorkerscriptversionsName(
-              resourceName,
-              workerScriptVersionUpdate,
-            );
+            await patchWorkerScriptVersion(resourceName, workerScriptVersionUpdate);
             return false;
           }
         }
@@ -1301,9 +1287,7 @@ class CloudflareController implements Controller {
             // Look up the D1 resource to get its database_id
             let d1Resource = null;
             try {
-              d1Resource = await getApisCfGuberProcIoV1D1sName(
-                d1Binding.database_name,
-              );
+              d1Resource = await getD1(d1Binding.database_name);
             } catch (error) {
               d1Resource = null;
             }
@@ -1328,9 +1312,7 @@ class CloudflareController implements Controller {
             // Look up the Queue resource to get its queue name
             let queueResource = null;
             try {
-              queueResource = await getApisCfGuberProcIoV1QsName(
-                queueBinding.queue_name,
-              );
+              queueResource = await getQueue(queueBinding.queue_name);
             } catch (error) {
               queueResource = null;
             }
@@ -1425,7 +1407,7 @@ class CloudflareController implements Controller {
         );
 
         // Still update status as partially successful (script deployed but no custom domain)
-        await patchApisCfGuberProcIoV1WorkersName(resourceName, {
+        await patchWorker(resourceName, {
           apiVersion: "cf.guber.proc.io/v1",
           kind: "Worker",
           metadata: { name: resourceName },
@@ -1451,7 +1433,7 @@ class CloudflareController implements Controller {
       );
 
       // Step 3: Update the resource status in the database
-      await patchApisCfGuberProcIoV1WorkersName(resourceName, {
+      await patchWorker(resourceName, {
         apiVersion: "cf.guber.proc.io/v1",
         kind: "Worker",
         metadata: { name: resourceName },
@@ -1487,10 +1469,7 @@ class CloudflareController implements Controller {
         },
       };
 
-      await patchApisCfGuberProcIoV1WorkerscriptversionsName(
-        resourceName,
-        workerScriptVersionUpdate,
-      );
+      await patchWorkerScriptVersion(resourceName, workerScriptVersionUpdate);
 
       return false;
     }
@@ -1569,7 +1548,7 @@ class CloudflareController implements Controller {
       await this.reconcilePendingWorkers(env);
 
       // Get all Worker resources from our API
-      const apiResourcesResponse = await getApisCfGuberProcIoV1Workers();
+      const apiResourcesResponse = await listWorker();
       const apiResources = apiResourcesResponse.data.items || [];
 
       // Get all Workers from Cloudflare
@@ -2003,7 +1982,7 @@ class CloudflareController implements Controller {
               statusData.domainId = domainId;
             }
 
-            await patchApisCfGuberProcIoV1WorkersName(resource.name, {
+            await patchWorker(resource.name, {
               apiVersion: "cf.guber.proc.io/v1",
               kind: "Worker",
               metadata: { name: resource.name },
@@ -2042,9 +2021,9 @@ class CloudflareController implements Controller {
                   resource.name,
                 ];
 
-            await patchApisCfGuberProcIoV1D1sName(resource.name, {
+            await patchWorker(resource.name, {
               apiVersion: "cf.guber.proc.io/v1",
-              kind: "D1",
+              kind: "Worker",
               metadata: { name: resource.name },
               status: {
                 state: "Failed",
@@ -2080,9 +2059,7 @@ class CloudflareController implements Controller {
                 for (const d1Binding of spec.bindings.d1_databases) {
                   let d1Resource = null;
                   try {
-                    d1Resource = await getApisCfGuberProcIoV1D1sName(
-                      d1Binding.database_name,
-                    );
+                    d1Resource = await getD1(d1Binding.database_name);
                   } catch (error) {
                     d1Resource = null;
                   }
@@ -2108,9 +2085,7 @@ class CloudflareController implements Controller {
                 for (const queueBinding of spec.bindings.queues) {
                   let queueResource = null;
                   try {
-                    queueResource = await getApisCfGuberProcIoV1QsName(
-                      queueBinding.queue_name,
-                    );
+                    queueResource = await getQueue(queueBinding.queue_name);
                   } catch (error) {
                     queueResource = null;
                   }
@@ -2286,7 +2261,7 @@ class CloudflareController implements Controller {
                   bindingsUpdated: true,
                 };
 
-                await patchApisCfGuberProcIoV1WorkersName(apiResource.name, {
+                await patchWorker(apiResource.name, {
                   apiVersion: "cf.guber.proc.io/v1",
                   kind: "Worker",
                   metadata: { name: apiResource.name },
@@ -2359,7 +2334,7 @@ class CloudflareController implements Controller {
                   }
                 }
 
-                await patchApisCfGuberProcIoV1WorkersName(apiResource.name, {
+                await patchWorker(apiResource.name, {
                   apiVersion: "cf.guber.proc.io/v1",
                   kind: "Worker",
                   metadata: { name: apiResource.name },
@@ -2401,7 +2376,7 @@ class CloudflareController implements Controller {
                 newStatus.state = "Failed";
               }
 
-              await patchApisCfGuberProcIoV1WorkersName(apiResource.name, {
+              await patchWorker(apiResource.name, {
                 apiVersion: "cf.guber.proc.io/v1",
                 kind: "Worker",
                 metadata: { name: apiResource.name },
@@ -2424,7 +2399,7 @@ class CloudflareController implements Controller {
             };
 
             try {
-              await patchApisCfGuberProcIoV1WorkersName(apiResource.name, {
+              await patchWorker(apiResource.name, {
                 apiVersion: "cf.guber.proc.io/v1",
                 kind: "Worker",
                 metadata: { name: apiResource.name },
@@ -2449,7 +2424,7 @@ class CloudflareController implements Controller {
   private async reconcilePendingWorkers(env: any) {
     console.log("Checking pending workers for dependency resolution...");
 
-    const workersResponse = await getApisCfGuberProcIoV1Workers();
+    const workersResponse = await listWorker();
     const pendingWorkers = (workersResponse.data.items || []).filter(
       (worker) => worker.status?.state === "Pending",
     );
@@ -2473,27 +2448,15 @@ class CloudflareController implements Controller {
             let depResource = null;
             try {
               if (dependency.kind === "Worker") {
-                depResource = await getApisCfGuberProcIoV1WorkersName(
-                  dependency.name,
-                );
+                depResource = await getWorker(dependency.name);
               } else if (dependency.kind === "WorkerScriptVersion") {
-                depResource =
-                  await getApisCfGuberProcIoV1WorkerscriptversionsName(
-                    dependency.name,
-                  );
+                depResource = await getWorkerScriptVersion(dependency.name);
               } else if (dependency.kind === "WorkerScriptDeployment") {
-                depResource =
-                  await getApisCfGuberProcIoV1WorkerscriptdeploymentsName(
-                    dependency.name,
-                  );
+                depResource = await getWorkerScriptDeployment(dependency.name);
               } else if (dependency.kind === "D1") {
-                depResource = await getApisCfGuberProcIoV1D1sName(
-                  dependency.name,
-                );
+                depResource = await getD1(dependency.name);
               } else if (dependency.kind === "Queue") {
-                depResource = await getApisCfGuberProcIoV1QsName(
-                  dependency.name,
-                );
+                depResource = await getQueue(dependency.name);
               }
             } catch (error) {
               // Resource not found
@@ -2544,7 +2507,7 @@ class CloudflareController implements Controller {
               pendingDependencies: unresolvedDependencies,
             };
 
-            await patchApisCfGuberProcIoV1WorkersName(worker.metadata.name!, {
+            await patchWorker(worker.metadata.name!, {
               apiVersion: "cf.guber.proc.io/v1",
               kind: "Worker",
               metadata: { name: worker.metadata.name },
@@ -2566,7 +2529,7 @@ class CloudflareController implements Controller {
       console.log("Starting D1 database reconciliation...");
 
       // Get all D1 resources from our API
-      const apiResourcesResponse = await getApisCfGuberProcIoV1D1s();
+      const apiResourcesResponse = await listD1();
       const apiResources = apiResourcesResponse.data.items || [];
 
       // Get all D1 databases from Cloudflare
@@ -2707,7 +2670,7 @@ class CloudflareController implements Controller {
             const result = (await createResponse.json()) as any;
             const databaseId = result.result.uuid;
 
-            await patchApisCfGuberProcIoV1D1sName(resource.name, {
+            await patchD1(resource.name, {
               apiVersion: "cf.guber.proc.io/v1",
               kind: "D1",
               metadata: { name: resource.name },
@@ -2730,7 +2693,7 @@ class CloudflareController implements Controller {
               error,
             );
 
-            await patchApisCfGuberProcIoV1D1sName(resource.name, {
+            await patchD1(resource.name, {
               apiVersion: "cf.guber.proc.io/v1",
               kind: "D1",
               metadata: { name: resource.name },
@@ -2799,11 +2762,11 @@ class CloudflareController implements Controller {
           let depResource = null;
           try {
             if (depKind === "Worker") {
-              depResource = await getApisCfGuberProcIoV1WorkersName(depName);
+              depResource = await getWorker(depName);
             } else if (depKind === "D1") {
-              depResource = await getApisCfGuberProcIoV1D1sName(depName);
+              depResource = await getD1(depName);
             } else if (depKind === "Queue") {
-              depResource = await getApisCfGuberProcIoV1QsName(depName);
+              depResource = await getQueue(depName);
             }
           } catch (error) {
             depResource = null;
@@ -2971,9 +2934,7 @@ class CloudflareController implements Controller {
             // Look up the D1 resource to get its database_id
             let d1Resource = null;
             try {
-              d1Resource = await getApisCfGuberProcIoV1D1sName(
-                d1Binding.database_name,
-              );
+              d1Resource = await getD1(d1Binding.database_name);
             } catch (error) {
               d1Resource = null;
             }
@@ -2998,9 +2959,7 @@ class CloudflareController implements Controller {
             // Look up the Queue resource to get its queue name
             let queueResource = null;
             try {
-              queueResource = await getApisCfGuberProcIoV1QsName(
-                queueBinding.queue_name,
-              );
+              queueResource = await getQueue(queueBinding.queue_name);
             } catch (error) {
               queueResource = null;
             }
@@ -3055,9 +3014,7 @@ class CloudflareController implements Controller {
       // Check if scriptName refers to a Worker resource in our system
       let workerResource = null;
       try {
-        workerResource = await getApisCfGuberProcIoV1WorkersName(
-          spec.scriptName,
-        );
+        workerResource = await getWorker(spec.scriptName);
       } catch (error) {
         workerResource = null;
       }
@@ -3080,10 +3037,7 @@ class CloudflareController implements Controller {
           },
         };
 
-        await patchApisCfGuberProcIoV1WorkerscriptversionsName(
-          resourceName,
-          workerScriptVersionUpdate,
-        );
+        await patchWorkerScriptVersion(resourceName, workerScriptVersionUpdate);
         return false;
       }
 
@@ -3106,10 +3060,7 @@ class CloudflareController implements Controller {
           },
         };
 
-        await patchApisCfGuberProcIoV1WorkerscriptversionsName(
-          resourceName,
-          workerScriptVersionUpdate,
-        );
+        await patchWorkerScriptVersion(resourceName, workerScriptVersionUpdate);
         return false;
       }
 
@@ -3137,10 +3088,7 @@ class CloudflareController implements Controller {
           },
         };
 
-        await patchApisCfGuberProcIoV1WorkerscriptversionsName(
-          resourceName,
-          workerScriptVersionUpdate,
-        );
+        await patchWorkerScriptVersion(resourceName, workerScriptVersionUpdate);
         return false;
       }
 
@@ -3162,10 +3110,7 @@ class CloudflareController implements Controller {
           },
         };
 
-        await patchApisCfGuberProcIoV1WorkerscriptversionsName(
-          resourceName,
-          workerScriptVersionUpdate,
-        );
+        await patchWorkerScriptVersion(resourceName, workerScriptVersionUpdate);
         return false;
       }
 
@@ -3222,10 +3167,7 @@ class CloudflareController implements Controller {
         },
       };
 
-      await patchApisCfGuberProcIoV1WorkerscriptversionsName(
-        resourceName,
-        workerScriptVersionUpdate,
-      );
+      await patchWorkerScriptVersion(resourceName, workerScriptVersionUpdate);
 
       console.log(
         `Worker script version ${resourceName} provisioned successfully`,
@@ -3251,10 +3193,7 @@ class CloudflareController implements Controller {
         },
       };
 
-      await patchApisCfGuberProcIoV1WorkerscriptversionsName(
-        resourceName,
-        workerScriptVersionUpdate,
-      );
+      await patchWorkerScriptVersion(resourceName, workerScriptVersionUpdate);
 
       return false;
     }
@@ -3303,8 +3242,7 @@ class CloudflareController implements Controller {
       console.log("Starting WorkerScriptVersion reconciliation...");
 
       // Get all WorkerScriptVersion resources from our API
-      const apiResourcesResponse =
-        await getApisCfGuberProcIoV1Workerscriptversions();
+      const apiResourcesResponse = await listWorkerScriptVersion();
       const apiResources = apiResourcesResponse.data.items || [];
 
       console.log(
@@ -3329,9 +3267,7 @@ class CloudflareController implements Controller {
             if (status.pendingWorker) {
               let targetWorkerResource = null;
               try {
-                targetWorkerResource = await getApisCfGuberProcIoV1WorkersName(
-                  status.pendingWorker,
-                );
+                targetWorkerResource = await getWorker(status.pendingWorker);
               } catch (error) {
                 targetWorkerResource = null;
               }
@@ -3381,7 +3317,7 @@ class CloudflareController implements Controller {
                     },
                   };
 
-                  await patchApisCfGuberProcIoV1WorkerscriptversionsName(
+                  await patchWorkerScriptVersion(
                     resource.metadata.name!,
                     workerScriptVersionUpdate,
                   );
@@ -3407,7 +3343,7 @@ class CloudflareController implements Controller {
                   },
                 };
 
-                await patchApisCfGuberProcIoV1WorkerscriptversionsName(
+                await patchWorkerScriptVersion(
                   resource.metadata.name!,
                   workerScriptVersionUpdate,
                 );
@@ -3425,17 +3361,11 @@ class CloudflareController implements Controller {
                 let depResource = null;
                 try {
                   if (dependency.kind === "Worker") {
-                    depResource = await getApisCfGuberProcIoV1WorkersName(
-                      dependency.name,
-                    );
+                    depResource = await getWorker(dependency.name);
                   } else if (dependency.kind === "D1") {
-                    depResource = await getApisCfGuberProcIoV1D1sName(
-                      dependency.name,
-                    );
+                    depResource = await getD1(dependency.name);
                   } else if (dependency.kind === "Queue") {
-                    depResource = await getApisCfGuberProcIoV1QsName(
-                      dependency.name,
-                    );
+                    depResource = await getQueue(dependency.name);
                   }
                 } catch (error) {
                   depResource = null;
@@ -3483,19 +3413,16 @@ class CloudflareController implements Controller {
                 );
 
                 // Update the dependency check timestamp
-                await patchApisCfGuberProcIoV1WorkerscriptversionsName(
-                  resource.metadata.name!,
-                  {
-                    apiVersion: "cf.guber.proc.io/v1",
-                    kind: "WorkerScriptVersion",
-                    metadata: { name: resource.metadata.name },
-                    status: {
-                      ...status,
-                      lastDependencyCheck: new Date().toISOString(),
-                      pendingDependencies: unresolvedDependencies,
-                    },
+                await patchWorkerScriptVersion(resource.metadata.name!, {
+                  apiVersion: "cf.guber.proc.io/v1",
+                  kind: "WorkerScriptVersion",
+                  metadata: { name: resource.metadata.name },
+                  status: {
+                    ...status,
+                    lastDependencyCheck: new Date().toISOString(),
+                    pendingDependencies: unresolvedDependencies,
                   },
-                );
+                });
               }
             }
           }
@@ -3535,7 +3462,7 @@ class CloudflareController implements Controller {
                   },
                 };
 
-                await patchApisCfGuberProcIoV1WorkerscriptversionsName(
+                await patchWorkerScriptVersion(
                   resource.metadata.name!,
                   workerScriptVersionUpdate,
                 );
@@ -3554,7 +3481,7 @@ class CloudflareController implements Controller {
                   },
                 };
 
-                await patchApisCfGuberProcIoV1WorkerscriptversionsName(
+                await patchWorkerScriptVersion(
                   resource.metadata.name!,
                   workerScriptVersionUpdate,
                 );
@@ -3611,10 +3538,7 @@ class CloudflareController implements Controller {
           },
         };
 
-        await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
-          resourceName,
-          workerScriptDeploymentUpdate,
-        );
+        await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
         return false;
       }
       // Check dependencies first
@@ -3655,10 +3579,7 @@ class CloudflareController implements Controller {
               },
             };
 
-            await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
-              resourceName,
-              workerScriptDeploymentUpdate,
-            );
+            await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
             return false;
           }
 
@@ -3680,10 +3601,7 @@ class CloudflareController implements Controller {
               },
             };
 
-            await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
-              resourceName,
-              workerScriptDeploymentUpdate,
-            );
+            await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
             return false;
           }
 
@@ -3707,10 +3625,7 @@ class CloudflareController implements Controller {
               },
             };
 
-            await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
-              resourceName,
-              workerScriptDeploymentUpdate,
-            );
+            await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
             return false;
           }
         }
@@ -3719,9 +3634,7 @@ class CloudflareController implements Controller {
       // Check if scriptName refers to a Worker resource in our system
       let workerResource = null;
       try {
-        workerResource = await getApisCfGuberProcIoV1WorkersName(
-          spec.scriptName,
-        );
+        workerResource = await getWorker(spec.scriptName);
       } catch (error) {
         workerResource = null;
       }
@@ -3744,10 +3657,7 @@ class CloudflareController implements Controller {
           },
         };
 
-        await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
-          resourceName,
-          workerScriptDeploymentUpdate,
-        );
+        await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
         return false;
       }
 
@@ -3770,10 +3680,7 @@ class CloudflareController implements Controller {
           },
         };
 
-        await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
-          resourceName,
-          workerScriptDeploymentUpdate,
-        );
+        await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
         return false;
       }
 
@@ -3801,10 +3708,7 @@ class CloudflareController implements Controller {
           },
         };
 
-        await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
-          resourceName,
-          workerScriptDeploymentUpdate,
-        );
+        await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
         return false;
       }
 
@@ -3826,10 +3730,7 @@ class CloudflareController implements Controller {
           },
         };
 
-        await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
-          resourceName,
-          workerScriptDeploymentUpdate,
-        );
+        await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
         return false;
       }
 
@@ -3851,10 +3752,7 @@ class CloudflareController implements Controller {
         // Look up the WorkerScriptVersion resource to get its version_id
         let versionResource = null;
         try {
-          versionResource =
-            await getApisCfGuberProcIoV1WorkerscriptversionsName(
-              spec.workerScriptVersionName,
-            );
+          versionResource = await getWorkerScriptVersion(spec.workerScriptVersionName);
         } catch (error) {
           versionResource = null;
         }
@@ -3877,10 +3775,7 @@ class CloudflareController implements Controller {
             },
           };
 
-          await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
-            resourceName,
-            workerScriptDeploymentUpdate,
-          );
+          await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
           return false;
         }
 
@@ -3902,10 +3797,7 @@ class CloudflareController implements Controller {
             },
           };
 
-          await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
-            resourceName,
-            workerScriptDeploymentUpdate,
-          );
+          await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
           return false;
         }
 
@@ -3928,10 +3820,7 @@ class CloudflareController implements Controller {
             },
           };
 
-          await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
-            resourceName,
-            workerScriptDeploymentUpdate,
-          );
+          await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
           return false;
         }
 
@@ -3953,10 +3842,7 @@ class CloudflareController implements Controller {
             },
           };
 
-          await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
-            resourceName,
-            workerScriptDeploymentUpdate,
-          );
+          await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
           return false;
         }
 
@@ -3987,10 +3873,7 @@ class CloudflareController implements Controller {
           },
         };
 
-        await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
-          resourceName,
-          workerScriptDeploymentUpdate,
-        );
+        await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
         return false;
       }
 
@@ -4027,10 +3910,7 @@ class CloudflareController implements Controller {
           // Look up the WorkerScriptVersion resource to get its version_id
           let versionResource = null;
           try {
-            versionResource =
-              await getApisCfGuberProcIoV1WorkerscriptversionsName(
-                version.version_name,
-              );
+            versionResource = await getWorkerScriptVersion(version.version_name);
           } catch (error) {
             versionResource = null;
           }
@@ -4072,10 +3952,7 @@ class CloudflareController implements Controller {
               },
             };
 
-            await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
-              resourceName,
-              workerScriptDeploymentUpdate,
-            );
+            await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
             return false;
           }
 
@@ -4157,10 +4034,7 @@ class CloudflareController implements Controller {
         },
       };
 
-      await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
-        resourceName,
-        workerScriptDeploymentUpdate,
-      );
+      await patchWorkerScriptDeployment(resourceName, workerScriptDeploymentUpdate);
 
       console.log(
         `Worker script deployment ${resourceName} provisioned successfully`,
@@ -4173,7 +4047,7 @@ class CloudflareController implements Controller {
       );
 
       // Update status to failed
-      await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(resourceName, {
+      await patchWorkerScriptDeployment(resourceName, {
         apiVersion: "cf.guber.proc.io/v1",
         kind: "WorkerScriptDeployment",
         metadata: { name: resourceName },
@@ -4230,8 +4104,7 @@ class CloudflareController implements Controller {
       console.log("Starting WorkerScriptDeployment reconciliation...");
 
       // Get all WorkerScriptDeployment resources from our API
-      const apiResourcesResponse =
-        await getApisCfGuberProcIoV1Workerscriptdeployments();
+      const apiResourcesResponse = await listWorkerScriptDeployment();
       const apiResources = apiResourcesResponse.data.items || [];
 
       console.log(
@@ -4255,9 +4128,7 @@ class CloudflareController implements Controller {
             if (status.pendingWorker) {
               let targetWorkerResource = null;
               try {
-                targetWorkerResource = await getApisCfGuberProcIoV1WorkersName(
-                  status.pendingWorker,
-                );
+                targetWorkerResource = await getWorker(status.pendingWorker);
               } catch (error) {
                 targetWorkerResource = null;
               }
@@ -4293,19 +4164,16 @@ class CloudflareController implements Controller {
                   );
 
                   // Update the worker check timestamp
-                  await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
-                    resource.name,
-                    {
-                      apiVersion: "cf.guber.proc.io/v1",
-                      kind: "WorkerScriptDeployment",
-                      metadata: { name: resource.name },
-                      status: {
-                        ...status,
-                        lastWorkerCheck: new Date().toISOString(),
-                        message: `Waiting for target worker to be ready: ${status.pendingWorker} (current state: ${targetWorkerStatus.state})`,
-                      },
+                  await patchWorkerScriptDeployment(resource.name, {
+                    apiVersion: "cf.guber.proc.io/v1",
+                    kind: "WorkerScriptDeployment",
+                    metadata: { name: resource.name },
+                    status: {
+                      ...status,
+                      lastWorkerCheck: new Date().toISOString(),
+                      message: `Waiting for target worker to be ready: ${status.pendingWorker} (current state: ${targetWorkerStatus.state})`,
                     },
-                  );
+                  });
                   continue;
                 }
               } else {
@@ -4314,19 +4182,16 @@ class CloudflareController implements Controller {
                 );
 
                 // Update status to indicate worker still missing
-                await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
-                  resource.name,
-                  {
-                    apiVersion: "cf.guber.proc.io/v1",
-                    kind: "WorkerScriptDeployment",
-                    metadata: { name: resource.name },
-                    status: {
-                      ...status,
-                      lastWorkerCheck: new Date().toISOString(),
-                      message: `Waiting for target worker to be provisioned: ${status.pendingWorker}`,
-                    },
+                await patchWorkerScriptDeployment(resource.name, {
+                  apiVersion: "cf.guber.proc.io/v1",
+                  kind: "WorkerScriptDeployment",
+                  metadata: { name: resource.name },
+                  status: {
+                    ...status,
+                    lastWorkerCheck: new Date().toISOString(),
+                    message: `Waiting for target worker to be provisioned: ${status.pendingWorker}`,
                   },
-                );
+                });
                 continue;
               }
             }
@@ -4341,22 +4206,13 @@ class CloudflareController implements Controller {
                 let depResource = null;
                 try {
                   if (dependency.kind === "Worker") {
-                    depResource = await getApisCfGuberProcIoV1WorkersName(
-                      dependency.name,
-                    );
+                    depResource = await getWorker(dependency.name);
                   } else if (dependency.kind === "WorkerScriptVersion") {
-                    depResource =
-                      await getApisCfGuberProcIoV1WorkerscriptversionsName(
-                        dependency.name,
-                      );
+                    depResource = await getWorkerScriptVersion(dependency.name);
                   } else if (dependency.kind === "D1") {
-                    depResource = await getApisCfGuberProcIoV1D1sName(
-                      dependency.name,
-                    );
+                    depResource = await getD1(dependency.name);
                   } else if (dependency.kind === "Queue") {
-                    depResource = await getApisCfGuberProcIoV1QsName(
-                      dependency.name,
-                    );
+                    depResource = await getQueue(dependency.name);
                   }
                 } catch (error) {
                   depResource = null;
@@ -4404,19 +4260,16 @@ class CloudflareController implements Controller {
                 );
 
                 // Update the dependency check timestamp
-                await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
-                  resource.name,
-                  {
-                    apiVersion: "cf.guber.proc.io/v1",
-                    kind: "WorkerScriptDeployment",
-                    metadata: { name: resource.name },
-                    status: {
-                      ...status,
-                      lastDependencyCheck: new Date().toISOString(),
-                      pendingDependencies: unresolvedDependencies,
-                    },
+                await patchWorkerScriptDeployment(resource.name, {
+                  apiVersion: "cf.guber.proc.io/v1",
+                  kind: "WorkerScriptDeployment",
+                  metadata: { name: resource.name },
+                  status: {
+                    ...status,
+                    lastDependencyCheck: new Date().toISOString(),
+                    pendingDependencies: unresolvedDependencies,
                   },
-                );
+                });
               }
             }
           }
@@ -4441,34 +4294,28 @@ class CloudflareController implements Controller {
                 );
 
                 // Update status to indicate the deployment is missing
-                await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
-                  resource.name,
-                  {
-                    apiVersion: "cf.guber.proc.io/v1",
-                    kind: "WorkerScriptDeployment",
-                    metadata: { name: resource.name },
-                    status: {
-                      ...status,
-                      state: "Failed",
-                      error: "Deployment no longer exists in Cloudflare",
-                      lastHealthCheck: new Date().toISOString(),
-                    },
+                await patchWorkerScriptDeployment(resource.name, {
+                  apiVersion: "cf.guber.proc.io/v1",
+                  kind: "WorkerScriptDeployment",
+                  metadata: { name: resource.name },
+                  status: {
+                    ...status,
+                    state: "Failed",
+                    error: "Deployment no longer exists in Cloudflare",
+                    lastHealthCheck: new Date().toISOString(),
                   },
-                );
+                });
               } else {
                 // Update last health check timestamp
-                await patchApisCfGuberProcIoV1WorkerscriptdeploymentsName(
-                  resource.name,
-                  {
-                    apiVersion: "cf.guber.proc.io/v1",
-                    kind: "WorkerScriptDeployment",
-                    metadata: { name: resource.name },
-                    status: {
-                      ...status,
-                      lastHealthCheck: new Date().toISOString(),
-                    },
+                await patchWorkerScriptDeployment(resource.name, {
+                  apiVersion: "cf.guber.proc.io/v1",
+                  kind: "WorkerScriptDeployment",
+                  metadata: { name: resource.name },
+                  status: {
+                    ...status,
+                    lastHealthCheck: new Date().toISOString(),
                   },
-                );
+                });
               }
             } catch (error) {
               console.error(
