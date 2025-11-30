@@ -1,4 +1,3 @@
-/// <reference path="./wrangler-types.d.ts" />
 import { Hono } from "hono";
 import { v4 as uuid } from "uuid";
 import type { GuberConfig, ResourceContext } from "./config";
