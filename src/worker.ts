@@ -1995,13 +1995,18 @@ export default {
       `Running scheduled tasks at ${new Date(event.scheduledTime).toISOString()}`,
     );
 
-    // Find the cloudflare controller specifically for scheduled handling
-    const cloudflareController = config.controllers.find(
-      (controller) => controller.constructor?.name === "CloudflareController",
-    );
-
-    if (cloudflareController && "handleScheduled" in cloudflareController) {
-      await (cloudflareController as any).handleScheduled(event, env);
+    // Run scheduled tasks for all controllers that support it
+    for (const controller of config.controllers) {
+      if ("handleScheduled" in controller) {
+        try {
+          await (controller as any).handleScheduled(event, env);
+        } catch (error) {
+          console.error(
+            `Controller ${controller.constructor?.name || "unknown"} failed to handle scheduled event:`,
+            error,
+          );
+        }
+      }
     }
   },
 };
