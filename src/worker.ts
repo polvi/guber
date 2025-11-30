@@ -1641,7 +1641,7 @@ app.patch("/apis/:group/:version/:plural/:name", async (c) => {
     status: current.status ? JSON.parse(current.status) : {},
   };
 
-  // Merge the patch with the current resource
+  // Deep merge the patch with the current resource
   const updatedResource = { ...currentResource };
 
   if (body.spec) {
@@ -1653,10 +1653,7 @@ app.patch("/apis/:group/:version/:plural/:name", async (c) => {
   }
 
   if (body.metadata) {
-    updatedResource.metadata = {
-      ...currentResource.metadata,
-      ...body.metadata,
-    };
+    updatedResource.metadata = { ...currentResource.metadata, ...body.metadata };
     // Preserve system fields
     updatedResource.metadata.name = name;
     updatedResource.metadata.creationTimestamp = current.created_at;
@@ -1893,7 +1890,7 @@ app.patch(
       status: current.status ? JSON.parse(current.status) : {},
     };
 
-    // Merge the patch with the current resource
+    // Deep merge the patch with the current resource
     const updatedResource = { ...currentResource };
 
     if (body.spec) {
@@ -1905,10 +1902,7 @@ app.patch(
     }
 
     if (body.metadata) {
-      updatedResource.metadata = {
-        ...currentResource.metadata,
-        ...body.metadata,
-      };
+      updatedResource.metadata = { ...currentResource.metadata, ...body.metadata };
       // Preserve system fields
       updatedResource.metadata.name = name;
       updatedResource.metadata.namespace = namespace;
