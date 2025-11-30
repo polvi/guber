@@ -585,9 +585,10 @@ app.get("/openapi/v3/apis/:group/:version", async (c) => {
   };
 
   for (const crd of results) {
-    const plural = crd.plural;
-    const kind = crd.kind;
-    const scope = crd.scope;
+    const crdData = crd as any;
+    const plural = crdData.plural;
+    const kind = crdData.kind;
+    const scope = crdData.scope;
 
     // Create a basic schema for the CRD if none exists
     const schema = {
@@ -1111,8 +1112,9 @@ app.get("/apis", async (c) => {
 
   // Add dynamic groups from CRDs
   for (const row of results || []) {
-    const groupName = row.group_name;
-    const version = row.version;
+    const rowData = row as any;
+    const groupName = rowData.group_name;
+    const version = rowData.version;
     if (!groups.has(groupName)) {
       groups.set(groupName, {
         name: groupName,
@@ -1120,7 +1122,7 @@ app.get("/apis", async (c) => {
         preferredVersion: { groupVersion: `${groupName}/${version}`, version },
       });
     }
-    groups.get(groupName).versions.push({
+    groups.get(groupName)!.versions.push({
       groupVersion: `${groupName}/${version}`,
       version,
     });
@@ -1391,16 +1393,17 @@ app.patch(
       .first();
     if (!result) return c.json({ message: "Not Found" }, 404);
 
+    const resultData = result as any;
     // Merge the patch with existing spec
     const existingSpec = {
-      group: result.group_name,
-      versions: [{ name: result.version, served: true, storage: true }],
-      scope: result.scope,
+      group: resultData.group_name,
+      versions: [{ name: resultData.version, served: true, storage: true }],
+      scope: resultData.scope,
       names: {
-        plural: result.plural,
-        kind: result.kind,
-        shortNames: result.short_names
-          ? JSON.parse(result.short_names)
+        plural: resultData.plural,
+        kind: resultData.kind,
+        shortNames: resultData.short_names
+          ? JSON.parse(resultData.short_names)
           : undefined,
       },
     };
@@ -1453,7 +1456,7 @@ app.patch(
     return c.json({
       apiVersion: "apiextensions.k8s.io/v1",
       kind: "CustomResourceDefinition",
-      metadata: { name, creationTimestamp: result.created_at },
+      metadata: { name, creationTimestamp: resultData.created_at },
       spec: updatedSpec,
     });
   },
@@ -1470,30 +1473,31 @@ app.delete(
       .first();
     if (!result) return c.json({ message: "Not Found" }, 404);
 
+    const resultData = result as any;
     // Delete all resources of this CRD type first
     await c.env.DB.prepare(
       "DELETE FROM resources WHERE group_name=? AND version=? AND plural=?",
     )
-      .bind(result.group_name, result.version, result.plural)
+      .bind(resultData.group_name, resultData.version, resultData.plural)
       .run();
 
     // Delete the CRD itself
     await c.env.DB.prepare("DELETE FROM crds WHERE name=?").bind(name).run();
 
-    const names: any = { plural: result.plural, kind: result.kind };
-    if (result.short_names) {
-      names.shortNames = JSON.parse(result.short_names);
+    const names: any = { plural: resultData.plural, kind: resultData.kind };
+    if (resultData.short_names) {
+      names.shortNames = JSON.parse(resultData.short_names);
     }
 
     // Return the deleted CRD object
     return c.json({
       apiVersion: "apiextensions.k8s.io/v1",
       kind: "CustomResourceDefinition",
-      metadata: { name: result.name, creationTimestamp: result.created_at },
+      metadata: { name: resultData.name, creationTimestamp: resultData.created_at },
       spec: {
-        group: result.group_name,
-        versions: [{ name: result.version, served: true, storage: true }],
-        scope: result.scope,
+        group: resultData.group_name,
+        versions: [{ name: resultData.version, served: true, storage: true }],
+        scope: resultData.scope,
         names,
       },
     });
