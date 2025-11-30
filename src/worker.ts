@@ -1,6 +1,11 @@
 import { Hono } from "hono";
 import { v4 as uuid } from "uuid";
-import type { GuberConfig } from "./config";
+import type { GuberConfig, ResourceContext } from "./config";
+
+interface Env {
+  DB: D1Database;
+  [key: string]: any;
+}
 
 // Load config
 let config: GuberConfig;
@@ -1271,7 +1276,7 @@ app.get(
           { name: "Name", type: "string", format: "name" },
           { name: "Created At", type: "string" },
         ],
-        rows: items.map((item) => ({
+        rows: items.map((item: any) => ({
           cells: [item.metadata.name, item.metadata.creationTimestamp],
           object: item,
         })),
@@ -1546,7 +1551,7 @@ app.get("/apis/:group/:version/:plural", async (c) => {
             "CreationTimestamp is a timestamp representing the server time when this object was created",
         },
       ],
-      rows: items.map((item) => ({
+      rows: items.map((item: any) => ({
         cells: [item.metadata.name, item.metadata.creationTimestamp],
         object: item,
       })),
@@ -1780,7 +1785,7 @@ app.get("/apis/:group/:version/namespaces/:namespace/:plural", async (c) => {
             "CreationTimestamp is a timestamp representing the server time when this object was created",
         },
       ],
-      rows: items.map((item) => ({
+      rows: items.map((item: any) => ({
         cells: [
           item.metadata.name,
           item.metadata.namespace,
