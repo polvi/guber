@@ -2982,12 +2982,18 @@ class CloudflareController implements Controller {
       }
 
       // Check if scriptName refers to a Worker resource in our system
+      console.log(`[DEBUG] Looking up worker resource: ${spec.scriptName}`);
       let workerResource = null;
       try {
         workerResource = await getApisCfGuberProcIoV1WorkersName(
           spec.scriptName
         );
+        console.log(`[DEBUG] Worker resource found:`, workerResource ? 'YES' : 'NO');
+        if (workerResource) {
+          console.log(`[DEBUG] Worker resource data:`, JSON.stringify(workerResource.data, null, 2));
+        }
       } catch (error) {
+        console.log(`[DEBUG] Error looking up worker resource:`, error);
         workerResource = null;
       }
 
@@ -3771,6 +3777,18 @@ class CloudflareController implements Controller {
       }
 
       // Validate that version percentages add up to 100
+      console.log(`[DEBUG] WorkerScriptDeployment ${resourceName} spec:`, JSON.stringify(spec, null, 2));
+      
+      if (!spec.versions) {
+        throw new Error("WorkerScriptDeployment spec must include 'versions' array");
+      }
+      
+      if (!Array.isArray(spec.versions)) {
+        throw new Error("WorkerScriptDeployment spec.versions must be an array");
+      }
+      
+      console.log(`[DEBUG] WorkerScriptDeployment ${resourceName} versions:`, spec.versions);
+      
       const totalPercentage = spec.versions.reduce(
         (sum: number, version: any) => sum + version.percentage,
         0
@@ -3782,8 +3800,10 @@ class CloudflareController implements Controller {
       }
 
       // Resolve version names to version IDs and validate versions
+      console.log(`[DEBUG] Resolving ${spec.versions.length} versions for deployment ${resourceName}`);
       const resolvedVersions = [];
       for (const version of spec.versions) {
+        console.log(`[DEBUG] Processing version:`, version);
         if (!version.percentage) {
           throw new Error(`Each version must have percentage specified`);
         }
@@ -3802,13 +3822,19 @@ class CloudflareController implements Controller {
 
         if (version.version_name) {
           // Look up the WorkerScriptVersion resource to get its version_id
+          console.log(`[DEBUG] Looking up WorkerScriptVersion: ${version.version_name}`);
           let versionResource = null;
           try {
             versionResource =
               await getApisCfGuberProcIoV1WorkerscriptversionsName(
                 version.version_name
               );
+            console.log(`[DEBUG] WorkerScriptVersion found:`, versionResource ? 'YES' : 'NO');
+            if (versionResource) {
+              console.log(`[DEBUG] WorkerScriptVersion data:`, JSON.stringify(versionResource.data, null, 2));
+            }
           } catch (error) {
+            console.log(`[DEBUG] Error looking up WorkerScriptVersion:`, error);
             versionResource = null;
           }
 
