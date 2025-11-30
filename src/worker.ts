@@ -81,6 +81,7 @@ app.get("/openapi/v3/api/v1", async (c) => {
     paths: {
       "/api/v1/namespaces/{name}": {
         patch: {
+          operationId: "patchNamespace",
           parameters: [
             {
               name: "name",
@@ -199,6 +200,7 @@ app.get("/openapi/v3/apis/apiextensions.k8s.io/v1", async (c) => {
     paths: {
       "/apis/apiextensions.k8s.io/v1/customresourcedefinitions": {
         get: {
+          operationId: "listCustomResourceDefinitions",
           "x-kubernetes-group-version-kind": {
             group: "apiextensions.k8s.io",
             version: "v1",
@@ -218,6 +220,7 @@ app.get("/openapi/v3/apis/apiextensions.k8s.io/v1", async (c) => {
           },
         },
         post: {
+          operationId: "createCustomResourceDefinition",
           "x-kubernetes-group-version-kind": {
             group: "apiextensions.k8s.io",
             version: "v1",
@@ -248,6 +251,7 @@ app.get("/openapi/v3/apis/apiextensions.k8s.io/v1", async (c) => {
       },
       "/apis/apiextensions.k8s.io/v1/customresourcedefinitions/{name}": {
         get: {
+          operationId: "getCustomResourceDefinition",
           parameters: [
             {
               name: "name",
@@ -275,6 +279,7 @@ app.get("/openapi/v3/apis/apiextensions.k8s.io/v1", async (c) => {
           },
         },
         put: {
+          operationId: "replaceCustomResourceDefinition",
           parameters: [
             {
               name: "name",
@@ -319,6 +324,7 @@ app.get("/openapi/v3/apis/apiextensions.k8s.io/v1", async (c) => {
           },
         },
         patch: {
+          operationId: "patchCustomResourceDefinition",
           parameters: [
             {
               name: "name",
@@ -363,6 +369,7 @@ app.get("/openapi/v3/apis/apiextensions.k8s.io/v1", async (c) => {
           },
         },
         delete: {
+          operationId: "deleteCustomResourceDefinition",
           parameters: [
             {
               name: "name",
@@ -622,6 +629,7 @@ app.get("/openapi/v3/apis/:group/:version", async (c) => {
       // Collection endpoints
       spec.paths[`/apis/${group}/${version}/${plural}`] = {
         get: {
+          operationId: `list${kind}`,
           "x-kubernetes-group-version-kind": {
             group,
             version,
@@ -649,6 +657,7 @@ app.get("/openapi/v3/apis/:group/:version", async (c) => {
           },
         },
         post: {
+          operationId: `create${kind}`,
           "x-kubernetes-group-version-kind": {
             group,
             version,
@@ -677,6 +686,7 @@ app.get("/openapi/v3/apis/:group/:version", async (c) => {
       // Individual resource endpoints
       spec.paths[`/apis/${group}/${version}/${plural}/{name}`] = {
         get: {
+          operationId: `get${kind}`,
           parameters: [
             {
               name: "name",
@@ -702,6 +712,7 @@ app.get("/openapi/v3/apis/:group/:version", async (c) => {
           },
         },
         put: {
+          operationId: `replace${kind}`,
           parameters: [
             {
               name: "name",
@@ -742,6 +753,7 @@ app.get("/openapi/v3/apis/:group/:version", async (c) => {
           },
         },
         patch: {
+          operationId: `patch${kind}`,
           parameters: [
             {
               name: "name",
@@ -782,6 +794,7 @@ app.get("/openapi/v3/apis/:group/:version", async (c) => {
           },
         },
         delete: {
+          operationId: `delete${kind}`,
           parameters: [
             {
               name: "name",
@@ -813,6 +826,7 @@ app.get("/openapi/v3/apis/:group/:version", async (c) => {
       spec.paths[`/apis/${group}/${version}/namespaces/{namespace}/${plural}`] =
         {
           get: {
+            operationId: `listNamespaced${kind}`,
             parameters: [
               {
                 name: "namespace",
@@ -848,6 +862,7 @@ app.get("/openapi/v3/apis/:group/:version", async (c) => {
             },
           },
           post: {
+            operationId: `createNamespaced${kind}`,
             parameters: [
               {
                 name: "namespace",
@@ -886,6 +901,7 @@ app.get("/openapi/v3/apis/:group/:version", async (c) => {
         `/apis/${group}/${version}/namespaces/{namespace}/${plural}/{name}`
       ] = {
         get: {
+          operationId: `getNamespaced${kind}`,
           parameters: [
             {
               name: "namespace",
@@ -917,6 +933,7 @@ app.get("/openapi/v3/apis/:group/:version", async (c) => {
           },
         },
         put: {
+          operationId: `replaceNamespaced${kind}`,
           parameters: [
             {
               name: "namespace",
@@ -963,6 +980,7 @@ app.get("/openapi/v3/apis/:group/:version", async (c) => {
           },
         },
         patch: {
+          operationId: `patchNamespaced${kind}`,
           parameters: [
             {
               name: "namespace",
@@ -1009,6 +1027,7 @@ app.get("/openapi/v3/apis/:group/:version", async (c) => {
           },
         },
         delete: {
+          operationId: `deleteNamespaced${kind}`,
           parameters: [
             {
               name: "namespace",
