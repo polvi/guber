@@ -890,10 +890,10 @@ class CloudflareController implements Controller {
       // Build API queue map with full names
       for (const resource of apiResources || []) {
         const fullQueueName = this.buildFullDatabaseName(
-          resource.name,
-          resource.group_name,
-          resource.plural,
-          resource.namespace,
+          resource.metadata?.name || resource.name,
+          "cf.guber.proc.io",
+          "qs",
+          resource.metadata?.namespace || resource.namespace,
           env.GUBER_NAME
         );
         apiQueueMap.set(fullQueueName, resource);
@@ -1342,10 +1342,10 @@ class CloudflareController implements Controller {
               if (status.queue_id) {
                 // Build the full queue name that was created in Cloudflare
                 const fullQueueName = this.buildFullDatabaseName(
-                  queueResource.name,
-                  queueResource.group_name,
-                  queueResource.plural,
-                  queueResource.namespace,
+                  queueResource.metadata?.name || queueResource.name,
+                  "cf.guber.proc.io",
+                  "qs",
+                  queueResource.metadata?.namespace || queueResource.namespace,
                   env.GUBER_NAME
                 );
                 const binding = {
@@ -1636,10 +1636,10 @@ class CloudflareController implements Controller {
       // Build API worker map with full names
       for (const resource of apiResources || []) {
         const fullWorkerName = this.buildFullDatabaseName(
-          resource.name,
-          resource.group_name,
-          resource.plural,
-          resource.namespace,
+          resource.metadata?.name || resource.name,
+          "cf.guber.proc.io",
+          "workers",
+          resource.metadata?.namespace || resource.namespace,
           env.GUBER_NAME
         );
         apiWorkerMap.set(fullWorkerName, resource);
@@ -1878,10 +1878,10 @@ class CloudflareController implements Controller {
                   const status = queueResource.status;
                   if (status.queue_id) {
                     const fullQueueName = this.buildFullDatabaseName(
-                      queueResource.name,
-                      queueResource.group_name,
-                      queueResource.plural,
-                      queueResource.namespace,
+                      queueResource.metadata?.name || queueResource.name,
+                      "cf.guber.proc.io",
+                      "qs",
+                      queueResource.metadata?.namespace || queueResource.namespace,
                       env.GUBER_NAME
                     );
                     bindings.push({
@@ -2098,10 +2098,10 @@ class CloudflareController implements Controller {
                     const queueStatus = queueResource.status;
                     if (queueStatus.queue_id) {
                       const fullQueueName = this.buildFullDatabaseName(
-                        queueResource.name,
-                        queueResource.group_name,
-                        queueResource.plural,
-                        queueResource.namespace,
+                        queueResource.metadata?.name || queueResource.name,
+                        "cf.guber.proc.io",
+                        "qs",
+                        queueResource.metadata?.namespace || queueResource.namespace,
                         env.GUBER_NAME
                       );
                       expectedBindings.push({
@@ -2501,10 +2501,10 @@ class CloudflareController implements Controller {
       // Build API database map with full names
       for (const resource of apiResources || []) {
         const fullDatabaseName = this.buildFullDatabaseName(
-          resource.name,
-          resource.group_name,
-          resource.plural,
-          resource.namespace,
+          resource.metadata?.name || resource.name,
+          "cf.guber.proc.io",
+          "d1s",
+          resource.metadata?.namespace || resource.namespace,
           env.GUBER_NAME
         );
         apiDatabaseMap.set(fullDatabaseName, resource);
