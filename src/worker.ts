@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { v4 as uuid } from "uuid";
 import type { GuberConfig, ResourceContext } from "./config";
-
+import type { Env } from "./wrangler-types";
 
 // Load config
 let config: GuberConfig;
