@@ -37,7 +37,11 @@ cp .env.example .env
 # Edit .env with your values
 ```
 
-For production deployment, set these as Wrangler secrets:
+The development server will automatically load these environment variables from the `.env` file.
+
+For production deployment, you can either:
+- Use the same `.env` file approach (recommended for simplicity)
+- Set these as Wrangler secrets for additional security:
 
 ```bash
 wrangler secret put CLOUDFLARE_ACCOUNT_ID
@@ -81,6 +85,9 @@ kubectl apply -f k8s/d1-example-db.yaml --validate=false
 kubectl apply -f k8s/q-example.yaml --validate=false
 kubectl apply -f k8s/worker-example.yaml --validate=false
 
+# Or try the inline worker example
+kubectl apply -f examples/worker-example-inline.yaml --validate=false
+
 # Check resource status
 kubectl get d1s
 kubectl get queues
@@ -119,11 +126,15 @@ You can manually trigger the reconciliation process by hitting the scheduled han
 curl http://127.0.0.1:8787/cdn-cgi/handler/scheduled
 ```
 
-The example manifests in `k8s/` demonstrate:
+The example manifests demonstrate:
 
+**CRDs (in `k8s/`):**
 - `d1s.cf.guber.proc.io.yaml`: CRD for Cloudflare D1 databases
 - `qs.cf.guber.proc.io.yaml`: CRD for Cloudflare Queues
 - `workers.cf.guber.proc.io.yaml`: CRD for Cloudflare Workers
-- `d1-example-db.yaml`: Example D1 database resource
-- `q-example.yaml`: Example Queue resource
-- `worker-example.yaml`: Example Worker resource
+
+**Resource Examples:**
+- `k8s/d1-example-db.yaml`: Example D1 database resource
+- `k8s/q-example.yaml`: Example Queue resource
+- `k8s/worker-example.yaml`: Example Worker resource
+- `examples/worker-example-inline.yaml`: Example Worker with inline script code
