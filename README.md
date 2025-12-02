@@ -76,17 +76,17 @@ Guber includes built-in support for provisioning Cloudflare resources:
 
 ```bash
 # Apply Cloudflare resource CRDs
-kubectl apply -f k8s/d1s.cf.guber.proc.io.yaml --validate=false
-kubectl apply -f k8s/qs.cf.guber.proc.io.yaml --validate=false
-kubectl apply -f k8s/workers.cf.guber.proc.io.yaml --validate=false
+kubectl apply -f k8s/d1s.cf.guber.proc.io.yaml
+kubectl apply -f k8s/qs.cf.guber.proc.io.yaml
+kubectl apply -f k8s/workers.cf.guber.proc.io.yaml
 
 # Create Cloudflare resources
-kubectl apply -f k8s/d1-example-db.yaml --validate=false
-kubectl apply -f k8s/q-example.yaml --validate=false
-kubectl apply -f k8s/worker-example.yaml --validate=false
+kubectl apply -f k8s/d1-example-db.yaml
+kubectl apply -f k8s/q-example.yaml
+kubectl apply -f k8s/worker-example.yaml
 
 # Or try the inline worker example
-kubectl apply -f examples/worker-example-inline.yaml --validate=false
+kubectl apply -f examples/worker-example-inline.yaml
 
 # Check resource status
 kubectl get d1s
