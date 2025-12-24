@@ -6,13 +6,15 @@ CONSTANTS
   CRDNames,
   ResourceNames,
   Schemas,
-  Specs
+  Specs,
+  MaxVersion
 
 ASSUME
-  CRDNames # {} /\
-  ResourceNames # {} /\
-  Schemas # {} /\
-  Specs # {}
+  /\ CRDNames # {}
+  /\ ResourceNames # {}
+  /\ Schemas # {}
+  /\ Specs # {}
+  /\ MaxVersion \in Nat
 
 VARIABLES
   crds,
@@ -41,11 +43,11 @@ Initial state
 *)
 Init ==
   /\ crds = {}
-  /\ schemaOf = [ c \in {} |-> CHOOSE s : TRUE ]
+  /\ schemaOf = [c \in {} |-> <<>>]
   /\ resources = {}
-  /\ resourceCRD = [ r \in {} |-> CHOOSE c : TRUE ]
-  /\ resourceSpec = [ r \in {} |-> CHOOSE s : TRUE ]
-  /\ resourceVersion = [ r \in {} |-> 0 ]
+  /\ resourceCRD = [r \in {} |-> <<>>]
+  /\ resourceSpec = [r \in {} |-> <<>>]
+  /\ resourceVersion = [r \in {} |-> 0]
 
 (*
 Create a CRD
@@ -62,19 +64,13 @@ Delete a CRD and cascade delete resources
 *)
 DeleteCRD ==
   \E c \in crds :
-    LET remaining ==
-          { r \in resources : resourceCRD[r] # c }
-    IN
+    LET remaining == { r \in resources : resourceCRD[r] # c } IN
     /\ crds' = crds \ { c }
-    /\ schemaOf' =
-        [ d \in (DOMAIN schemaOf) \ { c } |-> schemaOf[d] ]
+    /\ schemaOf' = [ d \in (DOMAIN schemaOf) \ { c } |-> schemaOf[d] ]
     /\ resources' = remaining
-    /\ resourceCRD' =
-        [ r \in remaining |-> resourceCRD[r] ]
-    /\ resourceSpec' =
-        [ r \in remaining |-> resourceSpec[r] ]
-    /\ resourceVersion' =
-        [ r \in remaining |-> resourceVersion[r] ]
+    /\ resourceCRD' = [ r \in remaining |-> resourceCRD[r] ]
+    /\ resourceSpec' = [ r \in remaining |-> resourceSpec[r] ]
+    /\ resourceVersion' = [ r \in remaining |-> resourceVersion[r] ]
 
 (*
 Create a resource, version starts at 1
@@ -90,15 +86,15 @@ CreateResource ==
     /\ UNCHANGED << crds, schemaOf >>
 
 (*
-Update a resource with optimistic concurrency
+Update a resource with optimistic concurrency and a bound on versions to limit state space
 *)
 UpdateResource ==
   \E r \in resources, spec \in Specs :
     LET expected == resourceVersion[r] IN
+    /\ expected < MaxVersion
     /\ SchemaValid(spec, schemaOf[resourceCRD[r]])
     /\ resourceSpec' = [ resourceSpec EXCEPT ![r] = spec ]
-    /\ resourceVersion' =
-        [ resourceVersion EXCEPT ![r] = expected + 1 ]
+    /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = expected + 1 ]
     /\ UNCHANGED << crds, schemaOf, resources, resourceCRD >>
 
 (*
@@ -130,6 +126,6 @@ SchemaCorrectness ==
   DOMAIN schemaOf = crds
 
 VersionWellFormed ==
-  \forall r \in resources : resourceVersion[r] > 0
+  \forall r \in resources : resourceVersion[r] >= 0
 
 =============================================================================
