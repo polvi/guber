@@ -105,13 +105,19 @@ UpdateResource ==
     /\ UNCHANGED << crds, schemaOf, resources, resourceCRD >>
 
 (*
-Reconcile
+Reconcile a specific resource
 *)
-Reconcile ==
-  \E r \in resources :
+ReconcileResource(r) ==
+    /\ r \in resources
     /\ resourceStatus[r] = "Pending"
     /\ resourceStatus' = [ resourceStatus EXCEPT ![r] = "Ready" ]
     /\ UNCHANGED << crds, schemaOf, resources, resourceCRD, resourceSpec, resourceVersion >>
+
+(*
+Reconcile action (any resource)
+*)
+Reconcile ==
+  \E r \in ResourceNames : ReconcileResource(r)
 
 (*
 Delete a resource
@@ -133,7 +139,15 @@ Next ==
   \/ Reconcile
   \/ DeleteResource
 
-Spec == Init /\ [][Next]_vars /\ WF_vars(Reconcile)
+(* 
+Spec with Weak Fairness per resource. 
+This ensures that if a specific resource r is Pending, the ReconcileResource(r) 
+step will eventually be taken.
+*)
+Spec == 
+  /\ Init 
+  /\ [][Next]_vars 
+  /\ \forall r \in ResourceNames : WF_vars(ReconcileResource(r))
 
 (* Invariants *)
 
