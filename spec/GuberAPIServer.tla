@@ -7,7 +7,8 @@ CONSTANTS
   ResourceNames,
   Schemas,
   Specs,
-  MaxVersion
+  MaxVersion,
+  SymmetrySet
 
 ASSUME
   /\ CRDNames # {}
