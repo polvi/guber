@@ -1,6 +1,6 @@
 --------------------------- MODULE GuberAPIServer ---------------------------
 
-EXTENDS Naturals, FiniteSets
+EXTENDS Naturals, FiniteSets, TLC
 
 CONSTANTS
   CRDNames,
@@ -117,6 +117,9 @@ Next ==
   \/ DeleteResource
 
 Spec == Init /\ [][Next]_vars
+
+(* Symmetry definition for TLC *)
+Symmetry == Permutations(SymmetrySet)
 
 (* Invariants *)
 
