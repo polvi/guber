@@ -23,7 +23,8 @@ VARIABLES
   resources,
   resourceCRD,
   resourceSpec,
-  resourceVersion
+  resourceVersion,
+  resourceStatus  \* Added to track reconciliation state
 
 vars ==
   << crds,
@@ -31,7 +32,8 @@ vars ==
      resources,
      resourceCRD,
      resourceSpec,
-     resourceVersion >>
+     resourceVersion,
+     resourceStatus >>
 
 (*
 Abstract schema validation
@@ -49,6 +51,7 @@ Init ==
   /\ resourceCRD = [r \in {} |-> <<>>]
   /\ resourceSpec = [r \in {} |-> <<>>]
   /\ resourceVersion = [r \in {} |-> 0]
+  /\ resourceStatus = [r \in {} |-> ""]
 
 (*
 Create a CRD
@@ -58,7 +61,7 @@ CreateCRD ==
     /\ c \notin crds
     /\ crds' = crds \cup { c }
     /\ schemaOf' = [ d \in DOMAIN schemaOf \cup {c} |-> IF d = c THEN s ELSE schemaOf[d] ]
-    /\ UNCHANGED << resources, resourceCRD, resourceSpec, resourceVersion >>
+    /\ UNCHANGED << resources, resourceCRD, resourceSpec, resourceVersion, resourceStatus >>
 
 (*
 Delete a CRD and cascade delete resources
@@ -72,9 +75,11 @@ DeleteCRD ==
     /\ resourceCRD' = [ r \in remaining |-> resourceCRD[r] ]
     /\ resourceSpec' = [ r \in remaining |-> resourceSpec[r] ]
     /\ resourceVersion' = [ r \in remaining |-> resourceVersion[r] ]
+    /\ resourceStatus' = [ r \in remaining |-> resourceStatus[r] ]
 
 (*
-Create a resource, version starts at 1
+Create a resource, version starts at 1. 
+Status starts as "Pending" to represent intent before reconciliation.
 *)
 CreateResource ==
   \E r \in ResourceNames, c \in crds, spec \in Specs :
@@ -84,10 +89,12 @@ CreateResource ==
     /\ resourceCRD' = [ s \in DOMAIN resourceCRD \cup {r} |-> IF s = r THEN c ELSE resourceCRD[s] ]
     /\ resourceSpec' = [ s \in DOMAIN resourceSpec \cup {r} |-> IF s = r THEN spec ELSE resourceSpec[s] ]
     /\ resourceVersion' = [ s \in DOMAIN resourceVersion \cup {r} |-> IF s = r THEN 1 ELSE resourceVersion[s] ]
+    /\ resourceStatus' = [ s \in DOMAIN resourceStatus \cup {r} |-> IF s = r THEN "Pending" ELSE resourceStatus[s] ]
     /\ UNCHANGED << crds, schemaOf >>
 
 (*
-Update a resource with optimistic concurrency and a bound on versions to limit state space
+Update a resource with optimistic concurrency.
+Resets status to "Pending" because the controller needs to re-apply changes.
 *)
 UpdateResource ==
   \E r \in resources, spec \in Specs :
@@ -96,7 +103,18 @@ UpdateResource ==
     /\ SchemaValid(spec, schemaOf[resourceCRD[r]])
     /\ resourceSpec' = [ resourceSpec EXCEPT ![r] = spec ]
     /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = expected + 1 ]
+    /\ resourceStatus' = [ resourceStatus EXCEPT ![r] = "Pending" ]
     /\ UNCHANGED << crds, schemaOf, resources, resourceCRD >>
+
+(*
+Reconcile: The controller observes the "Pending" state and provisions infrastructure.
+This models the "bun db:init" or "scheduled handler" logic from the README.
+*)
+Reconcile ==
+  \E r \in resources :
+    /\ resourceStatus[r] = "Pending"
+    /\ resourceStatus' = [ resourceStatus EXCEPT ![r] = "Ready" ]
+    /\ UNCHANGED << crds, schemaOf, resources, resourceCRD, resourceSpec, resourceVersion >>
 
 (*
 Delete a resource
@@ -107,6 +125,7 @@ DeleteResource ==
     /\ resourceCRD' = [ x \in (DOMAIN resourceCRD) \ { r } |-> resourceCRD[x] ]
     /\ resourceSpec' = [ x \in (DOMAIN resourceSpec) \ { r } |-> resourceSpec[x] ]
     /\ resourceVersion' = [ x \in (DOMAIN resourceVersion) \ { r } |-> resourceVersion[x] ]
+    /\ resourceStatus' = [ x \in (DOMAIN resourceStatus) \ { r } |-> resourceStatus[x] ]
     /\ UNCHANGED << crds, schemaOf >>
 
 Next ==
@@ -114,9 +133,10 @@ Next ==
   \/ DeleteCRD
   \/ CreateResource
   \/ UpdateResource
+  \/ Reconcile
   \/ DeleteResource
 
-Spec == Init /\ [][Next]_vars
+Spec == Init /\ [][Next]_vars /\ WF_vars(Reconcile)
 
 (* Symmetry definition for TLC *)
 Symmetry == Permutations(SymmetrySet)
@@ -131,5 +151,9 @@ SchemaCorrectness ==
 
 VersionWellFormed ==
   \forall r \in resources : resourceVersion[r] >= 0
+
+(* Liveness: Resources should eventually be reconciled if updates stop *)
+EventuallyConsistent ==
+  \forall r \in resources : <>(resourceStatus[r] = "Ready")
 
 =============================================================================
