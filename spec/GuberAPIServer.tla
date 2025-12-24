@@ -54,7 +54,7 @@ CreateCRD ==
   \E c \in CRDNames, s \in Schemas :
     /\ c \notin crds
     /\ crds' = crds \cup { c }
-    /\ schemaOf' = [ schemaOf EXCEPT ![c] = s ]
+    /\ schemaOf' = [ d \in DOMAIN schemaOf \cup {c} |-> IF d = c THEN s ELSE schemaOf[d] ]
     /\ UNCHANGED << resources, resourceCRD, resourceSpec, resourceVersion >>
 
 (*
@@ -84,31 +84,52 @@ CreateResource ==
     /\ r \notin resources
     /\ SchemaValid(spec, schemaOf[c])
     /\ resources' = resources \cup { r }
-    /\ resourceCRD' = [ resourceCRD EXCEPT ![r] = c ]
-    /\ resourceSpec' = [ resourceSpec EXCEPT ![r] = spec ]
-    /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = 1 ]
+    /\ resourceCRD' = [ s \in DOMAIN resourceCRD \cup {r} |-> IF s = r THEN c ELSE resourceCRD[s] ]
+    /\ resourceSpec' = [ s \in DOMAIN resourceSpec \cup {r} |-> IF s = r THEN spec ELSE resourceSpec[s] ]
+    /\ resourceVersion' = [ s \in DOMAIN resourceVersion \cup {r} |-> IF s = r THEN 1 ELSE resourceVersion[s] ]
     /\ UNCHANGED << crds, schemaOf >>
 
 (*
 Update a resource with optimistic concurrency
 *)
 UpdateResource ==
-  \E r \in resources, spec \in Specs, expected \in Nat :
-    /\ expected = resourceVersion[r]
+  \E r \in resources, spec \in Specs :
+    LET expected == resourceVersion[r] IN
     /\ SchemaValid(spec, schemaOf[resourceCRD[r]])
     /\ resourceSpec' = [ resourceSpec EXCEPT ![r] = spec ]
     /\ resourceVersion' =
-        [ resourceVersion EXCEPT ![r] = resourceVersion[r] + 1 ]
+        [ resourceVersion EXCEPT ![r] = expected + 1 ]
     /\ UNCHANGED << crds, schemaOf, resources, resourceCRD >>
 
 (*
-Delete a resource with optimistic concurrency
+Delete a resource
 *)
 DeleteResource ==
-  \E r \in resources, expected \in Nat :
-    /\ expected = resourceVersion[r]
+  \E r \in resources :
     /\ resources' = resources \ { r }
-    /\ resourceCRD' =
-        [ x \in (DOMAIN resourceCRD) \ { r } |-> resourceCRD[x] ]
-    /\ resourceSpec' =
-        [ x \in (DOMAIN resourc]()
+    /\ resourceCRD' = [ x \in (DOMAIN resourceCRD) \ { r } |-> resourceCRD[x] ]
+    /\ resourceSpec' = [ x \in (DOMAIN resourceSpec) \ { r } |-> resourceSpec[x] ]
+    /\ resourceVersion' = [ x \in (DOMAIN resourceVersion) \ { r } |-> resourceVersion[x] ]
+    /\ UNCHANGED << crds, schemaOf >>
+
+Next ==
+  \/ CreateCRD
+  \/ DeleteCRD
+  \/ CreateResource
+  \/ UpdateResource
+  \/ DeleteResource
+
+Spec == Init /\ [][Next]_vars
+
+(* Invariants *)
+
+ValidResourceCRD ==
+  \forall r \in resources : resourceCRD[r] \in crds
+
+SchemaCorrectness ==
+  DOMAIN schemaOf = crds
+
+VersionWellFormed ==
+  \forall r \in resources : resourceVersion[r] > 0
+
+=============================================================================
