@@ -154,6 +154,7 @@ VersionWellFormed ==
 
 (* Liveness: Resources should eventually be reconciled if updates stop *)
 EventuallyConsistent ==
-  \forall r \in resources : <>(resourceStatus[r] = "Ready")
+  \forall r \in ResourceNames : 
+    []((r \in resources /\ resourceStatus[r] = "Pending") => <>(resourceStatus[r] = "Ready" \/ r \notin resources))
 
 =============================================================================
