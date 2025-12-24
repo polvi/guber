@@ -24,7 +24,7 @@ VARIABLES
   resourceCRD,
   resourceSpec,
   resourceVersion,
-  resourceStatus  \* Added to track reconciliation state
+  resourceStatus
 
 vars ==
   << crds,
@@ -46,12 +46,12 @@ Initial state
 *)
 Init ==
   /\ crds = {}
-  /\ schemaOf = [c \in {} |-> <<>>]
+  /\ schemaOf = [c \in CRDNames |-> "None"]
   /\ resources = {}
-  /\ resourceCRD = [r \in {} |-> <<>>]
-  /\ resourceSpec = [r \in {} |-> <<>>]
-  /\ resourceVersion = [r \in {} |-> 0]
-  /\ resourceStatus = [r \in {} |-> ""]
+  /\ resourceCRD = [r \in ResourceNames |-> "None"]
+  /\ resourceSpec = [r \in ResourceNames |-> "None"]
+  /\ resourceVersion = [r \in ResourceNames |-> 0]
+  /\ resourceStatus = [r \in ResourceNames |-> "None"]
 
 (*
 Create a CRD
@@ -60,7 +60,7 @@ CreateCRD ==
   \E c \in CRDNames, s \in Schemas :
     /\ c \notin crds
     /\ crds' = crds \cup { c }
-    /\ schemaOf' = [ d \in DOMAIN schemaOf \cup {c} |-> IF d = c THEN s ELSE schemaOf[d] ]
+    /\ schemaOf' = [ schemaOf EXCEPT ![c] = s ]
     /\ UNCHANGED << resources, resourceCRD, resourceSpec, resourceVersion, resourceStatus >>
 
 (*
@@ -70,31 +70,29 @@ DeleteCRD ==
   \E c \in crds :
     LET remaining == { r \in resources : resourceCRD[r] # c } IN
     /\ crds' = crds \ { c }
-    /\ schemaOf' = [ d \in (DOMAIN schemaOf) \ { c } |-> schemaOf[d] ]
+    /\ schemaOf' = [ schemaOf EXCEPT ![c] = "None" ]
     /\ resources' = remaining
-    /\ resourceCRD' = [ r \in remaining |-> resourceCRD[r] ]
-    /\ resourceSpec' = [ r \in remaining |-> resourceSpec[r] ]
-    /\ resourceVersion' = [ r \in remaining |-> resourceVersion[r] ]
-    /\ resourceStatus' = [ r \in remaining |-> resourceStatus[r] ]
+    /\ resourceCRD' = [ r \in ResourceNames |-> IF r \in remaining THEN resourceCRD[r] ELSE "None" ]
+    /\ resourceSpec' = [ r \in ResourceNames |-> IF r \in remaining THEN resourceSpec[r] ELSE "None" ]
+    /\ resourceVersion' = [ r \in ResourceNames |-> IF r \in remaining THEN resourceVersion[r] ELSE 0 ]
+    /\ resourceStatus' = [ r \in ResourceNames |-> IF r \in remaining THEN resourceStatus[r] ELSE "None" ]
 
 (*
-Create a resource, version starts at 1. 
-Status starts as "Pending" to represent intent before reconciliation.
+Create a resource
 *)
 CreateResource ==
   \E r \in ResourceNames, c \in crds, spec \in Specs :
     /\ r \notin resources
     /\ SchemaValid(spec, schemaOf[c])
     /\ resources' = resources \cup { r }
-    /\ resourceCRD' = [ s \in DOMAIN resourceCRD \cup {r} |-> IF s = r THEN c ELSE resourceCRD[s] ]
-    /\ resourceSpec' = [ s \in DOMAIN resourceSpec \cup {r} |-> IF s = r THEN spec ELSE resourceSpec[s] ]
-    /\ resourceVersion' = [ s \in DOMAIN resourceVersion \cup {r} |-> IF s = r THEN 1 ELSE resourceVersion[s] ]
-    /\ resourceStatus' = [ s \in DOMAIN resourceStatus \cup {r} |-> IF s = r THEN "Pending" ELSE resourceStatus[s] ]
+    /\ resourceCRD' = [ resourceCRD EXCEPT ![r] = c ]
+    /\ resourceSpec' = [ resourceSpec EXCEPT ![r] = spec ]
+    /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = 1 ]
+    /\ resourceStatus' = [ resourceStatus EXCEPT ![r] = "Pending" ]
     /\ UNCHANGED << crds, schemaOf >>
 
 (*
-Update a resource with optimistic concurrency.
-Resets status to "Pending" because the controller needs to re-apply changes.
+Update a resource
 *)
 UpdateResource ==
   \E r \in resources, spec \in Specs :
@@ -107,8 +105,7 @@ UpdateResource ==
     /\ UNCHANGED << crds, schemaOf, resources, resourceCRD >>
 
 (*
-Reconcile: The controller observes the "Pending" state and provisions infrastructure.
-This models the "bun db:init" or "scheduled handler" logic from the README.
+Reconcile
 *)
 Reconcile ==
   \E r \in resources :
@@ -122,10 +119,10 @@ Delete a resource
 DeleteResource ==
   \E r \in resources :
     /\ resources' = resources \ { r }
-    /\ resourceCRD' = [ x \in (DOMAIN resourceCRD) \ { r } |-> resourceCRD[x] ]
-    /\ resourceSpec' = [ x \in (DOMAIN resourceSpec) \ { r } |-> resourceSpec[x] ]
-    /\ resourceVersion' = [ x \in (DOMAIN resourceVersion) \ { r } |-> resourceVersion[x] ]
-    /\ resourceStatus' = [ x \in (DOMAIN resourceStatus) \ { r } |-> resourceStatus[x] ]
+    /\ resourceCRD' = [ resourceCRD EXCEPT ![r] = "None" ]
+    /\ resourceSpec' = [ resourceSpec EXCEPT ![r] = "None" ]
+    /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = 0 ]
+    /\ resourceStatus' = [ resourceStatus EXCEPT ![r] = "None" ]
     /\ UNCHANGED << crds, schemaOf >>
 
 Next ==
@@ -138,21 +135,18 @@ Next ==
 
 Spec == Init /\ [][Next]_vars /\ WF_vars(Reconcile)
 
-(* Symmetry definition for TLC *)
-Symmetry == Permutations(SymmetrySet)
-
 (* Invariants *)
 
 ValidResourceCRD ==
   \forall r \in resources : resourceCRD[r] \in crds
 
 SchemaCorrectness ==
-  DOMAIN schemaOf = crds
+  \forall c \in crds : schemaOf[c] # "None"
 
 VersionWellFormed ==
-  \forall r \in resources : resourceVersion[r] >= 0
+  \forall r \in resources : resourceVersion[r] >= 1
 
-(* Liveness: Resources should eventually be reconciled if updates stop *)
+(* Liveness *)
 EventuallyConsistent ==
   \forall r \in ResourceNames : 
     []((r \in resources /\ resourceStatus[r] = "Pending") => <>(resourceStatus[r] = "Ready" \/ r \notin resources))
