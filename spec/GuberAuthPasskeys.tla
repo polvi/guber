@@ -34,12 +34,19 @@ AuthInit ==
 
 (* 
   Step 1: Registration
-  This is simply the CreateResource action from GuberAPIServer.
-  We assume the 'spec' provided is the Public Key.
+  We model this by ensuring the PasskeyCRD exists and then 
+  performing a standard CreateResource action.
 *)
 RegisterPasskey(r, key) ==
-    /\ CreateResource!(r, "PasskeyCRD", key)
-    /\ UNCHANGED << authSessions, authenticated >>
+    /\ "PasskeyCRD" \in crds
+    /\ r \notin resources
+    /\ SchemaValid(key, schemaOf["PasskeyCRD"])
+    /\ resources' = resources \cup { r }
+    /\ resourceCRD' = [ resourceCRD EXCEPT ![r] = "PasskeyCRD" ]
+    /\ resourceSpec' = [ resourceSpec EXCEPT ![r] = key ]
+    /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = 1 ]
+    /\ resourceStatus' = [ resourceStatus EXCEPT ![r] = "Pending" ]
+    /\ UNCHANGED << crds, schemaOf, authSessions, authenticated >>
 
 (* 
   Step 2: Authentication - Challenge
