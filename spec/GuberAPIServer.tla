@@ -10,6 +10,7 @@ EXTENDS Naturals, FiniteSets, TLC
   - Schemas: Abstract representations of OpenAPI validation schemas.
   - Specs: Possible desired states (spec) for the resources.
   - MaxVersion: A limit to keep the state space finite for model checking.
+  - MaxNamespaces: A limit on the number of active namespaces.
 *)
 CONSTANTS
   CRDNames,
@@ -17,7 +18,8 @@ CONSTANTS
   Namespaces,
   Schemas,
   Specs,
-  MaxVersion
+  MaxVersion,
+  MaxNamespaces
 
 ASSUME
   /\ CRDNames # {}
@@ -26,6 +28,7 @@ ASSUME
   /\ Schemas # {}
   /\ Specs # {}
   /\ MaxVersion \in Nat
+  /\ MaxNamespaces \in Nat
 
 (*
   VARIABLES represent the state of the API Server and the cluster:
@@ -89,6 +92,7 @@ Init ==
 CreateNamespace ==
   \E ns \in Namespaces :
     /\ ns \notin namespaces
+    /\ Cardinality(namespaces) < MaxNamespaces
     /\ namespaces' = namespaces \cup { ns }
     /\ UNCHANGED << crds, schemaOf, scopeOf, resources, resourceCRD, resourceNamespace, 
                     resourceSpec, resourceVersion, resourceGeneration, 
