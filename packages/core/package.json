@@ -2,7 +2,10 @@
   "name": "@guber/core",
   "version": "0.0.1",
   "type": "module",
-  "main": "index.ts",
+  "main": "./index.ts",
+  "exports": {
+    ".": "./index.ts"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   }
