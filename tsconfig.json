@@ -13,8 +13,14 @@
     "strict": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["@cloudflare/workers-types"]
+    "types": ["@cloudflare/workers-types", "bun-types"],
+    "baseUrl": ".",
+    "paths": {
+      "@guber/core": ["./packages/core/index.ts"],
+      "@guber/api-client": ["./packages/api-client/index.ts"],
+      "@guber/controllers": ["./packages/controllers/index.ts"]
+    }
   },
-  "include": ["src/**/*"],
+  "include": ["packages/**/*"],
   "exclude": ["node_modules"]
 }

@@ -1,5 +1,5 @@
 import { expect, test, describe, beforeEach } from "bun:test";
-import { ApiServer, CustomResourceDefinition, Resource } from "@guber/core";
+import { ApiServer, CustomResourceDefinition, Resource } from "../core/index";
 import { Controller } from "./controller";
 
 describe("Guber System Integration (TLA+ Full Lifecycle)", () => {
