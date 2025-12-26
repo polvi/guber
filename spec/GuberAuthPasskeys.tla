@@ -8,8 +8,7 @@ EXTENDS Naturals, FiniteSets, TLC, GuberAPIServer
 
 CONSTANTS
     Users,          (* Set of human user identities *)
-    Challenges,     (* Set of possible random challenges *)
-    Signatures      (* Set of valid cryptographic signatures *)
+    Challenges      (* Set of possible random challenges *)
 
 VARIABLES
     authSessions,   (* Maps Resource -> Challenge or "None" *)
@@ -20,10 +19,15 @@ VARIABLES
 authVars == << authSessions, usedChallenges, authenticated, resourceUser, vars >>
 
 (* 
+  Signatures are modeled as the set of all possible valid 
+  Key-Challenge pairs.
+*)
+Signatures == [key: Specs, challenge: Challenges]
+
+(* 
   Refined Cryptography: 
   A signature is valid only if it was generated for the specific 
   combination of the Public Key and the Challenge.
-  We model this as a function/record check.
 *)
 IsValidSignature(sig, key, challenge) ==
     /\ sig.key = key
@@ -92,7 +96,7 @@ APIServerStep ==
 NextAuth ==
     \/ \E r \in ResourceNames, u \in Users, k \in Specs : RegisterPasskey(r, u, k)
     \/ \E r \in ResourceNames : AuthChallenge(r)
-    \/ \E r \in ResourceNames, s \in Signatures : AuthVerify(r, s)
+    \/ \E sig \in Signatures, r \in ResourceNames : AuthVerify(r, sig)
     \/ /\ APIServerStep 
        /\ resourceUser' = [ r \in ResourceNames |-> IF r \in resources' THEN resourceUser[r] ELSE "None" ]
        /\ UNCHANGED << authSessions, usedChallenges, authenticated >>
