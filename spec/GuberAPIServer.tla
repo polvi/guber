@@ -97,7 +97,7 @@ DeleteCRD ==
     /\ resourceObservedGen' = [ r \in ResourceNames |-> IF r \in remaining THEN resourceObservedGen[r] ELSE 0 ]
     /\ resourceStatus' = [ r \in ResourceNames |-> IF r \in remaining THEN resourceStatus[r] ELSE "None" ]
     /\ resourceDeletionTimestamp' = [ r \in ResourceNames |-> IF r \in remaining THEN resourceDeletionTimestamp[r] ELSE FALSE ]
-    /\ resourceFinalizers' = [ r \in ResourceNames |-> IF r \in remaining THEN resourceFinalizers' ELSE {} ]
+    /\ resourceFinalizers' = [ r \in ResourceNames |-> IF r \in remaining THEN resourceFinalizers[r] ELSE {} ]
 
 (* Models creation of a resource with an initial finalizer. *)
 CreateResource ==
