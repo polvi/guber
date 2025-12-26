@@ -1,4 +1,4 @@
-import { Resource, CustomResourceDefinition } from "./index";
+import { Resource, CustomResourceDefinition, Storage } from "./index";
 
 export interface D1Database {
   prepare(query: string): D1PreparedStatement;
@@ -24,7 +24,7 @@ export interface D1Result<T = any> {
   error?: string;
 }
 
-export class D1Storage {
+export class D1Storage implements Storage {
   constructor(private db: D1Database) {}
 
   async bootstrap() {

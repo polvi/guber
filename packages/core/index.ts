@@ -1,5 +1,3 @@
-import { D1Storage } from "./d1-storage";
-
 export interface Metadata {
   name: string;
   namespace?: string;
@@ -50,6 +48,16 @@ export interface CustomResourceDefinition {
   };
 }
 
+export interface Storage {
+  saveResource(resource: Resource): Promise<void>;
+  getResource(kind: string, name: string, namespace?: string): Promise<Resource | undefined>;
+  deleteResource(kind: string, name: string, namespace?: string): Promise<void>;
+  listResources(kind: string, namespace?: string): Promise<Resource[]>;
+  saveCRD(crd: CustomResourceDefinition): Promise<void>;
+  getCRD(name: string): Promise<CustomResourceDefinition | undefined>;
+  listCRDs(): Promise<CustomResourceDefinition[]>;
+}
+
 export interface ResourceContext extends Resource {
   group: string;
   version: string;
@@ -66,7 +74,7 @@ export class ApiServer {
   private crds: Map<string, CustomResourceDefinition> = new Map();
   private namespaces: Set<string> = new Set(["default"]);
 
-  constructor(private storage?: D1Storage) {}
+  constructor(private storage?: Storage) {}
 
   private getResourceKey(kind: string, name: string, namespace?: string): string {
     return `${namespace ?? "default"}/${kind}/${name}`;
