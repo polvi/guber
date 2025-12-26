@@ -31,52 +31,55 @@ describe("Guber System Integration (TLA+ Full Lifecycle)", () => {
   });
 
   test("Full Lifecycle: Create -> Reconcile -> Update -> Reconcile -> Delete -> GC", async () => {
+    const name = "test-worker";
+    const kind = "Worker";
+
     // 1. CreateResource
     const initial: Resource = {
-      kind: "Worker",
+      kind,
       apiVersion: "cloudflare.guber.dev/v1",
-      metadata: { name: "test-worker", generation: 0, resourceVersion: "0" },
+      metadata: { name, generation: 0, resourceVersion: "0" },
       spec: { script: "console.log('v1')" },
     };
     api.create(initial);
     
-    let r = api.get("Worker", "test-worker")!;
+    let r = api.get(kind, name)!;
     expect(r.status?.observedGeneration).toBe(0);
 
     // 2. ReconcileResource
-    await controller.runIteration("Worker", "test-worker");
-    r = api.get("Worker", "test-worker")!;
+    await controller.runIteration(kind, name);
+    r = api.get(kind, name)!;
     expect(r.status?.observedGeneration).toBe(1);
     expect(r.status?.phase).toBe("Ready");
 
     // 3. UpdateResource (Spec change)
     const updated = { ...r, spec: { script: "console.log('v2')" } };
     api.update(updated);
-    r = api.get("Worker", "test-worker")!;
+    r = api.get(kind, name)!;
     expect(r.metadata.generation).toBe(2);
     expect(r.status?.observedGeneration).toBe(1); // Out of sync
 
     // 4. ReconcileResource (Again)
-    await controller.runIteration("Worker", "test-worker");
-    r = api.get("Worker", "test-worker")!;
+    await controller.runIteration(kind, name);
+    r = api.get(kind, name)!;
     expect(r.status?.observedGeneration).toBe(2);
 
     // 5. RequestDeleteResource
-    api.delete("Worker", "test-worker");
-    r = api.get("Worker", "test-worker")!;
+    api.delete(kind, name);
+    r = api.get(kind, name)!;
     expect(r.metadata.deletionTimestamp).toBeDefined();
     expect(r.metadata.finalizers).toContain("guber-controller");
 
     // 6. FinalizeResource
-    await controller.runIteration("Worker", "test-worker");
-    r = api.get("Worker", "test-worker")!;
+    await controller.runIteration(kind, name);
+    r = api.get(kind, name)!;
     expect(r.metadata.finalizers).not.toContain("guber-controller");
 
     // 7. ObserveGarbageCollection
-    const collected = api.collectGarbage("Worker", "test-worker");
-    expect(collected).toBe(true);
+    // In the new controller, runIteration also handles GC if finalizers are gone
+    await controller.runIteration(kind, name);
     
-    const finalLookup = api.get("Worker", "test-worker");
+    const finalLookup = api.get(kind, name);
     expect(finalLookup).toBeUndefined();
   });
 });
