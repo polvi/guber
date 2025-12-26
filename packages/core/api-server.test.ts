@@ -126,4 +126,18 @@ describe("ApiServer (TLA+ Resource Lifecycle)", () => {
     // Resource should be gone because its CRD was deleted
     expect(api.get("Worker", "my-worker")).toBeUndefined();
   });
+
+  test("DeleteNamespace performs cascading deletion of resources", () => {
+    api.createNamespace("prod");
+    const prodResource = {
+      ...baseResource,
+      metadata: { ...baseResource.metadata, name: "prod-worker", namespace: "prod" }
+    };
+    api.create(prodResource);
+    
+    expect(api.get("Worker", "prod-worker", "prod")).toBeDefined();
+    
+    api.deleteNamespace("prod");
+    expect(api.get("Worker", "prod-worker", "prod")).toBeUndefined();
+  });
 });

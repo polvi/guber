@@ -18,6 +18,15 @@ export interface Resource<Spec = any, Status = any> {
   };
 }
 
+export interface Namespace {
+  metadata: {
+    name: string;
+  };
+  status?: {
+    phase: string;
+  };
+}
+
 export interface CustomResourceDefinition {
   name: string;
   spec: {
@@ -53,6 +62,11 @@ export interface GuberConfig {
 export class ApiServer {
   private resources: Map<string, Resource> = new Map();
   private crds: Map<string, CustomResourceDefinition> = new Map();
+  private namespaces: Set<string> = new Set(["default"]);
+
+  private getResourceKey(kind: string, name: string, namespace?: string): string {
+    return `${namespace ?? "default"}/${kind}/${name}`;
+  }
 
   /**
    * Implements SchemaValid(spec, schema) from TLA+ spec.
@@ -72,6 +86,22 @@ export class ApiServer {
         }
       }
     }
+  }
+
+  createNamespace(name: string): void {
+    this.namespaces.add(name);
+  }
+
+  deleteNamespace(name: string): void {
+    if (name === "default") return;
+    
+    // Cascading deletion of resources in this namespace
+    for (const [key, resource] of this.resources.entries()) {
+      if (resource.metadata.namespace === name) {
+        this.resources.delete(key);
+      }
+    }
+    this.namespaces.delete(name);
   }
 
   /**
@@ -111,6 +141,11 @@ export class ApiServer {
    * Validates against registered CRDs (ValidResourceCRD invariant).
    */
   create<T extends Resource>(resource: T): T {
+    const ns = resource.metadata.namespace ?? "default";
+    if (!this.namespaces.has(ns)) {
+      throw new Error(`Namespace ${ns} does not exist`);
+    }
+
     // Validate CRD exists
     const crd = Array.from(this.crds.values()).find(
       crd => crd.spec.names.kind === resource.kind
@@ -123,7 +158,7 @@ export class ApiServer {
     // Implements SchemaValid check
     this.validateSchema(resource, crd);
 
-    const key = `${resource.kind}/${resource.metadata.name}`;
+    const key = this.getResourceKey(resource.kind, resource.metadata.name, resource.metadata.namespace);
     if (this.resources.has(key)) {
       throw new Error("Resource already exists");
     }
@@ -132,6 +167,7 @@ export class ApiServer {
       ...resource,
       metadata: {
         ...resource.metadata,
+        namespace: ns,
         resourceVersion: "1",
         generation: 1,
         finalizers: ["guber-controller"],
@@ -152,7 +188,7 @@ export class ApiServer {
    * Increments version and generation.
    */
   update<T extends Resource>(resource: T): T {
-    const key = `${resource.kind}/${resource.metadata.name}`;
+    const key = this.getResourceKey(resource.kind, resource.metadata.name, resource.metadata.namespace);
     const existing = this.resources.get(key);
 
     if (!existing) throw new Error("Not found");
@@ -193,7 +229,7 @@ export class ApiServer {
    * Increments resourceVersion but NOT generation.
    */
   patchStatus<T extends Resource>(resource: T): T {
-    const key = `${resource.kind}/${resource.metadata.name}`;
+    const key = this.getResourceKey(resource.kind, resource.metadata.name, resource.metadata.namespace);
     const existing = this.resources.get(key);
 
     if (!existing) throw new Error("Not found");
@@ -218,8 +254,8 @@ export class ApiServer {
    * Implements RequestDeleteResource from TLA+ spec.
    * Sets deletionTimestamp instead of immediate removal.
    */
-  delete(kind: string, name: string): void {
-    const key = `${kind}/${name}`;
+  delete(kind: string, name: string, namespace?: string): void {
+    const key = this.getResourceKey(kind, name, namespace);
     const existing = this.resources.get(key);
 
     if (!existing) return;
@@ -241,8 +277,8 @@ export class ApiServer {
    * Implements ObserveGarbageCollection from TLA+ spec.
    * Removes resource only if deletionTimestamp is set and finalizers are empty.
    */
-  collectGarbage(kind: string, name: string): boolean {
-    const key = `${kind}/${name}`;
+  collectGarbage(kind: string, name: string, namespace?: string): boolean {
+    const key = this.getResourceKey(kind, name, namespace);
     const resource = this.resources.get(key);
 
     if (resource?.metadata.deletionTimestamp && (!resource.metadata.finalizers || resource.metadata.finalizers.length === 0)) {
@@ -252,12 +288,16 @@ export class ApiServer {
     return false;
   }
 
-  get(kind: string, name: string): Resource | undefined {
-    const key = `${kind}/${name}`;
+  get(kind: string, name: string, namespace?: string): Resource | undefined {
+    const key = this.getResourceKey(kind, name, namespace);
     return this.resources.get(key);
   }
 
-  list(kind: string): Resource[] {
-    return Array.from(this.resources.values()).filter(r => r.kind === kind);
+  list(kind: string, namespace?: string): Resource[] {
+    return Array.from(this.resources.values()).filter(r => {
+      const kindMatch = r.kind === kind;
+      const nsMatch = namespace ? r.metadata.namespace === namespace : true;
+      return kindMatch && nsMatch;
+    });
   }
 }
