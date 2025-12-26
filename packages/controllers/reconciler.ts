@@ -30,4 +30,35 @@ export class Reconciler {
       },
     };
   }
+
+  /**
+   * Implements FinalizeResource(r) from TLA+ spec:
+   * /\ resourceDeletionTimestamp[r] = TRUE
+   * /\ "guber-controller" \in resourceFinalizers[r]
+   * /\ resourceFinalizers' = [ resourceFinalizers EXCEPT ![r] = resourceFinalizers[r] \ {"guber-controller"} ]
+   */
+  static shouldFinalize(resource: Resource): boolean {
+    const isDeleted = !!resource.metadata.deletionTimestamp;
+    const hasFinalizer = resource.metadata.finalizers?.includes("guber-controller") ?? false;
+
+    return isDeleted && hasFinalizer;
+  }
+
+  static finalize<T extends Resource>(resource: T): T {
+    if (!this.shouldFinalize(resource)) {
+      return resource;
+    }
+
+    const finalizers = (resource.metadata.finalizers ?? []).filter(
+      (f) => f !== "guber-controller"
+    );
+
+    return {
+      ...resource,
+      metadata: {
+        ...resource.metadata,
+        finalizers,
+      },
+    };
+  }
 }

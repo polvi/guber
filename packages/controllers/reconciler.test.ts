@@ -46,3 +46,44 @@ describe("Reconciler Logic (TLA+ ReconcileResource)", () => {
     expect(result.status?.phase).toBe("Ready");
   });
 });
+
+describe("Finalizer Logic (TLA+ FinalizeResource)", () => {
+  const deletingResource: Resource = {
+    kind: "TestResource",
+    apiVersion: "guber.dev/v1",
+    metadata: {
+      name: "test-1",
+      generation: 1,
+      resourceVersion: "105",
+      deletionTimestamp: "2023-01-01T00:00:00Z",
+      finalizers: ["guber-controller", "other-finalizer"],
+    },
+    spec: {},
+  };
+
+  test("shouldFinalize returns true when deletionTimestamp is set and finalizer exists", () => {
+    expect(Reconciler.shouldFinalize(deletingResource)).toBe(true);
+  });
+
+  test("shouldFinalize returns false when no deletionTimestamp", () => {
+    const activeResource = {
+      ...deletingResource,
+      metadata: { ...deletingResource.metadata, deletionTimestamp: undefined },
+    };
+    expect(Reconciler.shouldFinalize(activeResource)).toBe(false);
+  });
+
+  test("shouldFinalize returns false when finalizer already removed", () => {
+    const finalizedResource = {
+      ...deletingResource,
+      metadata: { ...deletingResource.metadata, finalizers: ["other-finalizer"] },
+    };
+    expect(Reconciler.shouldFinalize(finalizedResource)).toBe(false);
+  });
+
+  test("finalize removes the guber-controller finalizer", () => {
+    const result = Reconciler.finalize(deletingResource);
+    expect(result.metadata.finalizers).not.toContain("guber-controller");
+    expect(result.metadata.finalizers).toContain("other-finalizer");
+  });
+});
