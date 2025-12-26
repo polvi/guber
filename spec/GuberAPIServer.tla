@@ -97,7 +97,7 @@ DeleteCRD ==
     /\ resourceObservedGen' = [ r \in ResourceNames |-> IF r \in remaining THEN resourceObservedGen[r] ELSE 0 ]
     /\ resourceStatus' = [ r \in ResourceNames |-> IF r \in remaining THEN resourceStatus[r] ELSE "None" ]
     /\ resourceDeletionTimestamp' = [ r \in ResourceNames |-> IF r \in remaining THEN resourceDeletionTimestamp[r] ELSE FALSE ]
-    /\ resourceFinalizers' = [ r \in ResourceNames |-> IF r \in remaining THEN resourceFinalizers[r] ELSE {} ]
+    /\ resourceFinalizers' = [ r \in ResourceNames |-> IF r \in remaining THEN resourceFinalizers' ELSE {} ]
 
 (* Models creation of a resource with an initial finalizer. *)
 CreateResource ==
@@ -132,10 +132,12 @@ ReconcileResource(r) ==
     /\ r \in resources
     /\ resourceObservedGen[r] < resourceGeneration[r]
     /\ resourceDeletionTimestamp[r] = FALSE
-    /\ resourceVersion[r] < MaxVersion
+    (* Allow reconciliation even at MaxVersion to satisfy liveness *)
     /\ resourceStatus' = [ resourceStatus EXCEPT ![r] = "Ready" ]
     /\ resourceObservedGen' = [ resourceObservedGen EXCEPT ![r] = resourceGeneration[r] ]
-    /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = resourceVersion[r] + 1 ]
+    /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = IF resourceVersion[r] < MaxVersion 
+                                                          THEN resourceVersion[r] + 1 
+                                                          ELSE resourceVersion[r] ]
     /\ UNCHANGED << crds, schemaOf, resources, resourceCRD, resourceSpec, 
                     resourceGeneration, resourceDeletionTimestamp, resourceFinalizers >>
 
@@ -144,9 +146,10 @@ FinalizeResource(r) ==
     /\ r \in resources
     /\ resourceDeletionTimestamp[r] = TRUE
     /\ "guber-controller" \in resourceFinalizers[r]
-    /\ resourceVersion[r] < MaxVersion
     /\ resourceFinalizers' = [ resourceFinalizers EXCEPT ![r] = resourceFinalizers[r] \ {"guber-controller"} ]
-    /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = resourceVersion[r] + 1 ]
+    /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = IF resourceVersion[r] < MaxVersion 
+                                                          THEN resourceVersion[r] + 1 
+                                                          ELSE resourceVersion[r] ]
     /\ UNCHANGED << crds, schemaOf, resources, resourceCRD, resourceSpec, 
                     resourceGeneration, resourceObservedGen, resourceStatus, 
                     resourceDeletionTimestamp >>
@@ -155,9 +158,10 @@ FinalizeResource(r) ==
 RequestDeleteResource(r) ==
     /\ r \in resources
     /\ resourceDeletionTimestamp[r] = FALSE
-    /\ resourceVersion[r] < MaxVersion
     /\ resourceDeletionTimestamp' = [ resourceDeletionTimestamp EXCEPT ![r] = TRUE ]
-    /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = resourceVersion[r] + 1 ]
+    /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = IF resourceVersion[r] < MaxVersion 
+                                                          THEN resourceVersion[r] + 1 
+                                                          ELSE resourceVersion[r] ]
     /\ UNCHANGED << crds, schemaOf, resources, resourceCRD, resourceSpec, 
                     resourceGeneration, resourceObservedGen, resourceStatus, 
                     resourceFinalizers >>
