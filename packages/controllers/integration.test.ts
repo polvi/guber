@@ -72,7 +72,10 @@ describe("Guber System Integration (TLA+ Full Lifecycle)", () => {
     r = api.get("Worker", "test-worker")!;
     expect(r.metadata.finalizers).not.toContain("guber-controller");
 
-    // 7. ObserveGarbageCollection (Triggered by api.get)
+    // 7. ObserveGarbageCollection
+    const collected = api.collectGarbage("Worker", "test-worker");
+    expect(collected).toBe(true);
+    
     const finalLookup = api.get("Worker", "test-worker");
     expect(finalLookup).toBeUndefined();
   });

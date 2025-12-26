@@ -241,15 +241,19 @@ export class ApiServer {
    * Implements ObserveGarbageCollection from TLA+ spec.
    * Removes resource only if deletionTimestamp is set and finalizers are empty.
    */
-  get(kind: string, name: string): Resource | undefined {
+  collectGarbage(kind: string, name: string): boolean {
     const key = `${kind}/${name}`;
     const resource = this.resources.get(key);
 
     if (resource?.metadata.deletionTimestamp && (!resource.metadata.finalizers || resource.metadata.finalizers.length === 0)) {
       this.resources.delete(key);
-      return undefined;
+      return true;
     }
+    return false;
+  }
 
-    return resource;
+  get(kind: string, name: string): Resource | undefined {
+    const key = `${kind}/${name}`;
+    return this.resources.get(key);
   }
 }
