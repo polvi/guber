@@ -151,27 +151,32 @@ FinalizeResource(r) ==
                     resourceGeneration, resourceObservedGen, resourceStatus, 
                     resourceDeletionTimestamp >>
 
-(* Models 'kubectl delete'. *)
-DeleteResource ==
-  \E r \in resources :
+(* Models 'kubectl delete' initiation. *)
+RequestDeleteResource(r) ==
+    /\ r \in resources
+    /\ resourceDeletionTimestamp[r] = FALSE
     /\ resourceVersion[r] < MaxVersion
-    /\ IF resourceFinalizers[r] = {}
-       THEN /\ resources' = resources \ { r }
-            /\ resourceCRD' = [ resourceCRD EXCEPT ![r] = "None" ]
-            /\ resourceSpec' = [ resourceSpec EXCEPT ![r] = "None" ]
-            /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = 0 ]
-            /\ resourceGeneration' = [ resourceGeneration EXCEPT ![r] = 0 ]
-            /\ resourceObservedGen' = [ resourceObservedGen EXCEPT ![r] = 0 ]
-            /\ resourceStatus' = [ resourceStatus EXCEPT ![r] = "None" ]
-            /\ resourceDeletionTimestamp' = [ resourceDeletionTimestamp EXCEPT ![r] = FALSE ]
-            /\ resourceFinalizers' = [ resourceFinalizers EXCEPT ![r] = {} ]
-            /\ UNCHANGED << crds, schemaOf >>
-       ELSE /\ resourceDeletionTimestamp[r] = FALSE
-            /\ resourceDeletionTimestamp' = [ resourceDeletionTimestamp EXCEPT ![r] = TRUE ]
-            /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = resourceVersion[r] + 1 ]
-            /\ UNCHANGED << crds, schemaOf, resources, resourceCRD, resourceSpec, 
-                            resourceGeneration, resourceObservedGen, resourceStatus, 
-                            resourceFinalizers >>
+    /\ resourceDeletionTimestamp' = [ resourceDeletionTimestamp EXCEPT ![r] = TRUE ]
+    /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = resourceVersion[r] + 1 ]
+    /\ UNCHANGED << crds, schemaOf, resources, resourceCRD, resourceSpec, 
+                    resourceGeneration, resourceObservedGen, resourceStatus, 
+                    resourceFinalizers >>
+
+(* Models the API server removing the resource once finalizers are gone. *)
+ObserveGarbageCollection(r) ==
+    /\ r \in resources
+    /\ resourceDeletionTimestamp[r] = TRUE
+    /\ resourceFinalizers[r] = {}
+    /\ resources' = resources \ { r }
+    /\ resourceCRD' = [ resourceCRD EXCEPT ![r] = "None" ]
+    /\ resourceSpec' = [ resourceSpec EXCEPT ![r] = "None" ]
+    /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = 0 ]
+    /\ resourceGeneration' = [ resourceGeneration EXCEPT ![r] = 0 ]
+    /\ resourceObservedGen' = [ resourceObservedGen EXCEPT ![r] = 0 ]
+    /\ resourceStatus' = [ resourceStatus EXCEPT ![r] = "None" ]
+    /\ resourceDeletionTimestamp' = [ resourceDeletionTimestamp EXCEPT ![r] = FALSE ]
+    /\ resourceFinalizers' = [ resourceFinalizers EXCEPT ![r] = {} ]
+    /\ UNCHANGED << crds, schemaOf >>
 
 Next ==
   \/ CreateCRD
@@ -180,14 +185,15 @@ Next ==
   \/ UpdateResource
   \/ \E r \in ResourceNames : ReconcileResource(r)
   \/ \E r \in ResourceNames : FinalizeResource(r)
-  \/ DeleteResource
+  \/ \E r \in ResourceNames : RequestDeleteResource(r)
+  \/ \E r \in ResourceNames : ObserveGarbageCollection(r)
 
 Spec == 
   /\ Init 
   /\ [][Next]_vars 
   /\ \forall r \in ResourceNames : WF_vars(ReconcileResource(r))
   /\ \forall r \in ResourceNames : WF_vars(FinalizeResource(r))
-  /\ \forall r \in ResourceNames : WF_vars(DeleteResource)
+  /\ \forall r \in ResourceNames : WF_vars(ObserveGarbageCollection(r))
 
 (* --- Invariants --- *)
 
