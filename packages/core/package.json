@@ -2,7 +2,8 @@
   "name": "@guber/core",
   "version": "0.0.1",
   "type": "module",
-  "main": "./index.ts",
+  "main": "index.ts",
+  "module": "index.ts",
   "exports": {
     ".": "./index.ts"
   },
