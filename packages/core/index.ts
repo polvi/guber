@@ -256,4 +256,8 @@ export class ApiServer {
     const key = `${kind}/${name}`;
     return this.resources.get(key);
   }
+
+  list(kind: string): Resource[] {
+    return Array.from(this.resources.values()).filter(r => r.kind === kind);
+  }
 }

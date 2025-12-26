@@ -39,11 +39,10 @@ export class Controller {
    * In a real system, this would be triggered by a Watch event or a periodic resync.
    */
   async reconcileAll(kind: string): Promise<void> {
-    // In our mock ApiServer, we don't have a 'list' yet, but we can simulate 
-    // the behavior by knowing which resources we are tracking or 
-    // by extending the ApiServer to support listing.
-    // For now, we will assume the caller knows the names or we process 
-    // known resources.
+    const resources = this.apiServer.list(kind);
+    for (const resource of resources) {
+      await this.processResource(kind, resource.metadata.name);
+    }
   }
 
   /**
