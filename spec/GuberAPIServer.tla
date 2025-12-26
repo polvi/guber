@@ -32,8 +32,12 @@ ASSUME
   - resources: The set of existing Custom Resource instances.
   - resourceCRD: Which CRD type a specific resource belongs to.
   - resourceSpec: The 'spec' (desired state) of a resource.
-  - resourceVersion: The 'metadata.resourceVersion' for concurrency control.
+  - resourceVersion: The 'metadata.resourceVersion' for optimistic concurrency.
+  - resourceGeneration: Incremented on spec changes.
+  - resourceObservedGen: The generation last seen by the controller.
   - resourceStatus: The 'status' (observed state) of a resource.
+  - resourceDeletionTimestamp: Boolean flag indicating deletion is in progress.
+  - resourceFinalizers: Set of strings preventing hard deletion.
 *)
 VARIABLES
   crds,
@@ -42,27 +46,21 @@ VARIABLES
   resourceCRD,
   resourceSpec,
   resourceVersion,
-  resourceStatus
+  resourceGeneration,
+  resourceObservedGen,
+  resourceStatus,
+  resourceDeletionTimestamp,
+  resourceFinalizers
 
 vars ==
-  << crds,
-     schemaOf,
-     resources,
-     resourceCRD,
-     resourceSpec,
-     resourceVersion,
-     resourceStatus >>
+  << crds, schemaOf, resources, resourceCRD, resourceSpec, resourceVersion, 
+     resourceGeneration, resourceObservedGen, resourceStatus, 
+     resourceDeletionTimestamp, resourceFinalizers >>
 
-(*
-  Abstract schema validation. 
-  In a real K8s API server, this would be an OpenAPI v3 check.
-*)
+(* Abstract schema validation. *)
 SchemaValid(spec, schema) ==
   TRUE
 
-(*
-  Initial state: The cluster starts empty with no CRDs or resources.
-*)
 Init ==
   /\ crds = {}
   /\ schemaOf = [c \in CRDNames |-> "None"]
@@ -70,24 +68,23 @@ Init ==
   /\ resourceCRD = [r \in ResourceNames |-> "None"]
   /\ resourceSpec = [r \in ResourceNames |-> "None"]
   /\ resourceVersion = [r \in ResourceNames |-> 0]
+  /\ resourceGeneration = [r \in ResourceNames |-> 0]
+  /\ resourceObservedGen = [r \in ResourceNames |-> 0]
   /\ resourceStatus = [r \in ResourceNames |-> "None"]
+  /\ resourceDeletionTimestamp = [r \in ResourceNames |-> FALSE]
+  /\ resourceFinalizers = [r \in ResourceNames |-> {}]
 
-(*
-  CreateCRD: Models 'kubectl apply -f crd.yaml'.
-  Registers a new type in the API server.
-*)
+(* Models 'kubectl apply -f crd.yaml' *)
 CreateCRD ==
   \E c \in CRDNames, s \in Schemas :
     /\ c \notin crds
     /\ crds' = crds \cup { c }
     /\ schemaOf' = [ schemaOf EXCEPT ![c] = s ]
-    /\ UNCHANGED << resources, resourceCRD, resourceSpec, resourceVersion, resourceStatus >>
+    /\ UNCHANGED << resources, resourceCRD, resourceSpec, resourceVersion, 
+                    resourceGeneration, resourceObservedGen, resourceStatus, 
+                    resourceDeletionTimestamp, resourceFinalizers >>
 
-(*
-  DeleteCRD: Models the deletion of a CRD.
-  Kubernetes performs cascading deletion: when a CRD is removed, 
-  all its Custom Resources are also deleted.
-*)
+(* Models cascading deletion of resources when a CRD is removed. *)
 DeleteCRD ==
   \E c \in crds :
     LET remaining == { r \in resources : resourceCRD[r] # c } IN
@@ -97,12 +94,13 @@ DeleteCRD ==
     /\ resourceCRD' = [ r \in ResourceNames |-> IF r \in remaining THEN resourceCRD[r] ELSE "None" ]
     /\ resourceSpec' = [ r \in ResourceNames |-> IF r \in remaining THEN resourceSpec[r] ELSE "None" ]
     /\ resourceVersion' = [ r \in ResourceNames |-> IF r \in remaining THEN resourceVersion[r] ELSE 0 ]
+    /\ resourceGeneration' = [ r \in ResourceNames |-> IF r \in remaining THEN resourceGeneration[r] ELSE 0 ]
+    /\ resourceObservedGen' = [ r \in ResourceNames |-> IF r \in remaining THEN resourceObservedGen[r] ELSE 0 ]
     /\ resourceStatus' = [ r \in ResourceNames |-> IF r \in remaining THEN resourceStatus[r] ELSE "None" ]
+    /\ resourceDeletionTimestamp' = [ r \in ResourceNames |-> IF r \in remaining THEN resourceDeletionTimestamp[r] ELSE FALSE ]
+    /\ resourceFinalizers' = [ r \in ResourceNames |-> IF r \in remaining THEN resourceFinalizers[r] ELSE {} ]
 
-(*
-  CreateResource: Models 'kubectl apply -f resource.yaml' for a new object.
-  The API server validates the spec against the CRD schema and sets initial status to Pending.
-*)
+(* Models creation of a resource with an initial finalizer. *)
 CreateResource ==
   \E r \in ResourceNames, c \in crds, spec \in Specs :
     /\ r \notin resources
@@ -111,99 +109,100 @@ CreateResource ==
     /\ resourceCRD' = [ resourceCRD EXCEPT ![r] = c ]
     /\ resourceSpec' = [ resourceSpec EXCEPT ![r] = spec ]
     /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = 1 ]
-    /\ resourceStatus' = [ resourceStatus EXCEPT ![r] = "Pending" ]
+    /\ resourceGeneration' = [ resourceGeneration EXCEPT ![r] = 1 ]
+    /\ resourceObservedGen' = [ resourceObservedGen EXCEPT ![r] = 0 ]
+    /\ resourceStatus' = [ resourceStatus EXCEPT ![r] = "Initial" ]
+    /\ resourceDeletionTimestamp' = [ resourceDeletionTimestamp EXCEPT ![r] = FALSE ]
+    /\ resourceFinalizers' = [ resourceFinalizers EXCEPT ![r] = {"guber-controller"} ]
     /\ UNCHANGED << crds, schemaOf >>
 
-(*
-  UpdateResource: Models 'kubectl edit' or 'kubectl apply' on an existing object.
-  Increments resourceVersion and moves status back to Pending so the controller 
-  knows it needs to reconcile the new desired state.
-*)
+(* Models 'kubectl apply' with optimistic concurrency control. *)
 UpdateResource ==
   \E r \in resources, spec \in Specs :
-    LET expected == resourceVersion[r] IN
-    /\ expected < MaxVersion
+    /\ resourceDeletionTimestamp[r] = FALSE
+    /\ resourceVersion[r] < MaxVersion
     /\ SchemaValid(spec, schemaOf[resourceCRD[r]])
     /\ resourceSpec' = [ resourceSpec EXCEPT ![r] = spec ]
-    /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = expected + 1 ]
-    /\ resourceStatus' = [ resourceStatus EXCEPT ![r] = "Pending" ]
-    /\ UNCHANGED << crds, schemaOf, resources, resourceCRD >>
+    /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = resourceVersion[r] + 1 ]
+    /\ resourceGeneration' = [ resourceGeneration EXCEPT ![r] = resourceGeneration[r] + 1 ]
+    /\ UNCHANGED << crds, schemaOf, resources, resourceCRD, resourceObservedGen, 
+                    resourceStatus, resourceDeletionTimestamp, resourceFinalizers >>
 
-(*
-  ReconcileResource: Models the Controller's Reconcile() function.
-  If a resource is Pending (Desired != Observed), the controller acts 
-  to make it Ready.
-*)
+(* Models the Controller updating the status subresource. *)
 ReconcileResource(r) ==
     /\ r \in resources
-    /\ resourceStatus[r] = "Pending"
+    /\ resourceObservedGen[r] < resourceGeneration[r]
+    /\ resourceDeletionTimestamp[r] = FALSE
     /\ resourceStatus' = [ resourceStatus EXCEPT ![r] = "Ready" ]
-    /\ UNCHANGED << crds, schemaOf, resources, resourceCRD, resourceSpec, resourceVersion >>
+    /\ resourceObservedGen' = [ resourceObservedGen EXCEPT ![r] = resourceGeneration[r] ]
+    /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = resourceVersion[r] + 1 ]
+    /\ UNCHANGED << crds, schemaOf, resources, resourceCRD, resourceSpec, 
+                    resourceGeneration, resourceDeletionTimestamp, resourceFinalizers >>
 
-(*
-  Reconcile: The non-deterministic trigger of the reconciliation loop.
-*)
-Reconcile ==
-  \E r \in ResourceNames : ReconcileResource(r)
+(* Models the Controller cleaning up and removing finalizers. *)
+FinalizeResource(r) ==
+    /\ r \in resources
+    /\ resourceDeletionTimestamp[r] = TRUE
+    /\ "guber-controller" \in resourceFinalizers[r]
+    /\ resourceFinalizers' = [ resourceFinalizers EXCEPT ![r] = resourceFinalizers[r] \ {"guber-controller"} ]
+    /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = resourceVersion[r] + 1 ]
+    /\ UNCHANGED << crds, schemaOf, resources, resourceCRD, resourceSpec, 
+                    resourceGeneration, resourceObservedGen, resourceStatus, 
+                    resourceDeletionTimestamp >>
 
-(*
-  DeleteResource: Models 'kubectl delete'.
-  Removes the instance from the API server.
-*)
+(* Models 'kubectl delete'. If finalizers exist, it only sets the timestamp. *)
 DeleteResource ==
   \E r \in resources :
-    /\ resources' = resources \ { r }
-    /\ resourceCRD' = [ resourceCRD EXCEPT ![r] = "None" ]
-    /\ resourceSpec' = [ resourceSpec EXCEPT ![r] = "None" ]
-    /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = 0 ]
-    /\ resourceStatus' = [ resourceStatus EXCEPT ![r] = "None" ]
-    /\ UNCHANGED << crds, schemaOf >>
+    IF resourceFinalizers[r] = {}
+    THEN /\ resources' = resources \ { r }
+         /\ resourceCRD' = [ resourceCRD EXCEPT ![r] = "None" ]
+         /\ resourceSpec' = [ resourceSpec EXCEPT ![r] = "None" ]
+         /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = 0 ]
+         /\ resourceGeneration' = [ resourceGeneration EXCEPT ![r] = 0 ]
+         /\ resourceObservedGen' = [ resourceObservedGen EXCEPT ![r] = 0 ]
+         /\ resourceStatus' = [ resourceStatus EXCEPT ![r] = "None" ]
+         /\ resourceDeletionTimestamp' = [ resourceDeletionTimestamp EXCEPT ![r] = FALSE ]
+         /\ resourceFinalizers' = [ resourceFinalizers EXCEPT ![r] = {} ]
+         /\ UNCHANGED << crds, schemaOf >>
+    ELSE /\ resourceDeletionTimestamp' = [ resourceDeletionTimestamp EXCEPT ![r] = TRUE ]
+         /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = resourceVersion[r] + 1 ]
+         /\ UNCHANGED << crds, schemaOf, resources, resourceCRD, resourceSpec, 
+                         resourceGeneration, resourceObservedGen, resourceStatus, 
+                         resourceFinalizers >>
 
-(*
-  Next: The set of all possible atomic transitions in the system.
-*)
 Next ==
   \/ CreateCRD
   \/ DeleteCRD
   \/ CreateResource
   \/ UpdateResource
-  \/ Reconcile
+  \/ \E r \in ResourceNames : ReconcileResource(r)
+  \/ \E r \in ResourceNames : FinalizeResource(r)
   \/ DeleteResource
 
-(* 
-  Spec: The complete system specification.
-  Includes Weak Fairness (WF) on ReconcileResource. This models the 
-  guarantee that the controller is running and will eventually process 
-  any resource that needs reconciliation.
-*)
 Spec == 
   /\ Init 
   /\ [][Next]_vars 
   /\ \forall r \in ResourceNames : WF_vars(ReconcileResource(r))
+  /\ \forall r \in ResourceNames : WF_vars(FinalizeResource(r))
+  /\ \forall r \in ResourceNames : WF_vars(DeleteResource)
 
-(* --- Invariants (Safety Properties) --- *)
+(* --- Invariants --- *)
 
-(* Every existing resource must belong to a CRD that is currently registered. *)
-ValidResourceCRD ==
-  \forall r \in resources : resourceCRD[r] \in crds
+ValidResourceCRD == \forall r \in resources : resourceCRD[r] \in crds
+SchemaCorrectness == \forall c \in crds : schemaOf[c] # "None"
+VersionWellFormed == \forall r \in resources : resourceVersion[r] >= 1
 
-(* Every registered CRD must have an associated schema. *)
-SchemaCorrectness ==
-  \forall c \in crds : schemaOf[c] # "None"
+(* --- Liveness --- *)
 
-(* Every existing resource must have a version of at least 1. *)
-VersionWellFormed ==
-  \forall r \in resources : resourceVersion[r] >= 1
-
-(* --- Liveness Properties --- *)
-
-(* 
-  EventuallyConsistent: The core promise of the Kubernetes model.
-  If a resource is in a Pending state, it will eventually reach Ready, 
-  unless it is deleted from the system first.
-*)
+(* If a spec changes, the controller eventually observes that generation or the resource is deleted. *)
 EventuallyConsistent ==
   \forall r \in ResourceNames : 
-    []((r \in resources /\ resourceStatus[r] = "Pending") => <>(resourceStatus[r] = "Ready" \/ r \notin resources))
+    []((r \in resources /\ resourceObservedGen[r] < resourceGeneration[r]) 
+        => <>(resourceObservedGen[r] = resourceGeneration[r] \/ r \notin resources))
+
+(* If a resource is marked for deletion, it eventually leaves the system. *)
+EventuallyDeleted ==
+  \forall r \in ResourceNames :
+    [](resourceDeletionTimestamp[r] => <>(r \notin resources))
 
 =============================================================================
