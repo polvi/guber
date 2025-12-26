@@ -9,7 +9,6 @@ const app = new Hono<{ Bindings: Bindings }>();
 
 /**
  * Helper to initialize ApiServer with D1 data for the request.
- * In a production scenario, you might cache this or optimize queries.
  */
 async function getHydratedServer(db: any) {
   const storage = new D1Storage(db);
@@ -20,8 +19,6 @@ async function getHydratedServer(db: any) {
     api.createCRD(crd);
   }
 
-  // Note: For a real implementation, we'd only load resources relevant to the request
-  // or implement a more direct D1-backed ApiServer.
   return { api, storage };
 }
 
@@ -35,67 +32,121 @@ app.get("/api", (c) => {
   });
 });
 
-app.get("/apis", (c) => {
+app.get("/apis", async (c) => {
+  const { storage } = await getHydratedServer(c.env.DB);
+  const crds = await storage.listCRDs();
+  
+  // Extract unique groups from registered CRDs
+  const groups = new Set(crds.map(crd => crd.spec.group));
+  groups.add("apiextensions.k8s.io");
+
   return c.json({
     kind: "APIGroupList",
-    groups: [
-      {
-        name: "cloudflare.guber.dev",
-        versions: [{ groupVersion: "cloudflare.guber.dev/v1", version: "v1" }],
-        preferredVersion: { groupVersion: "cloudflare.guber.dev/v1", version: "v1" },
-      },
-    ],
+    groups: Array.from(groups).map(group => ({
+      name: group,
+      versions: [{ groupVersion: `${group}/v1`, version: "v1" }],
+      preferredVersion: { groupVersion: `${group}/v1`, version: "v1" },
+    })),
   });
 });
 
-app.get("/apis/cloudflare.guber.dev/v1", (c) => {
+// Discovery for CRDs themselves
+app.get("/apis/apiextensions.k8s.io/v1", (c) => {
   return c.json({
     kind: "APIResourceList",
-    groupVersion: "cloudflare.guber.dev/v1",
+    groupVersion: "apiextensions.k8s.io/v1",
     resources: [
       {
-        name: "workers",
-        singularName: "worker",
-        namespaced: true,
-        kind: "Worker",
-        verbs: ["get", "list", "create", "update", "patch", "delete"],
+        name: "customresourcedefinitions",
+        singularName: "customresourcedefinition",
+        namespaced: false,
+        kind: "CustomResourceDefinition",
+        verbs: ["get", "list", "create", "delete"],
       },
     ],
   });
 });
 
-// --- Resource Handlers ---
-
-// List Resources
-app.get("/apis/:group/:version/namespaces/:ns/:plural", async (c) => {
-  const { ns, plural } = c.req.param();
+// Dynamic Discovery for Custom Groups
+app.get("/apis/:group/:version", async (c) => {
+  const group = c.req.param("group");
   const { storage } = await getHydratedServer(c.env.DB);
+  const crds = await storage.listCRDs();
   
-  // Map plural to Kind (simplified)
-  const kind = plural === "workers" ? "Worker" : "";
-  const items = await storage.listResources(kind, ns);
+  const groupCrds = crds.filter(crd => crd.spec.group === group);
 
   return c.json({
-    kind: `${kind}List`,
-    apiVersion: `${c.req.param("group")}/${c.req.param("version")}`,
+    kind: "APIResourceList",
+    groupVersion: `${group}/${c.req.param("version")}`,
+    resources: groupCrds.map(crd => ({
+      name: crd.spec.names.plural,
+      singularName: crd.spec.names.kind.toLowerCase(),
+      namespaced: true,
+      kind: crd.spec.names.kind,
+      verbs: ["get", "list", "create", "update", "patch", "delete"],
+    })),
+  });
+});
+
+// --- CRD Management ---
+
+app.get("/apis/apiextensions.k8s.io/v1/customresourcedefinitions", async (c) => {
+  const { storage } = await getHydratedServer(c.env.DB);
+  const items = await storage.listCRDs();
+  return c.json({
+    kind: "CustomResourceDefinitionList",
+    apiVersion: "apiextensions.k8s.io/v1",
+    items,
+  });
+});
+
+app.post("/apis/apiextensions.k8s.io/v1/customresourcedefinitions", async (c) => {
+  const body = await c.req.json() as CustomResourceDefinition;
+  const { api, storage } = await getHydratedServer(c.env.DB);
+  
+  try {
+    api.createCRD(body);
+    await storage.saveCRD(body);
+    return c.json(body, 201);
+  } catch (e: any) {
+    return c.json({ message: e.message }, 400);
+  }
+});
+
+// --- Generic Resource Handlers ---
+
+app.get("/apis/:group/:version/namespaces/:ns/:plural", async (c) => {
+  const { ns, plural, group } = c.req.param();
+  const { storage } = await getHydratedServer(c.env.DB);
+  
+  const crds = await storage.listCRDs();
+  const crd = crds.find(r => r.spec.names.plural === plural && r.spec.group === group);
+  if (!crd) return c.json({ message: "Resource type not found" }, 404);
+
+  const items = await storage.listResources(crd.spec.names.kind, ns);
+
+  return c.json({
+    kind: `${crd.spec.names.kind}List`,
+    apiVersion: `${group}/${c.req.param("version")}`,
     metadata: { selfLink: c.req.path },
     items,
   });
 });
 
-// Get Single Resource
 app.get("/apis/:group/:version/namespaces/:ns/:plural/:name", async (c) => {
-  const { ns, plural, name } = c.req.param();
+  const { ns, plural, name, group } = c.req.param();
   const { storage } = await getHydratedServer(c.env.DB);
-  const kind = plural === "workers" ? "Worker" : "";
   
-  const resource = await storage.getResource(kind, name, ns);
+  const crds = await storage.listCRDs();
+  const crd = crds.find(r => r.spec.names.plural === plural && r.spec.group === group);
+  if (!crd) return c.json({ message: "Resource type not found" }, 404);
+  
+  const resource = await storage.getResource(crd.spec.names.kind, name, ns);
   if (!resource) return c.json({ message: "Not Found" }, 404);
   
   return c.json(resource);
 });
 
-// Create Resource
 app.post("/apis/:group/:version/namespaces/:ns/:plural", async (c) => {
   const { ns } = c.req.param();
   const body = await c.req.json();
@@ -111,16 +162,12 @@ app.post("/apis/:group/:version/namespaces/:ns/:plural", async (c) => {
   }
 });
 
-// Update Resource
 app.put("/apis/:group/:version/namespaces/:ns/:plural/:name", async (c) => {
   const { ns, name } = c.req.param();
   const body = await c.req.json();
   const { api, storage } = await getHydratedServer(c.env.DB);
 
   try {
-    const existing = await storage.getResource(body.kind, name, ns);
-    if (!existing) return c.json({ message: "Not Found" }, 404);
-
     const updated = api.update(body);
     await storage.saveResource(updated);
     return c.json(updated);
@@ -129,17 +176,16 @@ app.put("/apis/:group/:version/namespaces/:ns/:plural/:name", async (c) => {
   }
 });
 
-// Delete Resource
 app.delete("/apis/:group/:version/namespaces/:ns/:plural/:name", async (c) => {
-  const { ns, plural, name } = c.req.param();
+  const { ns, plural, name, group } = c.req.param();
   const { api, storage } = await getHydratedServer(c.env.DB);
-  const kind = plural === "workers" ? "Worker" : "";
+  
+  const crds = await storage.listCRDs();
+  const crd = crds.find(r => r.spec.names.plural === plural && r.spec.group === group);
+  if (!crd) return c.json({ message: "Resource type not found" }, 404);
 
-  const existing = await storage.getResource(kind, name, ns);
-  if (!existing) return c.json({ message: "Not Found" }, 404);
-
-  api.delete(kind, name, ns);
-  const updated = api.get(kind, name, ns);
+  api.delete(crd.spec.names.kind, name, ns);
+  const updated = api.get(crd.spec.names.kind, name, ns);
   if (updated) {
     await storage.saveResource(updated);
   }
