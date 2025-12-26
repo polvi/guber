@@ -301,3 +301,5 @@ export class ApiServer {
     });
   }
 }
+
+export * from "./d1-storage";
