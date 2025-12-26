@@ -109,6 +109,10 @@ describe("ApiServer (TLA+ Resource Lifecycle)", () => {
     };
     api.update(finalized); 
     
+    // Explicitly trigger garbage collection as per TLA+ ObserveGarbageCollection
+    const collected = api.collectGarbage("Worker", "my-worker");
+    expect(collected).toBe(true);
+
     const result = api.get("Worker", "my-worker");
     expect(result).toBeUndefined();
   });
