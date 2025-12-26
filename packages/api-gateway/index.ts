@@ -7,21 +7,6 @@ type Bindings = {
 
 const app = new Hono<{ Bindings: Bindings }>();
 
-/**
- * Helper to initialize ApiServer with D1 data for the request.
- */
-async function getHydratedServer(db: any) {
-  const storage = new D1Storage(db);
-  const api = new ApiServer();
-  
-  const crds = await storage.listCRDs();
-  for (const crd of crds) {
-    api.createCRD(crd);
-  }
-
-  return { api, storage };
-}
-
 // --- Kubernetes Discovery Endpoints ---
 
 app.get("/api", (c) => {
@@ -33,7 +18,7 @@ app.get("/api", (c) => {
 });
 
 app.get("/apis", async (c) => {
-  const { storage } = await getHydratedServer(c.env.DB);
+  const storage = new D1Storage(c.env.DB);
   const crds = await storage.listCRDs();
   
   // Extract unique groups from registered CRDs
@@ -70,7 +55,7 @@ app.get("/apis/apiextensions.k8s.io/v1", (c) => {
 // Dynamic Discovery for Custom Groups
 app.get("/apis/:group/:version", async (c) => {
   const group = c.req.param("group");
-  const { storage } = await getHydratedServer(c.env.DB);
+  const storage = new D1Storage(c.env.DB);
   const crds = await storage.listCRDs();
   
   const groupCrds = crds.filter(crd => crd.spec.group === group);
@@ -91,7 +76,7 @@ app.get("/apis/:group/:version", async (c) => {
 // --- CRD Management ---
 
 app.get("/apis/apiextensions.k8s.io/v1/customresourcedefinitions", async (c) => {
-  const { storage } = await getHydratedServer(c.env.DB);
+  const storage = new D1Storage(c.env.DB);
   const items = await storage.listCRDs();
   return c.json({
     kind: "CustomResourceDefinitionList",
@@ -102,7 +87,8 @@ app.get("/apis/apiextensions.k8s.io/v1/customresourcedefinitions", async (c) => 
 
 app.post("/apis/apiextensions.k8s.io/v1/customresourcedefinitions", async (c) => {
   const body = await c.req.json() as CustomResourceDefinition;
-  const { api, storage } = await getHydratedServer(c.env.DB);
+  const storage = new D1Storage(c.env.DB);
+  const api = new ApiServer(storage);
   
   try {
     api.createCRD(body);
@@ -117,7 +103,7 @@ app.post("/apis/apiextensions.k8s.io/v1/customresourcedefinitions", async (c) =>
 
 app.get("/apis/:group/:version/namespaces/:ns/:plural", async (c) => {
   const { ns, plural, group } = c.req.param();
-  const { storage } = await getHydratedServer(c.env.DB);
+  const storage = new D1Storage(c.env.DB);
   
   const crds = await storage.listCRDs();
   const crd = crds.find(r => r.spec.names.plural === plural && r.spec.group === group);
@@ -135,7 +121,7 @@ app.get("/apis/:group/:version/namespaces/:ns/:plural", async (c) => {
 
 app.get("/apis/:group/:version/namespaces/:ns/:plural/:name", async (c) => {
   const { ns, plural, name, group } = c.req.param();
-  const { storage } = await getHydratedServer(c.env.DB);
+  const storage = new D1Storage(c.env.DB);
   
   const crds = await storage.listCRDs();
   const crd = crds.find(r => r.spec.names.plural === plural && r.spec.group === group);
@@ -150,11 +136,12 @@ app.get("/apis/:group/:version/namespaces/:ns/:plural/:name", async (c) => {
 app.post("/apis/:group/:version/namespaces/:ns/:plural", async (c) => {
   const { ns } = c.req.param();
   const body = await c.req.json();
-  const { api, storage } = await getHydratedServer(c.env.DB);
+  const storage = new D1Storage(c.env.DB);
+  const api = new ApiServer(storage);
 
   try {
     const resource = { ...body, metadata: { ...body.metadata, namespace: ns } };
-    const created = api.create(resource);
+    const created = await api.create(resource);
     await storage.saveResource(created);
     return c.json(created, 201);
   } catch (e: any) {
@@ -165,10 +152,14 @@ app.post("/apis/:group/:version/namespaces/:ns/:plural", async (c) => {
 app.put("/apis/:group/:version/namespaces/:ns/:plural/:name", async (c) => {
   const { ns, name } = c.req.param();
   const body = await c.req.json();
-  const { api, storage } = await getHydratedServer(c.env.DB);
+  const storage = new D1Storage(c.env.DB);
+  const api = new ApiServer(storage);
 
   try {
-    const updated = api.update(body);
+    const existing = await storage.getResource(body.kind, name, ns);
+    if (!existing) return c.json({ message: "Not Found" }, 404);
+
+    const updated = await api.update(body, existing);
     await storage.saveResource(updated);
     return c.json(updated);
   } catch (e: any) {
@@ -178,15 +169,21 @@ app.put("/apis/:group/:version/namespaces/:ns/:plural/:name", async (c) => {
 
 app.delete("/apis/:group/:version/namespaces/:ns/:plural/:name", async (c) => {
   const { ns, plural, name, group } = c.req.param();
-  const { api, storage } = await getHydratedServer(c.env.DB);
+  const storage = new D1Storage(c.env.DB);
+  const api = new ApiServer(storage);
   
   const crds = await storage.listCRDs();
   const crd = crds.find(r => r.spec.names.plural === plural && r.spec.group === group);
   if (!crd) return c.json({ message: "Resource type not found" }, 404);
 
-  api.delete(crd.spec.names.kind, name, ns);
-  const updated = api.get(crd.spec.names.kind, name, ns);
-  if (updated) {
+  const existing = await storage.getResource(crd.spec.names.kind, name, ns);
+  if (!existing) return c.json({ message: "Not Found" }, 404);
+
+  const updated = api.delete(crd.spec.names.kind, name, existing);
+  
+  if (api.collectGarbage(updated)) {
+    await storage.deleteResource(crd.spec.names.kind, name, ns);
+  } else {
     await storage.saveResource(updated);
   }
 

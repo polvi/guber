@@ -1,3 +1,5 @@
+import { D1Storage } from "./d1-storage";
+
 export interface Metadata {
   name: string;
   namespace?: string;
@@ -63,6 +65,8 @@ export class ApiServer {
   private resources: Map<string, Resource> = new Map();
   private crds: Map<string, CustomResourceDefinition> = new Map();
   private namespaces: Set<string> = new Set(["default"]);
+
+  constructor(private storage?: D1Storage) {}
 
   private getResourceKey(kind: string, name: string, namespace?: string): string {
     return `${namespace ?? "default"}/${kind}/${name}`;
@@ -140,16 +144,23 @@ export class ApiServer {
    * Sets initial version/generation and adds the default finalizer.
    * Validates against registered CRDs (ValidResourceCRD invariant).
    */
-  create<T extends Resource>(resource: T): T {
+  async create<T extends Resource>(resource: T): Promise<T> {
     const ns = resource.metadata.namespace ?? "default";
     if (!this.namespaces.has(ns)) {
       throw new Error(`Namespace ${ns} does not exist`);
     }
 
     // Validate CRD exists
-    const crd = Array.from(this.crds.values()).find(
-      crd => crd.spec.names.kind === resource.kind
-    );
+    let crd: CustomResourceDefinition | undefined;
+    
+    if (this.storage) {
+      const allCrds = await this.storage.listCRDs();
+      crd = allCrds.find(c => c.spec.names.kind === resource.kind);
+    } else {
+      crd = Array.from(this.crds.values()).find(
+        crd => crd.spec.names.kind === resource.kind
+      );
+    }
 
     if (!crd) {
       throw new Error(`No CRD registered for kind: ${resource.kind}`);
@@ -187,36 +198,42 @@ export class ApiServer {
    * Implements UpdateResource from TLA+ spec.
    * Increments version and generation.
    */
-  update<T extends Resource>(resource: T): T {
+  async update<T extends Resource>(resource: T, existing?: T): Promise<T> {
     const key = this.getResourceKey(resource.kind, resource.metadata.name, resource.metadata.namespace);
-    const existing = this.resources.get(key);
+    const current = existing || this.resources.get(key);
 
-    if (!existing) throw new Error("Not found");
-    if (existing.metadata.resourceVersion !== resource.metadata.resourceVersion) {
+    if (!current) throw new Error("Not found");
+    if (current.metadata.resourceVersion !== resource.metadata.resourceVersion) {
       throw new Error("Conflict: Optimistic concurrency failure");
     }
 
-    const crd = Array.from(this.crds.values()).find(
-      crd => crd.spec.names.kind === resource.kind
-    );
+    let crd: CustomResourceDefinition | undefined;
+    if (this.storage) {
+      const allCrds = await this.storage.listCRDs();
+      crd = allCrds.find(c => c.spec.names.kind === resource.kind);
+    } else {
+      crd = Array.from(this.crds.values()).find(
+        crd => crd.spec.names.kind === resource.kind
+      );
+    }
+
     if (crd) {
       this.validateSchema(resource, crd);
     }
 
     // If the spec is changing, we block it if deletion is in progress.
-    // However, metadata changes (like finalizers) must be allowed.
-    if (existing.metadata.deletionTimestamp && JSON.stringify(existing.spec) !== JSON.stringify(resource.spec)) {
+    if (current.metadata.deletionTimestamp && JSON.stringify(current.spec) !== JSON.stringify(resource.spec)) {
       throw new Error("Cannot update resource spec marked for deletion");
     }
 
-    const isSpecChanged = JSON.stringify(existing.spec) !== JSON.stringify(resource.spec);
+    const isSpecChanged = JSON.stringify(current.spec) !== JSON.stringify(resource.spec);
 
     const updated: T = {
       ...resource,
       metadata: {
         ...resource.metadata,
-        resourceVersion: (parseInt(existing.metadata.resourceVersion) + 1).toString(),
-        generation: isSpecChanged ? existing.metadata.generation + 1 : existing.metadata.generation,
+        resourceVersion: (parseInt(current.metadata.resourceVersion) + 1).toString(),
+        generation: isSpecChanged ? current.metadata.generation + 1 : current.metadata.generation,
       },
     };
 
@@ -228,21 +245,21 @@ export class ApiServer {
    * Implements the status subresource update.
    * Increments resourceVersion but NOT generation.
    */
-  patchStatus<T extends Resource>(resource: T): T {
+  patchStatus<T extends Resource>(resource: T, existing?: T): T {
     const key = this.getResourceKey(resource.kind, resource.metadata.name, resource.metadata.namespace);
-    const existing = this.resources.get(key);
+    const current = existing || this.resources.get(key);
 
-    if (!existing) throw new Error("Not found");
-    if (existing.metadata.resourceVersion !== resource.metadata.resourceVersion) {
+    if (!current) throw new Error("Not found");
+    if (current.metadata.resourceVersion !== resource.metadata.resourceVersion) {
       throw new Error("Conflict: Optimistic concurrency failure");
     }
 
     const updated: T = {
-      ...existing,
+      ...current,
       status: { ...resource.status },
       metadata: {
-        ...existing.metadata,
-        resourceVersion: (parseInt(existing.metadata.resourceVersion) + 1).toString(),
+        ...current.metadata,
+        resourceVersion: (parseInt(current.metadata.resourceVersion) + 1).toString(),
       },
     };
 
@@ -254,12 +271,8 @@ export class ApiServer {
    * Implements RequestDeleteResource from TLA+ spec.
    * Sets deletionTimestamp instead of immediate removal.
    */
-  delete(kind: string, name: string, namespace?: string): void {
-    const key = this.getResourceKey(kind, name, namespace);
-    const existing = this.resources.get(key);
-
-    if (!existing) return;
-    if (existing.metadata.deletionTimestamp) return;
+  delete(kind: string, name: string, existing: Resource): Resource {
+    if (existing.metadata.deletionTimestamp) return existing;
 
     const updated: Resource = {
       ...existing,
@@ -270,19 +283,15 @@ export class ApiServer {
       },
     };
 
-    this.resources.set(key, updated);
+    return updated;
   }
 
   /**
    * Implements ObserveGarbageCollection from TLA+ spec.
    * Removes resource only if deletionTimestamp is set and finalizers are empty.
    */
-  collectGarbage(kind: string, name: string, namespace?: string): boolean {
-    const key = this.getResourceKey(kind, name, namespace);
-    const resource = this.resources.get(key);
-
+  collectGarbage(resource: Resource): boolean {
     if (resource?.metadata.deletionTimestamp && (!resource.metadata.finalizers || resource.metadata.finalizers.length === 0)) {
-      this.resources.delete(key);
       return true;
     }
     return false;
