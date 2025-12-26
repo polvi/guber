@@ -1,0 +1,13 @@
+{
+  "name": "@guber/controllers",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "index.ts",
+  "dependencies": {
+    "@guber/api-client": "workspace:*",
+    "@guber/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}
