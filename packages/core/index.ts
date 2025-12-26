@@ -189,6 +189,32 @@ export class ApiServer {
   }
 
   /**
+   * Implements the status subresource update.
+   * Increments resourceVersion but NOT generation.
+   */
+  patchStatus<T extends Resource>(resource: T): T {
+    const key = `${resource.kind}/${resource.metadata.name}`;
+    const existing = this.resources.get(key);
+
+    if (!existing) throw new Error("Not found");
+    if (existing.metadata.resourceVersion !== resource.metadata.resourceVersion) {
+      throw new Error("Conflict: Optimistic concurrency failure");
+    }
+
+    const updated: T = {
+      ...existing,
+      status: { ...resource.status },
+      metadata: {
+        ...existing.metadata,
+        resourceVersion: (parseInt(existing.metadata.resourceVersion) + 1).toString(),
+      },
+    };
+
+    this.resources.set(key, updated);
+    return updated;
+  }
+
+  /**
    * Implements RequestDeleteResource from TLA+ spec.
    * Sets deletionTimestamp instead of immediate removal.
    */

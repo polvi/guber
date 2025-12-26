@@ -65,6 +65,18 @@ describe("ApiServer (TLA+ Resource Lifecycle)", () => {
     expect(updated.metadata.generation).toBe(2);
   });
 
+  test("patchStatus increments version but NOT generation", () => {
+    const created = api.create(baseResource);
+    const patched = api.patchStatus({
+      ...created,
+      status: { ...created.status, phase: "Ready" }
+    });
+
+    expect(patched.metadata.resourceVersion).toBe("2");
+    expect(patched.metadata.generation).toBe(1);
+    expect(patched.status?.phase).toBe("Ready");
+  });
+
   test("UpdateResource fails if schema validation fails", () => {
     const created = api.create(baseResource);
     expect(() => api.update({ ...created, spec: {} })).toThrow("missing required field 'script'");
