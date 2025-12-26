@@ -73,16 +73,21 @@ export class ApiServer {
     if (existing.metadata.resourceVersion !== resource.metadata.resourceVersion) {
       throw new Error("Conflict: Optimistic concurrency failure");
     }
-    if (existing.metadata.deletionTimestamp) {
-      throw new Error("Cannot update resource marked for deletion");
+
+    // If the spec is changing, we block it if deletion is in progress.
+    // However, metadata changes (like finalizers) must be allowed.
+    if (existing.metadata.deletionTimestamp && JSON.stringify(existing.spec) !== JSON.stringify(resource.spec)) {
+      throw new Error("Cannot update resource spec marked for deletion");
     }
+
+    const isSpecChanged = JSON.stringify(existing.spec) !== JSON.stringify(resource.spec);
 
     const updated: T = {
       ...resource,
       metadata: {
         ...resource.metadata,
         resourceVersion: (parseInt(existing.metadata.resourceVersion) + 1).toString(),
-        generation: existing.metadata.generation + 1,
+        generation: isSpecChanged ? existing.metadata.generation + 1 : existing.metadata.generation,
       },
     };
 
@@ -99,6 +104,7 @@ export class ApiServer {
     const existing = this.resources.get(key);
 
     if (!existing) return;
+    if (existing.metadata.deletionTimestamp) return;
 
     const updated: Resource = {
       ...existing,
