@@ -1,16 +1,13 @@
 {
-  "name": "guber",
+  "name": "@guber/api-gateway",
   "version": "0.0.1",
-  "scripts": {
-    "test": "bun test"
+  "type": "module",
+  "main": "index.ts",
+  "dependencies": {
+    "@guber/core": "workspace:*",
+    "hono": "^4.0.0"
   },
-  "workspaces": [
-    "packages/*"
-  ],
   "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5.0.0"
+    "@cloudflare/workers-types": "^4.20240101.0"
   }
 }
