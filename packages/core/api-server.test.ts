@@ -9,7 +9,18 @@ describe("ApiServer (TLA+ Resource Lifecycle)", () => {
     spec: {
       group: "cloudflare.guber.dev",
       names: { kind: "Worker", plural: "workers" },
-      versions: [{ name: "v1" }]
+      versions: [{ 
+        name: "v1",
+        schema: {
+          openAPIV3Schema: {
+            type: "object",
+            required: ["script"],
+            properties: {
+              script: { type: "string" }
+            }
+          }
+        }
+      }]
     }
   };
 
@@ -30,6 +41,11 @@ describe("ApiServer (TLA+ Resource Lifecycle)", () => {
     expect(() => api.create(unknownResource)).toThrow("No CRD registered");
   });
 
+  test("CreateResource fails if schema validation fails", () => {
+    const invalidResource = { ...baseResource, spec: {} };
+    expect(() => api.create(invalidResource)).toThrow("missing required field 'script'");
+  });
+
   test("CreateResource sets initial state and finalizers", () => {
     const created = api.create(baseResource);
     expect(created.metadata.resourceVersion).toBe("1");
@@ -47,6 +63,11 @@ describe("ApiServer (TLA+ Resource Lifecycle)", () => {
 
     expect(updated.metadata.resourceVersion).toBe("2");
     expect(updated.metadata.generation).toBe(2);
+  });
+
+  test("UpdateResource fails if schema validation fails", () => {
+    const created = api.create(baseResource);
+    expect(() => api.update({ ...created, spec: {} })).toThrow("missing required field 'script'");
   });
 
   test("UpdateResource fails on version conflict", () => {

@@ -28,7 +28,13 @@ export interface CustomResourceDefinition {
     };
     versions: Array<{
       name: string;
-      schema?: any;
+      schema?: {
+        openAPIV3Schema: {
+          type: string;
+          required?: string[];
+          properties?: Record<string, any>;
+        };
+      };
     }>;
   };
 }
@@ -47,6 +53,26 @@ export interface GuberConfig {
 export class ApiServer {
   private resources: Map<string, Resource> = new Map();
   private crds: Map<string, CustomResourceDefinition> = new Map();
+
+  /**
+   * Implements SchemaValid(spec, schema) from TLA+ spec.
+   * Performs basic validation based on required fields.
+   */
+  private validateSchema(resource: Resource, crd: CustomResourceDefinition): void {
+    const version = resource.apiVersion.split("/").pop();
+    const vDef = crd.spec.versions.find(v => v.name === version);
+    
+    if (!vDef || !vDef.schema) return;
+
+    const schema = vDef.schema.openAPIV3Schema;
+    if (schema.required) {
+      for (const field of schema.required) {
+        if (resource.spec[field] === undefined) {
+          throw new Error(`Validation failed: missing required field '${field}'`);
+        }
+      }
+    }
+  }
 
   /**
    * Implements CreateCRD from TLA+ spec.
@@ -86,13 +112,16 @@ export class ApiServer {
    */
   create<T extends Resource>(resource: T): T {
     // Validate CRD exists
-    const crdExists = Array.from(this.crds.values()).some(
+    const crd = Array.from(this.crds.values()).find(
       crd => crd.spec.names.kind === resource.kind
     );
 
-    if (!crdExists) {
+    if (!crd) {
       throw new Error(`No CRD registered for kind: ${resource.kind}`);
     }
+
+    // Implements SchemaValid check
+    this.validateSchema(resource, crd);
 
     const key = `${resource.kind}/${resource.metadata.name}`;
     if (this.resources.has(key)) {
@@ -129,6 +158,13 @@ export class ApiServer {
     if (!existing) throw new Error("Not found");
     if (existing.metadata.resourceVersion !== resource.metadata.resourceVersion) {
       throw new Error("Conflict: Optimistic concurrency failure");
+    }
+
+    const crd = Array.from(this.crds.values()).find(
+      crd => crd.spec.names.kind === resource.kind
+    );
+    if (crd) {
+      this.validateSchema(resource, crd);
     }
 
     // If the spec is changing, we block it if deletion is in progress.
