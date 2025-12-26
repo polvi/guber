@@ -300,6 +300,8 @@ export class ApiServer {
    */
   collectGarbage(resource: Resource): boolean {
     if (resource?.metadata.deletionTimestamp && (!resource.metadata.finalizers || resource.metadata.finalizers.length === 0)) {
+      const key = this.getResourceKey(resource.kind, resource.metadata.name, resource.metadata.namespace);
+      this.resources.delete(key);
       return true;
     }
     return false;

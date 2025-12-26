@@ -41,7 +41,7 @@ describe("Guber System Integration (TLA+ Full Lifecycle)", () => {
       metadata: { name, generation: 0, resourceVersion: "0" },
       spec: { script: "console.log('v1')" },
     };
-    api.create(initial);
+    await api.create(initial);
     
     let r = api.get(kind, name)!;
     expect(r.status?.observedGeneration).toBe(0);
@@ -54,7 +54,7 @@ describe("Guber System Integration (TLA+ Full Lifecycle)", () => {
 
     // 3. UpdateResource (Spec change)
     const updated = { ...r, spec: { script: "console.log('v2')" } };
-    api.update(updated);
+    await api.update(updated);
     r = api.get(kind, name)!;
     expect(r.metadata.generation).toBe(2);
     expect(r.status?.observedGeneration).toBe(1); // Out of sync
@@ -65,7 +65,8 @@ describe("Guber System Integration (TLA+ Full Lifecycle)", () => {
     expect(r.status?.observedGeneration).toBe(2);
 
     // 5. RequestDeleteResource
-    api.delete(kind, name);
+    const deleting = api.delete(kind, name, r);
+    await api.update(deleting);
     r = api.get(kind, name)!;
     expect(r.metadata.deletionTimestamp).toBeDefined();
     expect(r.metadata.finalizers).toContain("guber-controller");
@@ -87,7 +88,7 @@ describe("Guber System Integration (TLA+ Full Lifecycle)", () => {
     const name = "conflict-worker";
     const kind = "Worker";
 
-    api.create({
+    await api.create({
       kind,
       apiVersion: "cloudflare.guber.dev/v1",
       metadata: { name, generation: 0, resourceVersion: "0" },

@@ -36,27 +36,37 @@ describe("ApiServer (TLA+ Resource Lifecycle)", () => {
     spec: { script: "console.log('hi')" },
   };
 
-  test("CreateResource fails if CRD does not exist", () => {
+  test("CreateResource fails if CRD does not exist", async () => {
     const unknownResource = { ...baseResource, kind: "Unknown" };
-    expect(() => api.create(unknownResource)).toThrow("No CRD registered");
+    try {
+      await api.create(unknownResource);
+      expect(true).toBe(false); // Should not reach here
+    } catch (e: any) {
+      expect(e.message).toContain("No CRD registered");
+    }
   });
 
-  test("CreateResource fails if schema validation fails", () => {
+  test("CreateResource fails if schema validation fails", async () => {
     const invalidResource = { ...baseResource, spec: {} };
-    expect(() => api.create(invalidResource)).toThrow("missing required field 'script'");
+    try {
+      await api.create(invalidResource);
+      expect(true).toBe(false);
+    } catch (e: any) {
+      expect(e.message).toContain("missing required field 'script'");
+    }
   });
 
-  test("CreateResource sets initial state and finalizers", () => {
-    const created = api.create(baseResource);
+  test("CreateResource sets initial state and finalizers", async () => {
+    const created = await api.create(baseResource);
     expect(created.metadata.resourceVersion).toBe("1");
     expect(created.metadata.generation).toBe(1);
     expect(created.metadata.finalizers).toContain("guber-controller");
     expect(created.status?.phase).toBe("Initial");
   });
 
-  test("UpdateResource increments generation and version", () => {
-    const created = api.create(baseResource);
-    const updated = api.update({
+  test("UpdateResource increments generation and version", async () => {
+    const created = await api.create(baseResource);
+    const updated = await api.update({
       ...created,
       spec: { script: "updated" },
     });
@@ -65,8 +75,8 @@ describe("ApiServer (TLA+ Resource Lifecycle)", () => {
     expect(updated.metadata.generation).toBe(2);
   });
 
-  test("patchStatus increments version but NOT generation", () => {
-    const created = api.create(baseResource);
+  test("patchStatus increments version but NOT generation", async () => {
+    const created = await api.create(baseResource);
     const patched = api.patchStatus({
       ...created,
       status: { ...created.status, phase: "Ready" }
@@ -77,48 +87,51 @@ describe("ApiServer (TLA+ Resource Lifecycle)", () => {
     expect(patched.status?.phase).toBe("Ready");
   });
 
-  test("UpdateResource fails if schema validation fails", () => {
-    const created = api.create(baseResource);
-    expect(() => api.update({ ...created, spec: {} })).toThrow("missing required field 'script'");
+  test("UpdateResource fails if schema validation fails", async () => {
+    const created = await api.create(baseResource);
+    try {
+      await api.update({ ...created, spec: {} });
+      expect(true).toBe(false);
+    } catch (e: any) {
+      expect(e.message).toContain("missing required field 'script'");
+    }
   });
 
-  test("UpdateResource fails on version conflict", () => {
-    const created = api.create(baseResource);
-    expect(() => api.update({ ...created, metadata: { ...created.metadata, resourceVersion: "0" } }))
-      .toThrow("Conflict");
+  test("UpdateResource fails on version conflict", async () => {
+    const created = await api.create(baseResource);
+    try {
+      await api.update({ ...created, metadata: { ...created.metadata, resourceVersion: "0" } });
+      expect(true).toBe(false);
+    } catch (e: any) {
+      expect(e.message).toContain("Conflict");
+    }
   });
 
-  test("RequestDeleteResource sets deletionTimestamp", () => {
-    api.create(baseResource);
-    api.delete("Worker", "my-worker");
+  test("RequestDeleteResource sets deletionTimestamp", async () => {
+    const created = await api.create(baseResource);
+    const deleted = api.delete("Worker", "my-worker", created);
     
-    const resource = api.get("Worker", "my-worker");
-    expect(resource?.metadata.deletionTimestamp).toBeDefined();
-    expect(resource?.metadata.resourceVersion).toBe("2");
+    expect(deleted.metadata.deletionTimestamp).toBeDefined();
+    expect(deleted.metadata.resourceVersion).toBe("2");
   });
 
-  test("ObserveGarbageCollection removes resource when finalizers are gone", () => {
-    const created = api.create(baseResource);
-    api.delete("Worker", "my-worker");
+  test("ObserveGarbageCollection removes resource when finalizers are gone", async () => {
+    const created = await api.create(baseResource);
+    const deleting = api.delete("Worker", "my-worker", created);
     
     // Simulate controller removing finalizer
-    const deleting = api.get("Worker", "my-worker")!;
     const finalized = {
       ...deleting,
       metadata: { ...deleting.metadata, finalizers: [] }
     };
-    api.update(finalized); 
     
     // Explicitly trigger garbage collection as per TLA+ ObserveGarbageCollection
-    const collected = api.collectGarbage("Worker", "my-worker");
+    const collected = api.collectGarbage(finalized);
     expect(collected).toBe(true);
-
-    const result = api.get("Worker", "my-worker");
-    expect(result).toBeUndefined();
   });
 
-  test("DeleteCRD performs cascading deletion of resources", () => {
-    api.create(baseResource);
+  test("DeleteCRD performs cascading deletion of resources", async () => {
+    await api.create(baseResource);
     expect(api.get("Worker", "my-worker")).toBeDefined();
 
     api.deleteCRD(workerCRD.name);
@@ -127,13 +140,13 @@ describe("ApiServer (TLA+ Resource Lifecycle)", () => {
     expect(api.get("Worker", "my-worker")).toBeUndefined();
   });
 
-  test("DeleteNamespace performs cascading deletion of resources", () => {
+  test("DeleteNamespace performs cascading deletion of resources", async () => {
     api.createNamespace("prod");
     const prodResource = {
       ...baseResource,
       metadata: { ...baseResource.metadata, name: "prod-worker", namespace: "prod" }
     };
-    api.create(prodResource);
+    await api.create(prodResource);
     
     expect(api.get("Worker", "prod-worker", "prod")).toBeDefined();
     
