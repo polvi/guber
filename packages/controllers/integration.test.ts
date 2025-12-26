@@ -82,4 +82,39 @@ describe("Guber System Integration (TLA+ Full Lifecycle)", () => {
     const finalLookup = api.get(kind, name);
     expect(finalLookup).toBeUndefined();
   });
+
+  test("Concurrency Conflict: Controller should retry on conflict", async () => {
+    const name = "conflict-worker";
+    const kind = "Worker";
+
+    api.create({
+      kind,
+      apiVersion: "cloudflare.guber.dev/v1",
+      metadata: { name, generation: 0, resourceVersion: "0" },
+      spec: { script: "v1" },
+    });
+
+    // We want to simulate a conflict. 
+    // We'll wrap the api.patchStatus to fail once.
+    const originalPatch = api.patchStatus.bind(api);
+    let failedOnce = false;
+    
+    api.patchStatus = (resource: Resource) => {
+      if (!failedOnce) {
+        failedOnce = true;
+        // Simulate someone else updated the resource version in the background
+        const current = api.get(kind, name)!;
+        api.update({ ...current, metadata: { ...current.metadata, annotations: { "touched": "true" } } });
+        // Now this call should throw conflict because the version in 'resource' is stale
+        return originalPatch(resource);
+      }
+      return originalPatch(resource);
+    };
+
+    await controller.runIteration(kind, name);
+    
+    const final = api.get(kind, name)!;
+    expect(final.status?.observedGeneration).toBe(1);
+    expect(failedOnce).toBe(true);
+  });
 });

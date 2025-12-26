@@ -7,50 +7,63 @@ export class Controller {
   /**
    * Processes a single resource through the reconciliation or finalization loop.
    * This maps to the individual actions in the TLA+ spec.
+   * Implements retries to handle optimistic concurrency conflicts.
    */
-  async processResource(kind: string, name: string): Promise<void> {
-    const resource = this.apiServer.get(kind, name);
-    if (!resource) return;
+  async processResource(kind: string, name: string, namespace?: string): Promise<void> {
+    const maxRetries = 3;
+    let attempt = 0;
 
-    // 1. Handle Garbage Collection (ObserveGarbageCollection in TLA+)
-    // If the resource is ready to be deleted, we do it.
-    if (resource.metadata.deletionTimestamp && (!resource.metadata.finalizers || resource.metadata.finalizers.length === 0)) {
-      this.apiServer.collectGarbage(kind, name);
-      return;
-    }
+    while (attempt < maxRetries) {
+      const resource = this.apiServer.get(kind, name, namespace);
+      if (!resource) return;
 
-    // 2. Handle Finalization (FinalizeResource in TLA+)
-    if (Reconciler.shouldFinalize(resource)) {
-      const finalized = Reconciler.finalize(resource);
-      this.apiServer.update(finalized);
-      return;
-    }
+      try {
+        // 1. Handle Garbage Collection (ObserveGarbageCollection in TLA+)
+        if (resource.metadata.deletionTimestamp && (!resource.metadata.finalizers || resource.metadata.finalizers.length === 0)) {
+          this.apiServer.collectGarbage(kind, name, namespace);
+          return;
+        }
 
-    // 3. Handle Reconciliation (ReconcileResource in TLA+)
-    if (Reconciler.shouldReconcile(resource)) {
-      const reconciled = Reconciler.reconcile(resource);
-      this.apiServer.patchStatus(reconciled);
-      return;
+        // 2. Handle Finalization (FinalizeResource in TLA+)
+        if (Reconciler.shouldFinalize(resource)) {
+          const finalized = Reconciler.finalize(resource);
+          this.apiServer.update(finalized);
+          return;
+        }
+
+        // 3. Handle Reconciliation (ReconcileResource in TLA+)
+        if (Reconciler.shouldReconcile(resource)) {
+          const reconciled = Reconciler.reconcile(resource);
+          this.apiServer.patchStatus(reconciled);
+          return;
+        }
+        
+        // If no action was needed, exit loop
+        return;
+      } catch (error: any) {
+        if (error.message.includes("Conflict")) {
+          attempt++;
+          continue;
+        }
+        throw error;
+      }
     }
   }
 
   /**
    * Simulates a full control loop iteration for a specific kind.
-   * In a real system, this would be triggered by a Watch event or a periodic resync.
    */
-  async reconcileAll(kind: string): Promise<void> {
-    const resources = this.apiServer.list(kind);
+  async reconcileAll(kind: string, namespace?: string): Promise<void> {
+    const resources = this.apiServer.list(kind, namespace);
     for (const resource of resources) {
-      await this.processResource(kind, resource.metadata.name);
+      await this.processResource(kind, resource.metadata.name, resource.metadata.namespace);
     }
   }
 
   /**
    * Simulates one "tick" of the controller loop for a specific resource.
-   * In TLA+, this corresponds to the non-deterministic firing of 
-   * ReconcileResource or FinalizeResource for any resource 'r'.
    */
-  async runIteration(kind: string, name: string): Promise<void> {
-    await this.processResource(kind, name);
+  async runIteration(kind: string, name: string, namespace?: string): Promise<void> {
+    await this.processResource(kind, name, namespace);
   }
 }
