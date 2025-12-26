@@ -20,14 +20,14 @@ export class Controller {
       try {
         // 1. Handle Garbage Collection (ObserveGarbageCollection in TLA+)
         if (resource.metadata.deletionTimestamp && (!resource.metadata.finalizers || resource.metadata.finalizers.length === 0)) {
-          this.apiServer.collectGarbage(kind, name, namespace);
+          this.apiServer.collectGarbage(resource);
           return;
         }
 
         // 2. Handle Finalization (FinalizeResource in TLA+)
         if (Reconciler.shouldFinalize(resource)) {
           const finalized = Reconciler.finalize(resource);
-          this.apiServer.update(finalized);
+          await this.apiServer.update(finalized);
           return;
         }
 
