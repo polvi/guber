@@ -79,4 +79,14 @@ describe("ApiServer (TLA+ Resource Lifecycle)", () => {
     const result = api.get("Worker", "my-worker");
     expect(result).toBeUndefined();
   });
+
+  test("DeleteCRD performs cascading deletion of resources", () => {
+    api.create(baseResource);
+    expect(api.get("Worker", "my-worker")).toBeDefined();
+
+    api.deleteCRD(workerCRD.name);
+    
+    // Resource should be gone because its CRD was deleted
+    expect(api.get("Worker", "my-worker")).toBeUndefined();
+  });
 });

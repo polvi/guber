@@ -61,9 +61,21 @@ export class ApiServer {
 
   /**
    * Implements DeleteCRD from TLA+ spec.
-   * Note: In a real system this would trigger cascading deletion of resources.
+   * Models cascading deletion: remaining == { r \in resources : resourceCRD[r] # c }
    */
   deleteCRD(name: string): void {
+    const crd = this.crds.get(name);
+    if (!crd) return;
+
+    const kindToDelete = crd.spec.names.kind;
+    
+    // Remove all resources associated with this CRD's kind
+    for (const [key, resource] of this.resources.entries()) {
+      if (resource.kind === kindToDelete) {
+        this.resources.delete(key);
+      }
+    }
+
     this.crds.delete(name);
   }
 
