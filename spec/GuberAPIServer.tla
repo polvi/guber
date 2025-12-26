@@ -15,8 +15,7 @@ CONSTANTS
   ResourceNames,
   Schemas,
   Specs,
-  MaxVersion,
-  SymmetrySet
+  MaxVersion
 
 ASSUME
   /\ CRDNames # {}
@@ -56,6 +55,13 @@ vars ==
   << crds, schemaOf, resources, resourceCRD, resourceSpec, resourceVersion, 
      resourceGeneration, resourceObservedGen, resourceStatus, 
      resourceDeletionTimestamp, resourceFinalizers >>
+
+(* 
+  Symmetry definitions for TLC. 
+  Permutations(S) returns the set of all permutations of the set S.
+*)
+Symmetry == 
+    Permutations(CRDNames) \cup Permutations(ResourceNames)
 
 (* Abstract schema validation. *)
 SchemaValid(spec, schema) ==
