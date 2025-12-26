@@ -1,11 +1,21 @@
 import { expect, test, describe, beforeEach } from "bun:test";
-import { ApiServer, Resource } from "./index";
+import { ApiServer, Resource, CustomResourceDefinition } from "./index";
 
 describe("ApiServer (TLA+ Resource Lifecycle)", () => {
   let api: ApiServer;
 
+  const workerCRD: CustomResourceDefinition = {
+    name: "workers.cloudflare.guber.dev",
+    spec: {
+      group: "cloudflare.guber.dev",
+      names: { kind: "Worker", plural: "workers" },
+      versions: [{ name: "v1" }]
+    }
+  };
+
   beforeEach(() => {
     api = new ApiServer();
+    api.createCRD(workerCRD);
   });
 
   const baseResource: Resource = {
@@ -14,6 +24,11 @@ describe("ApiServer (TLA+ Resource Lifecycle)", () => {
     metadata: { name: "my-worker", generation: 0, resourceVersion: "0" },
     spec: { script: "console.log('hi')" },
   };
+
+  test("CreateResource fails if CRD does not exist", () => {
+    const unknownResource = { ...baseResource, kind: "Unknown" };
+    expect(() => api.create(unknownResource)).toThrow("No CRD registered");
+  });
 
   test("CreateResource sets initial state and finalizers", () => {
     const created = api.create(baseResource);
@@ -59,8 +74,6 @@ describe("ApiServer (TLA+ Resource Lifecycle)", () => {
       ...deleting,
       metadata: { ...deleting.metadata, finalizers: [] }
     };
-    // We use a direct set or update for this simulation
-    // In the spec, ObserveGarbageCollection is an API server internal check
     api.update(finalized); 
     
     const result = api.get("Worker", "my-worker");

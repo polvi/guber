@@ -18,6 +18,21 @@ export interface Resource<Spec = any, Status = any> {
   };
 }
 
+export interface CustomResourceDefinition {
+  name: string;
+  spec: {
+    group: string;
+    names: {
+      kind: string;
+      plural: string;
+    };
+    versions: Array<{
+      name: string;
+      schema?: any;
+    }>;
+  };
+}
+
 export interface ResourceContext extends Resource {
   group: string;
   version: string;
@@ -31,12 +46,42 @@ export interface GuberConfig {
 
 export class ApiServer {
   private resources: Map<string, Resource> = new Map();
+  private crds: Map<string, CustomResourceDefinition> = new Map();
+
+  /**
+   * Implements CreateCRD from TLA+ spec.
+   */
+  createCRD(crd: CustomResourceDefinition): CustomResourceDefinition {
+    if (this.crds.has(crd.name)) {
+      throw new Error(`CRD ${crd.name} already exists`);
+    }
+    this.crds.set(crd.name, crd);
+    return crd;
+  }
+
+  /**
+   * Implements DeleteCRD from TLA+ spec.
+   * Note: In a real system this would trigger cascading deletion of resources.
+   */
+  deleteCRD(name: string): void {
+    this.crds.delete(name);
+  }
 
   /**
    * Implements CreateResource from TLA+ spec.
    * Sets initial version/generation and adds the default finalizer.
+   * Validates against registered CRDs (ValidResourceCRD invariant).
    */
   create<T extends Resource>(resource: T): T {
+    // Validate CRD exists
+    const crdExists = Array.from(this.crds.values()).some(
+      crd => crd.spec.names.kind === resource.kind
+    );
+
+    if (!crdExists) {
+      throw new Error(`No CRD registered for kind: ${resource.kind}`);
+    }
+
     const key = `${resource.kind}/${resource.metadata.name}`;
     if (this.resources.has(key)) {
       throw new Error("Resource already exists");
