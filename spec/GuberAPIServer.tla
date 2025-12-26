@@ -56,13 +56,6 @@ vars ==
      resourceGeneration, resourceObservedGen, resourceStatus, 
      resourceDeletionTimestamp, resourceFinalizers >>
 
-(* 
-  Symmetry definitions for TLC. 
-  Permutations(S) returns the set of all permutations of the set S.
-*)
-Symmetry == 
-    Permutations(CRDNames) \cup Permutations(ResourceNames)
-
 (* Abstract schema validation. *)
 SchemaValid(spec, schema) ==
   TRUE
@@ -139,6 +132,7 @@ ReconcileResource(r) ==
     /\ r \in resources
     /\ resourceObservedGen[r] < resourceGeneration[r]
     /\ resourceDeletionTimestamp[r] = FALSE
+    /\ resourceVersion[r] < MaxVersion
     /\ resourceStatus' = [ resourceStatus EXCEPT ![r] = "Ready" ]
     /\ resourceObservedGen' = [ resourceObservedGen EXCEPT ![r] = resourceGeneration[r] ]
     /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = resourceVersion[r] + 1 ]
@@ -150,31 +144,34 @@ FinalizeResource(r) ==
     /\ r \in resources
     /\ resourceDeletionTimestamp[r] = TRUE
     /\ "guber-controller" \in resourceFinalizers[r]
+    /\ resourceVersion[r] < MaxVersion
     /\ resourceFinalizers' = [ resourceFinalizers EXCEPT ![r] = resourceFinalizers[r] \ {"guber-controller"} ]
     /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = resourceVersion[r] + 1 ]
     /\ UNCHANGED << crds, schemaOf, resources, resourceCRD, resourceSpec, 
                     resourceGeneration, resourceObservedGen, resourceStatus, 
                     resourceDeletionTimestamp >>
 
-(* Models 'kubectl delete'. If finalizers exist, it only sets the timestamp. *)
+(* Models 'kubectl delete'. *)
 DeleteResource ==
   \E r \in resources :
-    IF resourceFinalizers[r] = {}
-    THEN /\ resources' = resources \ { r }
-         /\ resourceCRD' = [ resourceCRD EXCEPT ![r] = "None" ]
-         /\ resourceSpec' = [ resourceSpec EXCEPT ![r] = "None" ]
-         /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = 0 ]
-         /\ resourceGeneration' = [ resourceGeneration EXCEPT ![r] = 0 ]
-         /\ resourceObservedGen' = [ resourceObservedGen EXCEPT ![r] = 0 ]
-         /\ resourceStatus' = [ resourceStatus EXCEPT ![r] = "None" ]
-         /\ resourceDeletionTimestamp' = [ resourceDeletionTimestamp EXCEPT ![r] = FALSE ]
-         /\ resourceFinalizers' = [ resourceFinalizers EXCEPT ![r] = {} ]
-         /\ UNCHANGED << crds, schemaOf >>
-    ELSE /\ resourceDeletionTimestamp' = [ resourceDeletionTimestamp EXCEPT ![r] = TRUE ]
-         /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = resourceVersion[r] + 1 ]
-         /\ UNCHANGED << crds, schemaOf, resources, resourceCRD, resourceSpec, 
-                         resourceGeneration, resourceObservedGen, resourceStatus, 
-                         resourceFinalizers >>
+    /\ resourceVersion[r] < MaxVersion
+    /\ IF resourceFinalizers[r] = {}
+       THEN /\ resources' = resources \ { r }
+            /\ resourceCRD' = [ resourceCRD EXCEPT ![r] = "None" ]
+            /\ resourceSpec' = [ resourceSpec EXCEPT ![r] = "None" ]
+            /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = 0 ]
+            /\ resourceGeneration' = [ resourceGeneration EXCEPT ![r] = 0 ]
+            /\ resourceObservedGen' = [ resourceObservedGen EXCEPT ![r] = 0 ]
+            /\ resourceStatus' = [ resourceStatus EXCEPT ![r] = "None" ]
+            /\ resourceDeletionTimestamp' = [ resourceDeletionTimestamp EXCEPT ![r] = FALSE ]
+            /\ resourceFinalizers' = [ resourceFinalizers EXCEPT ![r] = {} ]
+            /\ UNCHANGED << crds, schemaOf >>
+       ELSE /\ resourceDeletionTimestamp[r] = FALSE
+            /\ resourceDeletionTimestamp' = [ resourceDeletionTimestamp EXCEPT ![r] = TRUE ]
+            /\ resourceVersion' = [ resourceVersion EXCEPT ![r] = resourceVersion[r] + 1 ]
+            /\ UNCHANGED << crds, schemaOf, resources, resourceCRD, resourceSpec, 
+                            resourceGeneration, resourceObservedGen, resourceStatus, 
+                            resourceFinalizers >>
 
 Next ==
   \/ CreateCRD
@@ -203,8 +200,8 @@ VersionWellFormed == \forall r \in resources : resourceVersion[r] >= 1
 (* If a spec changes, the controller eventually observes that generation or the resource is deleted. *)
 EventuallyConsistent ==
   \forall r \in ResourceNames : 
-    []((r \in resources /\ resourceObservedGen[r] < resourceGeneration[r]) 
-        => <>(resourceObservedGen[r] = resourceGeneration[r] \/ r \notin resources))
+    []((r \in resources /\ resourceObservedGen[r] < resourceGeneration[r] /\ resourceDeletionTimestamp[r] = FALSE) 
+        => <>(resourceObservedGen[r] = resourceGeneration[r] \/ r \notin resources \/ resourceDeletionTimestamp[r] = TRUE))
 
 (* If a resource is marked for deletion, it eventually leaves the system. *)
 EventuallyDeleted ==
